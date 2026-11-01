@@ -180,5 +180,10 @@
       "cursor",
       "vscode"
     ]
+  },
+  "seo": {
+    "metatags": {
+      "canonical": "https://docs.getsales.io"
+    }
   }
 }
