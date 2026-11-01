@@ -1,0 +1,57 @@
+---
+title: "Authentication"
+description: "API keys, OAuth access tokens, session JWTs and team scoping."
+---
+
+Every request to every service authenticates with one header:
+
+```
+Authorization: Bearer <token>
+```
+
+Three token kinds are accepted, and the server tells them apart by shape.
+
+## API keys (recommended for integrations)
+
+An API key is an opaque bearer token that starts with `gs_live_`. There is no handshake: you paste it into your runtime and send it as the bearer token on every call, to the REST API and to the [MCP server](/mcp/connect) alike.
+
+- **The secret is shown once.** `POST /api/api-keys` returns the full token in `plaintext_token` in that one response. Afterwards the API returns only `token_prefix` and `token_last4` for display. The server stores a hash, not the key.
+- **Rotation swaps the secret in place.** `POST /api/api-keys/{sid}/rotate` mints a new `gs_live_` secret for the same key record and returns it once. The previous secret keeps working until `previous_token_expires_at`, 24 hours by default (`grace_seconds`, 0 for an immediate cutover), so a config can be updated without downtime. Rotate on any suspicion of a leak, or before an offboarding.
+- **Keys expire.** Default expiry is 3 years from creation; pass `expires_at: null` on create for a perpetual key.
+- **Keys carry permissions.** A key's permissions must sit inside the grant of whoever mints it. Downscoping is allowed, escalation is a `403` with `grant_exceeds_ceiling`.
+- **Keys are team-scoped.** A key belongs to the workspace it was created in and acts on that workspace's data. A `Team-SID` header is not needed and, if sent for another workspace, is ignored.
+- **Names are unique among live keys.** Creating a key under a name a live key already holds answers `already_exists` with the existing key and no secret; an expired or revoked key frees its name.
+- **A key is not a person.** It authenticates as itself, with its own permissions, so no user account sits behind it. `GET /api/users/current` (`get_current_user`) therefore answers `403` with `not_a_user_actor` on a key, and no permission you add to the key changes that. Sign in, or connect through OAuth, when you need the signed-in account itself.
+
+Manage keys in the app under Settings, API keys, or over the [ID and Teams API](/api-reference/id): search them for an access audit (`last_used_at` shows stale keys worth revoking), check `expires_at` for keys about to lapse, and revoke what you no longer use.
+
+## OAuth access tokens
+
+An interactive MCP client (claude.ai, Claude Desktop, Cursor, ChatGPT) authenticates through OAuth: the user signs in on the GetSales consent screen, picks the workspaces the client may act in, and the client holds an access token it refreshes itself. The token goes in the same `Authorization: Bearer` header and works on the REST API too. A workspace revokes the connection in the app under Settings, Connected apps. The flow and the discovery documents are on [Connect a client](/mcp/connect).
+
+## Session JWTs
+
+Signing in to [beta.getsales.io](https://beta.getsales.io/login) issues a short-lived JWT. It goes in the same header. This is what the app itself uses; for server-to-server integrations prefer an API key, which does not expire mid-job.
+
+## The Team-SID header
+
+A token is normally already scoped to one workspace, and that scope is authoritative. The optional `Team-SID` header exists for tokens that do not carry a team: it selects which of your workspaces the call acts on.
+
+```
+Team-SID: ts_tm_Hx7kQ3mN2pL4
+```
+
+When the token already names a team, `Team-SID` is ignored. With an API key you can leave it out entirely.
+
+## Auth failures
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `unauthorized` | 401 | Missing, expired, revoked or malformed token (`context.reason: missing_or_invalid_token`) |
+| `forbidden` | 403 | Valid token, but no rights on this workspace or resource; `context.reason` names the permission or the actor rule |
+
+Both arrive as the standard [error envelope](/concepts/envelopes-and-errors), so they are machine-readable like every other failure.
+
+## Handling the secret
+
+Treat `gs_live_` tokens like passwords: keep them in a secret manager or environment variable, never in client-side code or a repository, and never in logs. If a key leaks, rotate it with `grace_seconds: 0`; the old secret stops working immediately.

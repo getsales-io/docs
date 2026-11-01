@@ -1,47 +1,112 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Mint an API key and make your first authenticated call."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+This page takes you from nothing to a successful API response.
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+<Tip>
+  **Give this to your AI agent** and it will handle the API side while you sign up:
 
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+  "Connect to GetSales: add the MCP connector at `https://mcp2.getsales.io/mcp` (OAuth) or call the REST API at beta.getsales.io with my key. Then list my playtables and my sender profiles, tell me what each sender profile can send today, and show the newest conversations in the inbox. Read-only for now: do not send, create or change anything."
+</Tip>
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
-
-    ```bash
-    npm install your-package
-    ```
+  <Step title="Create an account">
+    Sign up at [beta.getsales.io/signup](https://beta.getsales.io/signup). Your first workspace starts right away: Playtables stay free with your own API keys, and LinkedIn and email come with a 7-day trial. Connecting a LinkedIn account or a mailbox happens in the app, under a sender profile; the API reads and acts on what is connected.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+  <Step title="Mint an API key">
+    In the app, open Settings, then API keys, and create a key. The full secret looks like `gs_live_` followed by the key body and is shown exactly once: store it now, because the API only ever returns `token_prefix` and `token_last4` afterwards. If you lose it, rotate the key to get a new secret.
 
-    ```bash
-    your-cli init
-    ```
+    Keys can also be minted over the API with [`POST /api/api-keys`](/api-reference/id/api_keys/create-api-key) once you have a first key or a session token to call it with.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+  <Step title="Make your first call">
+    List your tables. The key goes in the `Authorization` header as a bearer token.
 
-    ```bash
-    your-cli start
+    <CodeGroup>
+
+    ```bash curl
+    curl -X POST "https://beta.getsales.io/playtables/v1/api/playtables/search" \
+      -H "Authorization: Bearer gs_live_YOUR_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"page_size": 5}'
     ```
+
+    ```typescript TypeScript
+    const res = await fetch(
+      "https://beta.getsales.io/playtables/v1/api/playtables/search",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.GETSALES_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ page_size: 5 }),
+      },
+    );
+    const data = await res.json();
+    ```
+
+    ```python Python
+    import os, requests
+
+    res = requests.post(
+        "https://beta.getsales.io/playtables/v1/api/playtables/search",
+        headers={"Authorization": f"Bearer {os.environ['GETSALES_API_KEY']}"},
+        json={"page_size": 5},
+    )
+    data = res.json()
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Read the response">
+    Every success is the same envelope: `success`, the `operation` shape, and a `meta` block with a `trace_id` for support. Fields below are trimmed for the example.
+
+    ```json
+    {
+      "success": true,
+      "operation": "search",
+      "items": [
+        {
+          "item": {
+            "sid": "pt_tb_Hx7kQ3mN2pL4",
+            "name": "Marketing agencies in Berlin",
+            "created_at": "2026-10-28T09:12:41Z"
+          },
+          "included": {}
+        }
+      ],
+      "counts": { "total_count": 1, "groups": {} },
+      "pagination": { "next_cursor": null, "has_more": false, "total_count": 1 },
+      "applied_filters": {},
+      "includes": [],
+      "meta": {
+        "trace_id": "0198f2ab-7c11-7e32-9a41-d2b64f2a91c3"
+      }
+    }
+    ```
+
+    The `sid` is the table's stable identifier. Every entity in the platform has one, with a type-specific prefix (`pt_tb_` for tables, `ub_sp_` for sender profiles, `ub_cv_` for conversations, `wf_wf_` for workflows, `ts_tm_` for workspaces).
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Next steps
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Authentication" href="/authentication">
+    Key rotation, permissions, OAuth and the Team-SID header.
+  </Card>
+
+  <Card title="Envelopes and errors" href="/concepts/envelopes-and-errors">
+    The response contract and the 16 error codes.
+  </Card>
+
+  <Card title="Receive webhooks" href="/guides/receive-webhooks">
+    Hear about replies, finished imports and workflow milestones at your own URL.
+  </Card>
+
+  <Card title="Connect the MCP server" href="/mcp/connect">
+    The same tools, callable by an AI agent.
+  </Card>
+</CardGroup>

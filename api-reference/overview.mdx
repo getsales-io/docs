@@ -1,0 +1,43 @@
+---
+title: "API reference overview"
+sidebarTitle: "Overview"
+description: "How to read the reference: base URLs, auth, the envelope, and the x-gs operation flags."
+---
+
+The reference documents the public contract of five services. Every page is generated from the same registry that defines the MCP tools (one endpoint per tool), so it matches what the server validates, not what someone remembered to write down.
+
+## Base URLs
+
+| Service | Base URL |
+|---|---|
+| Playtables | `https://beta.getsales.io/playtables/v1` |
+| Unibox | `https://beta.getsales.io/unibox/v1` |
+| Signals | `https://beta.getsales.io/signals/v1` |
+| Integrations | `https://beta.getsales.io/integrations/v1` |
+| ID and Teams | `https://beta.getsales.io/id/v1` |
+
+Auth is the same everywhere: `Authorization: Bearer <token>` with an [API key, an OAuth access token or a session JWT](/authentication). The playground on each page can send real requests; use a test workspace.
+
+## Reading an operation
+
+Beyond the request and response schemas, each operation carries flags from the registry. They render in the description and as `x-gs-*` extensions in the raw spec, so both a person and a client generator can act on them:
+
+| Flag | Meaning |
+|---|---|
+| `dangerous` | Over MCP the call is gated behind a preview and a commit token; over REST it runs at once, and the effect cannot be undone through the API |
+| `mass action` | The verb's own request accepts a filter or a `targets[]` set, which the owning service drains |
+| `step eligible` | A workflow may run the verb as one of its steps |
+| `schedule required` | Bulk use of the verb must be paced with a schedule |
+| `availability` | `ga`, or `stub_501` for endpoints whose contract is final but not yet live |
+| `tool class` | `trivial`, `typical` or `complex`: how much reading the operation's description deserves |
+
+The raw spec also names the MCP tool, its mount and its entity for every operation (`x-gs-mcp-tool`, `x-gs-mcp-mount`, `x-gs-entity`), and the typed envelope the 200 body uses (`x-gs-operation`, `x-gs-envelope`).
+
+## Deprecated means "not yet", not "going away"
+
+Operations marked deprecated are `stub_501` endpoints: they validate the full request and then answer `501 not_implemented`. The request contract is final, so you can build against it today; the marker exists so a generated client tells you not to ship against it yet. The reason is in the operation's description.
+
+## Two serialization details
+
+- On `GET` and `DELETE`, object parameters (`filter`, `sort`) travel as JSON text in the query string, and array parameters repeat as `name[]=value`. Details in [Pagination and filtering](/concepts/pagination-and-filtering).
+- Success and error bodies are envelopes shared by every endpoint. Details in [Envelopes and errors](/concepts/envelopes-and-errors).

@@ -1,0 +1,80 @@
+---
+title: "Pagination and filtering"
+description: "Cursor paging, typed per-field filters, includes, and how objects travel in query strings."
+---
+
+Every list endpoint (`POST /api/{entity}/search`) takes the same four inputs: `filter`, `sort`, `page_size` and `cursor`, plus an optional `include` list. The same `filter` shape scopes that entity's `metrics` endpoint.
+
+## Paging
+
+- `page_size` defaults to 50 and goes up to 500 on most endpoints. A few heavy tables cap lower (200, 100 or 50); each endpoint's reference states its own range, and asking for more than it allows is a `validation_failed` rather than a clamp.
+- Responses return `pagination.next_cursor`, an opaque string. Pass it back as `cursor` to get the next page; `null` means the last page. Cursors are forward-only, and there is no offset or page number.
+- `page_size: 0` is count-only mode: `items` comes back empty and you read `counts.total_count` and `counts.groups`. It is the cheapest way to answer "how many match".
+- `page_size: 1` is the get-first idiom: one row plus a cursor, for "does anything match, and what is the newest one".
+
+```json
+{
+  "filter": { "status": { "eq": "running" } },
+  "page_size": 100,
+  "cursor": "eyJpZCI6MTAwfQ=="
+}
+```
+
+## Filtering
+
+`filter` is a typed object, validated per entity. Each filterable field takes an object of operators; which operators a field supports is spelled out in the reference for that endpoint.
+
+```json
+{
+  "filter": {
+    "status": { "in": ["running", "paused"] },
+    "created_at": { "gte": "2026-10-01T00:00:00Z" },
+    "q": "berlin"
+  }
+}
+```
+
+### The operator vocabulary
+
+| Operator | Takes | Reads as |
+|---|---|---|
+| `eq` | a scalar | equals |
+| `ne` | a scalar | does not equal |
+| `in` | an array | matches any of |
+| `nin` | an array | matches none of |
+| `gt`, `gte` | a scalar | after / at or after (dates), greater than (numbers) |
+| `lt`, `lte` | a scalar | before / at or before, less than |
+| `is_null` | a boolean | the column is empty, or is not |
+| `contains`, `starts_with`, `like` | a string | substring, prefix and pattern matches, on the text fields that declare them |
+| `any` | an array | an array column shares at least one value with the list |
+
+Which ones a given field accepts is stated in the reference for that endpoint, and asking for one a field does not accept is an error rather than a silent no-op. Multiple operators on one field are ANDed: `{"created_at": {"gte": "...", "lt": "..."}}` is a half-open range, which is how you page a window by time rather than by cursor.
+
+`q` is full-text search where the entity supports it. It is a reserved field inside `filter`, not a top-level parameter, and each endpoint's description names the columns it scans.
+
+<Warning>
+An unknown filter field, an unsupported operator, or a value of the wrong type answers
+`validation_failed` with a `field_errors` entry naming the offending path. Nothing is
+silently dropped, so a filter that returns everything is a filter you did not send, not
+one that was ignored.
+</Warning>
+
+The response echoes what actually ran in `applied_filters`, which is the fastest way to
+confirm a filter reached the backend in the shape you meant.
+
+## Sorting
+
+`sort` is a single object with a `field` and a `direction`, both required, for example `{ "field": "created_at", "direction": "desc" }`. One sort field applies per request, and the sortable fields are listed per endpoint.
+
+## Includes
+
+`include` names relations to load with each row, for example `["fields", "views"]` on a table. Loaded relations arrive under `items[].included`, keyed by relation name, and the response's top-level `includes` echoes what you asked for. If a requested relation is absent under `included` for a row, that row has none; if it was never in `includes`, it was not requested. The two cases stay distinguishable.
+
+## Objects in query strings
+
+Search runs over `POST` with a JSON body, so this mostly concerns `GET` and `DELETE` endpoints that accept the same parameters:
+
+- An object parameter (`filter`, `sort`) travels as JSON text in the query string: `?filter={"status":{"eq":"running"}}` (URL-encoded).
+- An array parameter repeats as `name[]=value`: `?include[]=fields&include[]=views`.
+
+The playground on each reference page builds these for you, which is the quickest way to see the exact wire format.

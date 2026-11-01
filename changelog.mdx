@@ -1,0 +1,19 @@
+---
+title: "Changelog"
+description: "What's new in the GetSales platform and this documentation."
+---
+
+<Update label="2026-11-01" description="The developer documentation opens">
+  **The public contract, documented from its source.** The [API reference](/api-reference/overview)
+  covers the five services of the platform, 411 operations in all: Playtables (142), Unibox (125),
+  ID and Teams (88), Signals (30) and Integrations (26). Every page is generated from the same
+  Zod registry that defines the MCP tools, one endpoint per tool, so the playground shows what the
+  server validates. The guides cover [authentication](/authentication), the
+  [response envelope and the 16 error codes](/concepts/envelopes-and-errors),
+  [paging and filters](/concepts/pagination-and-filtering) and
+  [webhooks](/guides/receive-webhooks).
+
+  **The MCP server.** `https://mcp2.getsales.io/mcp` exposes the same tools to Claude, Cursor,
+  ChatGPT, Claude Code and any other MCP client, through OAuth or a `gs_live_` API key.
+  [Connect a client](/mcp/connect) has the setup for each.
+</Update>

@@ -1,0 +1,66 @@
+---
+title: "MCP server"
+sidebarTitle: "Overview"
+description: "The same platform, exposed as Model Context Protocol tools an AI agent can call."
+---
+
+GetSales ships a managed MCP server at `https://mcp2.getsales.io/mcp`. It exposes more than 400 typed tools across the platform's domains, so Claude, Cursor, ChatGPT or a custom agent runtime can build tables, enrich rows, run workflows, read and answer the inbox, and watch signals in a workspace you own.
+
+MCP and REST are the same contract. Every tool maps 1:1 to an endpoint in the [API reference](/api-reference/overview): one Zod schema defines the tool, the endpoint and this documentation, so an agent and your backend code see identical shapes. If you can do it over REST, an agent can do it over MCP, under the same server-side rules.
+
+## One address, two ways to mount it
+
+- **The facade, `https://mcp2.getsales.io/mcp`.** Four meta-tools over the whole registry: `search_tools` finds tools by what they do (plain words, optionally narrowed to one toolset; with `detail: "full"` it returns whole definitions), `describe_tool` gives one full definition, `call_tool` runs a tool by name, and `list_toolsets` is the map. The agent discovers what it needs instead of loading hundreds of definitions into its context.
+- **A domain mount, `https://mcp2.getsales.io/mcp/<service>/<mount>`.** Every tool of one domain with its full schema, 25 tools at most, for a client that wants them in its tool list directly: `playtables/tables`, `playtables/columns`, `playtables/people`, `playtables/pipeline`, `playtables/sources`, `playtables/stoplist`, `playtables/workflows`, `playtables/journeys`, `unibox/inbox`, `unibox/threads`, `unibox/sender-profiles`, `unibox/sender-profile-mailboxes`, `unibox/agent`, `unibox/agent-memory`, `unibox/knowledge`, `unibox/website`, `signals/website`, `signals/visits`, `id/identity`, `id/access`, `id/billing`, `id/partner`, `id/notifications`, `integrations/providers`, `integrations/webhooks`.
+
+`https://mcp2.getsales.io/health` lists the mounts and their tool counts without a token.
+
+## What the tools cover
+
+| Area | Examples |
+|---|---|
+| Tables and columns | create a table, add an enrichment or AI column, estimate what a fill costs, run or stop a fill, read cells |
+| People and companies | search, create, merge and update rows, read a LinkedIn profile or company into a table, move people between pipeline stages |
+| Data sources | import a CSV, add a LinkedIn or Sales Navigator search, a post's engagers or a webhook source, watch an import's progress |
+| Workflows | create, validate, publish, pause and resume a workflow, add people, read records and tasks, approve or retry a task |
+| Inbox and threads | search conversations and messages, send or approve a reply, hand a thread over, link a person, read the timeline |
+| Sender profiles | connect a LinkedIn account or a mailbox, read today's limits, pause and resume sending, sync history |
+| AI SDR | the agents with their scenarios, plans and runs, the knowledge they answer from, the golden examples they learn from |
+| Signals | registered sites, key pages and tracked events, sessions and visitors, who viewed a sender's profile |
+| Account and billing | workspaces and members, API keys, OAuth clients, subscriptions, credits, notifications |
+| Integrations | provider connections and custom HTTP tools, the provider call log, webhook subscriptions and their deliveries |
+
+## What to ask
+
+Once a client is connected, the agent picks the tools itself from a plain request. A few that work on day one:
+
+| Ask | What the agent does |
+|---|---|
+| "Build a table of marketing agencies in Berlin and find their heads of growth" | creates a table, adds a company search as its data source and a Find people column that runs on every row that lands |
+| "Which of my tables are still importing?" | searches the data sources by status and reports each table's progress |
+| "Find and verify a work email for everyone in this table without one" | adds the enrichment column over the rows that need it and reports the fill's estimate before it runs |
+| "Show me the replies from this week that nobody answered" | searches the conversations by state and last inbound message, newest first |
+| "Draft an answer to this thread, I will send it myself" | drafts in the thread as a pending message and leaves the send to you |
+| "Pause the outbound workflow for the DACH list until Monday" | pauses the workflow and tells you what is parked |
+| "What can my sender profiles send today?" | reads each profile's limits and today's spend against them |
+| "Who from the companies in this table visited the pricing page?" | searches the website sessions by company and page |
+
+Anything that changes state goes through the guardrails below; reads run straight away.
+
+## Guardrails that matter for agents
+
+- **Dangerous tools preview first.** A delete, a cancel, a merge, a key or secret minted or rotated, a paid run, a subscription change: the first call answers a preview and a `commit_token` and changes nothing; the same call with the same arguments plus the token executes. The token is single use and expires in 300 seconds. A plain write (a send, an approval, a pause) runs on the first call, on the user's word.
+- **Server-side limits.** 600 calls and 120 writes a minute per workspace, a batch of at most 16 messages, 25 seconds per backend call, and answers trimmed to a 48,000-character budget with a note when they were. Sending budgets, warm-up and pacing are enforced under every tool call; an agent does not send faster by calling more often.
+- **Typed errors.** A refused tool call is a tool result with `isError: true` and the same 16-code envelope as REST, with `recoverable` and a `suggestion` written for an LLM to act on. See [Envelopes and errors](/concepts/envelopes-and-errors).
+- **Every answer carries the trace.** `_meta.trace_id` on every tool result and the `X-Trace-Id` response header; quote it when reporting a problem.
+
+## Where to go
+
+<CardGroup cols={2}>
+  <Card title="Connect a client" href="/mcp/connect">
+    Claude, Cursor, ChatGPT, Claude Code, and anything else that speaks MCP.
+  </Card>
+  <Card title="Search these docs from AI tools" href="/mcp/use-docs-with-ai">
+    The documentation's own MCP endpoint.
+  </Card>
+</CardGroup>

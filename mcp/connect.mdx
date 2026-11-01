@@ -1,0 +1,163 @@
+---
+title: "Connect a client"
+description: "Add the GetSales MCP server to Claude, ChatGPT, Cursor, VS Code, Claude Code, Codex or any MCP-compatible runtime."
+---
+
+The server speaks streamable HTTP at `https://mcp2.getsales.io/mcp` and authenticates with
+OAuth. Your client discovers the flow on its own: the first call comes back with a `401` and a
+`WWW-Authenticate` challenge pointing at the server's metadata, the client registers itself
+(dynamic registration, nothing to pre-register), and you approve the GetSales consent screen in
+your browser: sign in, pick the workspaces the client may act in, click Allow. Your password
+never reaches the client.
+
+## Add to your agent
+
+One action per client, then approve the consent screen that opens. That is the whole setup.
+
+<CardGroup cols={2}>
+  <Card title="Claude" icon="message" href="https://claude.ai/settings/connectors">
+    Open Settings, Connectors, then "Add custom connector". Name it GetSales, paste `https://mcp2.getsales.io/mcp`, Add, then Connect and approve access. Works for claude.ai and Claude Desktop.
+  </Card>
+  <Card title="Cursor" icon="arrow-pointer" href="cursor://anysphere.cursor-deeplink/mcp/install?name=getsales&config=eyJ1cmwiOiJodHRwczovL21jcDIuZ2V0c2FsZXMuaW8vbWNwIn0=">
+    One-click install (the button opens Cursor). Press Connect on the server and sign in on the consent page that follows.
+  </Card>
+  <Card title="VS Code" icon="code" href="vscode:mcp/install?%7B%22name%22%3A%22getsales%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp2.getsales.io%2Fmcp%22%7D">
+    One-click install (the button opens VS Code). Sign in on the consent page that follows.
+  </Card>
+  <Card title="ChatGPT" icon="comment-dots">
+    Settings, Connectors, Create: URL `https://mcp2.getsales.io/mcp`, authentication OAuth. It registers itself and opens the consent screen like the others. On Business and Enterprise workspaces an admin may need to allow custom connectors first.
+  </Card>
+</CardGroup>
+
+### Claude Code
+
+```bash
+claude mcp add --transport http getsales https://mcp2.getsales.io/mcp
+```
+
+Then run `/mcp` in any session and authenticate when prompted. `claude mcp list` shows
+`getsales` as connected once consent is done. One domain mount instead of the facade puts every
+tool of that domain in the tool list, with no discovery step:
+
+```bash
+claude mcp add --transport http gs-tables https://mcp2.getsales.io/mcp/playtables/tables
+```
+
+### Codex
+
+```bash
+codex mcp add getsales --url https://mcp2.getsales.io/mcp
+codex mcp login getsales
+```
+
+The first line registers the server, the second runs the OAuth flow and opens the consent page.
+
+### Claude Desktop and Cursor by file
+
+A client that configures servers by file takes the bare URL:
+
+```json
+{
+  "mcpServers": {
+    "getsales": { "url": "https://mcp2.getsales.io/mcp" }
+  }
+}
+```
+
+### Any other MCP client
+
+Point it at `https://mcp2.getsales.io/mcp` over the streamable HTTP transport and let it
+run the OAuth flow. The discovery documents are standard: the protected-resource metadata at
+`https://mcp2.getsales.io/.well-known/oauth-protected-resource` (RFC 9728) names the
+authorization server, whose metadata is at
+`https://beta.getsales.io/.well-known/oauth-authorization-server/id/v1` (RFC 8414; the issuer
+`https://beta.getsales.io/id/v1` has a path, so its document lives at that root-inserted form).
+
+### Clients that only spawn a command
+
+Some clients cannot take a URL at all, only a command to run over stdio. The open
+`mcp-remote` bridge runs the same OAuth flow, opens the consent page on first use and caches the
+tokens under `~/.mcp-auth`:
+
+```json
+{
+  "mcpServers": {
+    "getsales": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp2.getsales.io/mcp"]
+    }
+  }
+}
+```
+
+## Headless: authenticate with an API key
+
+The same key that authenticates the [REST API](/api-reference/overview) works on this server as
+a plain bearer token. No browser, no consent screen, so it fits CI, servers and any agent
+runtime where the OAuth round trip is not an option. Mint a key in the app (Settings, API keys)
+and attach it as a header:
+
+```bash
+claude mcp add --transport http getsales https://mcp2.getsales.io/mcp --header "Authorization: Bearer gs_live_..."
+```
+
+For command-spawning clients, the bridge takes the same header:
+
+```json
+{
+  "mcpServers": {
+    "getsales": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp2.getsales.io/mcp", "--header", "Authorization: Bearer gs_live_..."]
+    }
+  }
+}
+```
+
+<Note>
+Pick one mode per connection. A client that attaches an `Authorization` header and also runs the
+OAuth flow overwrites the OAuth token with the static header on every request, and the connection
+fails in a way that looks like a server problem. With a key attached the OAuth flow never
+starts; without one it always does. The key is scoped to its workspace and its permission set,
+revocable in the app, and treated like a password (see [Authentication](/authentication)).
+Interactive clients such as claude.ai connectors have no header field and always use OAuth.
+</Note>
+
+## Check it from a terminal
+
+A key is the simplest bearer for a terminal. Every call is one JSON-RPC message; the `Accept`
+header has to name both media types.
+
+```bash
+# find a tool by what it does, with its whole definition
+curl -sS -X POST https://mcp2.getsales.io/mcp \
+  -H "Authorization: Bearer gs_live_..." \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_tools","arguments":{"query":"pause a workflow","detail":"full"}}}'
+
+# one domain mount, the first page of tables
+curl -sS -X POST https://mcp2.getsales.io/mcp/playtables/tables \
+  -H "Authorization: Bearer gs_live_..." \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_playtables","arguments":{"page_size":5}}}'
+```
+
+To walk the OAuth flow by hand instead, run `npx @modelcontextprotocol/inspector`, choose the
+streamable HTTP transport, enter `https://mcp2.getsales.io/mcp`, connect, and complete the
+consent screen. The tool list appears once you are authorized.
+
+## What you get
+
+On the facade, four meta-tools rather than hundreds of individual ones: `search_tools` to find
+tools by what they do, `describe_tool` to read one definition, `call_tool` to run any tool by
+name, and `list_toolsets` to see the map. Have the full definition before the first call:
+`search_tools` with `detail: "full"` when the pick is clear, `describe_tool` otherwise, then
+`call_tool`. On a domain mount the tools are listed directly. Dangerous tools still run their
+preview and commit step, so an agent cannot delete a table or cancel a run without showing you
+what it is about to do.
+
+## First prompt to try
+
+> "List my tables and tell me which data sources are still importing. Then find the three newest conversations with a reply nobody answered yet and draft an answer for each, without sending."
+
+The agent chains the tools on its own; the drafts wait for your word.
