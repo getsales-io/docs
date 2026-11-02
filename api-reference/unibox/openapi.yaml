@@ -4498,7 +4498,7 @@ paths:
       operationId: list_sender_profile_linkedin_proxy_countries
       summary: List LinkedIn proxy countries
       description: |-
-        The managed proxy pool's countries with free stock, gtm's own feed passed through. These are the only values a form may offer for proxy_country_code, because a connect refuses a country with no free proxy. An empty list means the pool is dry, and only the team's own proxy (custom_proxy_config) or its own GoLogin profile (vendor_profile_id) can bring a browser then. 501 while the gtm bridge is unconfigured.
+        The managed proxy pool's countries with free stock, gtm's own feed passed through, most free proxies first and without the counts. These are the only values a form may offer for proxy_country_code, because a connect refuses a country with no free proxy; the first row is the country to pre-fill. An empty list means the pool is dry, and only the team's own proxy (custom_proxy_config) or its own GoLogin profile (vendor_profile_id) can bring a browser then. 501 while the gtm bridge is unconfigured.
 
         Contract:
         - MCP tool `list_sender_profile_linkedin_proxy_countries`, registry package `mcp.unibox/sender_profiles`, mount `unibox.sender-profiles`.
@@ -4617,7 +4617,7 @@ paths:
       description: |-
         Start a LinkedIn login at TEAM level: gtm mints a cloud browser and returns its one-time login link, and the sender profile is born later, from the linkedin-accounts.created delivery. Use start_sender_profile_linkedin_connect instead when the account must land on a sender profile that already exists.
 
-        At most one browser source per call (two is a 422): proxy_country_code takes a browser off the managed proxy pool (default US; offer only what list_sender_profile_linkedin_proxy_countries reports in stock, because a country with no free proxy is refused as a 422 proxy_pool_empty on that field), custom_proxy_config routes a platform-minted browser through the team's own proxy, and vendor_profile_id uses the team's own GoLogin profile, whose proxy stays on it. history_since is the account's history window (omitted = all history), history_scope its import scope (omitted = playtable_people, the default). Each call is a connect of its own: when gtm-api did not confirm the browser create, or the link minted after it, the call answers 409 linkedin_connect_unconfirmed, not recoverable, since a repeat here makes another browser; prefer start_sender_profile_linkedin_connect, whose repeat picks up a browser made meanwhile. gtm-api's other refusals of the create read as on start_sender_profile_linkedin_connect (402 linkedin_sender_profiles_full, 402 subscription_required, 403 gtm_scope_missing). 501 while the gtm bridge is unconfigured.
+        One browser source per call (two is a 422): proxy_country_code (the managed pool; offer only what list_sender_profile_linkedin_proxy_countries reports, a dry country is 422 proxy_pool_empty), custom_proxy_config (the team's own proxy) or vendor_profile_id (the team's own GoLogin profile, its proxy stays on it). public_link makes the link a two-day one for whoever holds the password, mailed to public_link_email when given (result.sent_to_email). history_since and history_scope bound what of the account's past is imported. Each call is a connect of its own: when gtm-api did not confirm the browser create or the link, the call answers 409 linkedin_connect_unconfirmed, not recoverable, since a repeat here makes another browser; prefer start_sender_profile_linkedin_connect, whose repeat picks up a browser made meanwhile. Other refusals read as on that tool (402 linkedin_sender_profiles_full, 402 subscription_required, 403 gtm_scope_missing). 501 while the gtm bridge is unconfigured.
 
         Contract:
         - MCP tool `start_new_sender_profile_linkedin_connect`, registry package `mcp.unibox/sender_profiles`, mount `unibox.sender-profiles`.
@@ -5111,7 +5111,7 @@ paths:
       operationId: start_sender_profile_linkedin_connect
       summary: Start a LinkedIn connect for a sender profile
       description: |-
-        Connect a LinkedIn account to this sender profile: the browser is remembered for 24 hours, so the account it produces binds here instead of birthing a sender profile. One browser source per call (two is 422). proxy_country_code or custom_proxy_config answers a cloud-browser login link a human signs in to (result.mode connect). vendor_profile_id answers no link: its browser is found or created and run, the profile's signed-in session births the account (result.mode run: follow get_sender_profile_linkedin_connect_status until bound or failed), or the account gtm-api already holds on it binds at once (result.mode bound). A sender profile that already holds an account gets the re-login link of that account's browser (result.mode relogin; 409 linkedin_browser_missing: detach and connect again). A repeat while a browser is pending reuses it (a new link, never a second browser); on 503 linkedin_connect_unconfirmed call again in a minute, the browser gtm-api made is picked up.
+        Connect a LinkedIn account to this sender profile: the browser is remembered for 24 hours, so the account it produces binds here instead of birthing a sender profile. One browser source per call (two is 422). proxy_country_code or custom_proxy_config answers a cloud-browser login link a human signs in to (result.mode connect); public_link makes it a two-day link for whoever holds the password, mailed to public_link_email when given (result.sent_to_email). vendor_profile_id answers no link: its browser is found or created and run, the profile's signed-in session births the account (result.mode run: follow get_sender_profile_linkedin_connect_status until bound or failed), or the account gtm-api already holds on it binds at once (result.mode bound). A sender profile that already holds an account gets the re-login link of that account's browser (result.mode relogin; 409 linkedin_browser_missing: detach and connect again). A repeat while a browser is pending reuses it (a new link, never a second browser); on 503 linkedin_connect_unconfirmed call again in a minute, the browser gtm-api made is picked up.
 
         Refusals: 422 proxy_pool_empty, vendor_profile_not_found, vendor_profile_no_run_access; 409 linkedin_profile_held_elsewhere, linkedin_profile_busy, linkedin_browser_no_server; 402 linkedin_sender_profiles_full (the plan's LinkedIn sender profiles are all in use) or subscription_required; 403 gtm_scope_missing; 501 while the gtm bridge is unconfigured.
 
@@ -28934,14 +28934,9 @@ components:
                 properties:
                   country_code:
                     type: string
-                    description: ISO 3166-1 alpha-2.
-                  available:
-                    type: integer
-                    minimum: 0
-                    description: Free proxies in stock. A country is offerable while this is above zero.
+                    description: ISO 3166-1 alpha-2. Every row has free proxies; the rows come most free proxies first, so the first is the country to pre-fill when nothing else points at one.
                 required:
                   - country_code
-                  - available
           required:
             - countries
         meta:
@@ -49506,6 +49501,16 @@ components:
             - all
             - playtable_people
           description: "The account's import scope: playtable_people (omitted or null, the default) takes only the conversations with a person the workspace keeps in a playtable, all every conversation. The pending connect keeps it until the account lands."
+        public_link:
+          type: boolean
+          nullable: true
+          description: "Mint the login link for whoever holds the LinkedIn password: it lives two days instead of the hours a link opened right away lives. Refused with vendor_profile_id (a GoLogin profile signs in on its own session). Implied by public_link_email."
+        public_link_email:
+          type: string
+          nullable: true
+          maxLength: 255
+          format: email
+          description: gtm-api mails the public sign-in link to this address as well; the answer's sent_to_email says where it went. Implies public_link.
     StartNewSenderProfileLinkedinConnectResponse:
       type: object
       properties:
@@ -49537,10 +49542,15 @@ components:
               type: string
               nullable: true
               description: ISO 8601 UTC expiry of the link.
+            sent_to_email:
+              type: string
+              nullable: true
+              description: Where gtm-api mailed the public sign-in link (public_link_email on the call); null when nothing was mailed.
           required:
             - antidetect_browser_sid
             - connect_url
             - connect_url_expires_at
+            - sent_to_email
         meta:
           type: object
           properties:
@@ -49724,6 +49734,16 @@ components:
             - all
             - playtable_people
           description: "The account's import scope: playtable_people (omitted or null, the default) takes only the conversations with a person the workspace keeps in a playtable, all every conversation. The pending connect keeps it until the account lands."
+        public_link:
+          type: boolean
+          nullable: true
+          description: "Mint the login link for whoever holds the LinkedIn password: it lives two days instead of the hours a link opened right away lives. Refused with vendor_profile_id (a GoLogin profile signs in on its own session). Implied by public_link_email."
+        public_link_email:
+          type: string
+          nullable: true
+          maxLength: 255
+          format: email
+          description: gtm-api mails the public sign-in link to this address as well; the answer's sent_to_email says where it went. Implies public_link.
     StartSenderProfileLinkedinConnectResponse:
       type: object
       properties:
@@ -49759,11 +49779,16 @@ components:
             mode:
               type: string
               description: connect = a new browser was minted and the link opens the login; relogin = the re-login link for the account this sender profile already holds; run = gtm-api's browser on the team's own GoLogin profile was started, no link, the profile's own signed-in session births the account (follow get_sender_profile_linkedin_connect_status); bound = the account gtm-api already held on that profile is on the sender profile now.
+            sent_to_email:
+              type: string
+              nullable: true
+              description: Where gtm-api mailed the public sign-in link (public_link_email on the call); null when nothing was mailed.
           required:
             - antidetect_browser_sid
             - connect_url
             - connect_url_expires_at
             - mode
+            - sent_to_email
         meta:
           type: object
           properties:
