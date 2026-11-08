@@ -11,7 +11,7 @@ info:
 
     GENERATED. This document is projected from the Zod MCP tool registry in `product/mcp/gs.mcp` (one tool per public endpoint, 1:1). Do not edit it by hand; edit the tool definition and regenerate with `pnpm openapi:public`.
 
-    Surface: the public `/api` contract of `gs.service.signals`, 30 operations. This is the only OpenAPI document the platform publishes. Internal (`/internal`) and health endpoints are deliberately absent: they are not part of any contract, they can change without notice, and the service source is their only description.
+    Surface: the public `/api` contract of `gs.service.signals`, 17 operations. This is the only OpenAPI document the platform publishes. Internal (`/internal`) and health endpoints are deliberately absent: they are not part of any contract, they can change without notice, and the service source is their only description.
 
     Conventions:
     - Auth is a bearer JWT, optionally narrowed by the `Team-SID` header.
@@ -29,30 +29,24 @@ info:
     name: Proprietary
     url: https://getsales.io/terms
 servers:
-  - url: https://beta.getsales.io/signals/v1
-    description: Production (the gateway path on the beta ring; the origin is provisioned per DEPLOY_MAP.md)
+  - url: https://api2.getsales.io/signals/v1
+    description: Production
 security:
   - BearerJwt: []
     TeamSid: []
 tags:
   - name: profile_view_sightings
-    description: Registry package `mcp.signals/profile_view_sightings`, served on MCP mount `signals.visits`.
-  - name: signal_preferences
-    description: Registry package `mcp.signals/signal_preferences`, served on MCP mount `signals.website`.
+    description: Registry package `mcp.signals/profile_view_sightings`, served on MCP mount `signals`.
   - name: signal_settings
-    description: Registry package `mcp.signals/signal_settings`, served on MCP mount `signals.website`.
-  - name: website_key_pages
-    description: Registry package `mcp.signals/website_key_pages`, served on MCP mount `signals.website`.
+    description: Registry package `mcp.signals/signal_settings`, served on MCP mount `workspace.website-tracking`.
   - name: website_session_owners
-    description: Registry package `mcp.signals/website_session_owners`, served on MCP mount `signals.visits`.
+    description: Registry package `mcp.signals/website_session_owners`, served on MCP mount `signals`.
   - name: website_sessions
-    description: Registry package `mcp.signals/website_sessions`, served on MCP mount `signals.visits`.
+    description: Registry package `mcp.signals/website_sessions`, served on MCP mount `signals`.
   - name: website_sites
-    description: Registry package `mcp.signals/website_sites`, served on MCP mount `signals.website`.
-  - name: website_tracked_events
-    description: Registry package `mcp.signals/website_tracked_events`, served on MCP mount `signals.website`.
+    description: Registry package `mcp.signals/website_sites`, served on MCP mount `workspace.website-tracking`.
   - name: website_visitors
-    description: Registry package `mcp.signals/website_visitors`, served on MCP mount `signals.visits`.
+    description: Registry package `mcp.signals/website_visitors`, served on MCP mount `signals`.
 paths:
   /api/profile-view-sightings/search:
     post:
@@ -62,7 +56,7 @@ paths:
         Who looked at the team's sender profiles' LinkedIn profiles (read once a day per sender profile), newest first: known people (person_sid) and anonymous rows, with LinkedIn's words and the view count. Scope with sender_profile_sid and a last_seen_at or first_seen_at window; page_size 0 for the counts by is_anonymous and by sender profile. One person: search_people with the signal viewed_our_profile. A view is private context: it decides when to write, the lead is never told we know.
 
         Contract:
-        - MCP tool `search_profile_view_sightings`, registry package `mcp.signals/profile_view_sightings`, mount `signals.visits`.
+        - MCP tool `search_profile_view_sightings`, registry package `mcp.signals/profile_view_sightings`, mount `signals`.
         - Operation `search`, response envelope `search`.
         - Flags: read only.
       tags:
@@ -85,11 +79,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: search_profile_view_sightings
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: profile_view_sightings
       x-gs-operation: search
       x-gs-envelope: search
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -103,7 +98,7 @@ paths:
         One sighting: the viewer's words, the sighting clocks, how often they looked and, with include person, the person the team holds. Private context: never repeated to the lead.
 
         Contract:
-        - MCP tool `get_profile_view_sighting`, registry package `mcp.signals/profile_view_sightings`, mount `signals.visits`.
+        - REST only: no MCP tool serves this route (registry package `mcp.signals/profile_view_sightings`, surface api).
         - Operation `get`, response envelope `get`.
         - Flags: read only.
       tags:
@@ -145,132 +140,17 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: get_profile_view_sighting
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: profile_view_sightings
       x-gs-operation: get
       x-gs-envelope: get
       x-gs-availability: ga
+      x-gs-surface: api
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: trivial
-  /api/signal-preferences:
-    get:
-      operationId: get_signal_preferences
-      summary: Get signal preferences
-      description: |-
-        Your own Signals page settings: hidden_types and notify_types, sender_profile_scope with sender_profile_sids, toast_enabled, seen_at, saved_views. New for me: then search_activities with type in notify_types minus hidden_types, created_at gt seen_at and occurred_at gt seen_at minus three days (a sender profile leaf only when scope is chosen). Reading never marks the feed seen; a signal is private context, never repeated to the lead.
-
-        Contract:
-        - MCP tool `get_signal_preferences`, registry package `mcp.signals/signal_preferences`, mount `signals.website`.
-        - Operation `get`, response envelope `get`.
-        - Flags: read only.
-      tags:
-        - signal_preferences
-      responses:
-        "200":
-          description: "`get` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetSignalPreferencesResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: get_signal_preferences
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: signal_preferences
-      x-gs-operation: get
-      x-gs-envelope: get
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
-    patch:
-      operationId: update_signal_preferences
-      summary: Update signal preferences
-      description: |-
-        Change your own Signals page settings, a partial update: each field sent replaces the stored value. hidden_types and notify_types are whole lists of signal types: to stop or start hearing of one, read the row and send the list without or with it. sender_profile_scope all | mine | chosen, with sender_profile_sids for chosen; toast_enabled; saved_views, the whole list: stored views keep their ids, a new one gets one. seen_at is mark_signals_seen. Nothing editable is 422 nothing_to_update.
-
-        Contract:
-        - MCP tool `update_signal_preferences`, registry package `mcp.signals/signal_preferences`, mount `signals.website`.
-        - Operation `update`, response envelope `update`.
-        - Flags: none.
-      tags:
-        - signal_preferences
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateSignalPreferencesRequest"
-      responses:
-        "200":
-          description: "`update` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UpdateSignalPreferencesResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: update_signal_preferences
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: signal_preferences
-      x-gs-operation: update
-      x-gs-envelope: update
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
-  /api/signal-preferences/mark-seen:
-    post:
-      operationId: mark_signals_seen
-      summary: Mark signals seen
-      description: |-
-        Mark your Signals feed seen up to an instant (now by default): seen_at moves forward to it, cut to the second and never past now plus a minute, and never back, so an instant at or before the stored one changes nothing (result.moved false). This is the user opening the page: call it only when the user asks for it ("mark everything as read"), never after reading the feed for them, which would hide what is new from their badge. Answers the row with result.previous_seen_at.
-
-        Contract:
-        - MCP tool `mark_signals_seen`, registry package `mcp.signals/signal_preferences`, mount `signals.website`.
-        - Operation `action`, response envelope `action`.
-        - Flags: none.
-      tags:
-        - signal_preferences
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MarkSignalsSeenRequest"
-      responses:
-        "200":
-          description: "`action` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MarkSignalsSeenResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: mark_signals_seen
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: signal_preferences
-      x-gs-operation: action
-      x-gs-envelope: action
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
   /api/signal-settings:
     get:
       operationId: get_signal_settings
@@ -279,7 +159,7 @@ paths:
         The team's signal settings, one row per team: website_link_codes (the master switch for the code in every link the send paths emit), profile_views_enabled (whether the premium sender profiles' "Who viewed your profile" lists are read once a day) and profile_views_excluded_sender_profiles (the sender profiles kept out of that). The first read creates the row, so it always answers.
 
         Contract:
-        - MCP tool `get_signal_settings`, registry package `mcp.signals/signal_settings`, mount `signals.website`.
+        - MCP tool `get_signal_settings`, registry package `mcp.signals/signal_settings`, mount `workspace.website-tracking`.
         - Operation `get`, response envelope `get`.
         - Flags: read only.
       tags:
@@ -296,11 +176,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: get_signal_settings
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: signal_settings
       x-gs-operation: get
       x-gs-envelope: get
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -313,7 +194,7 @@ paths:
         Flip the team's switches. website_link_codes false stops coding every link of the team whatever the sites say, true lets a verified site with link_codes_enabled code again (one site's codes: update_website_site). profile_views_enabled false stops reading every sender profile's Who viewed your profile list (a queued run finishes); profile_views_excluded_sender_profiles replaces the excluded set. Nothing changed is 422 nothing_to_update.
 
         Contract:
-        - MCP tool `update_signal_settings`, registry package `mcp.signals/signal_settings`, mount `signals.website`.
+        - MCP tool `update_signal_settings`, registry package `mcp.signals/signal_settings`, mount `workspace.website-tracking`.
         - Operation `update`, response envelope `update`.
         - Flags: none.
       tags:
@@ -336,195 +217,17 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: update_signal_settings
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: signal_settings
       x-gs-operation: update
       x-gs-envelope: update
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: typical
-  /api/website-key-pages:
-    post:
-      operationId: create_website_key_page
-      summary: Create website key page
-      description: |-
-        Name a page whose visits matter: site_sid, a stable slug (key, lowercase, immutable), a label, a path glob (pattern: a path or a pasted URL, * for any run of characters, matching ignores case and a trailing slash) and is_conversion. A match in a session is highlighted in the feed and becomes the fact website_key_page_visited. One page per key per site: a duplicate is 409 duplicate_rejected with the existing sid.
-
-        Contract:
-        - MCP tool `create_website_key_page`, registry package `mcp.signals/website_key_pages`, mount `signals.website`.
-        - Operation `create`, response envelope `create`.
-        - Flags: none.
-      tags:
-        - website_key_pages
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateWebsiteKeyPageRequest"
-      responses:
-        "200":
-          description: "`create` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreateWebsiteKeyPageResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: create_website_key_page
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_key_pages
-      x-gs-operation: create
-      x-gs-envelope: create
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
-  /api/website-key-pages/search:
-    post:
-      operationId: search_website_key_pages
-      summary: Search website key pages
-      description: |-
-        The pages a site's visits are judged by (pricing, demo, signup, contact by default, or the team's own): one row per key page with its slug (key), label and path glob (pattern). site_sid.eq is the usual scope, key.eq finds one by slug, q searches key, label and pattern. The slugs are what search_website_sessions filter.key_page and the signal visited_key_page name. Who visited one is search_website_sessions, not this.
-
-        Contract:
-        - MCP tool `search_website_key_pages`, registry package `mcp.signals/website_key_pages`, mount `signals.website`.
-        - Operation `search`, response envelope `search`.
-        - Flags: read only.
-      tags:
-        - website_key_pages
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SearchWebsiteKeyPagesRequest"
-      responses:
-        "200":
-          description: "`search` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SearchWebsiteKeyPagesResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: search_website_key_pages
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_key_pages
-      x-gs-operation: search
-      x-gs-envelope: search
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
-  /api/website-key-pages/{sid}:
-    patch:
-      operationId: update_website_key_page
-      summary: Update website key page
-      description: |-
-        Change a key page's label, pattern or is_conversion; the key and the site are immutable (delete and create for a new slug). Applies to visits from then on; nothing changed is 422 nothing_to_update.
-
-        Contract:
-        - MCP tool `update_website_key_page`, registry package `mcp.signals/website_key_pages`, mount `signals.website`.
-        - Operation `update`, response envelope `update`.
-        - Flags: none.
-      tags:
-        - website_key_pages
-      parameters:
-        - name: sid
-          in: path
-          required: true
-          description: Website key page sid (sg_kp_...).
-          schema:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^sg_kp_
-            description: Website key page sid (sg_kp_...).
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateWebsiteKeyPageRequest"
-      responses:
-        "200":
-          description: "`update` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UpdateWebsiteKeyPageResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: update_website_key_page
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_key_pages
-      x-gs-operation: update
-      x-gs-envelope: update
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: trivial
-    delete:
-      operationId: delete_website_key_page
-      summary: Delete website key page
-      description: |-
-        Soft-delete a key page; visits from then on no longer match it, and facts already written keep its key. Idempotent (already_deleted on a repeat).
-
-        Contract:
-        - MCP tool `delete_website_key_page`, registry package `mcp.signals/website_key_pages`, mount `signals.website`.
-        - Operation `delete`, response envelope `delete_simple`.
-        - Flags: dangerous: the MCP layer gates it behind a preview/commit token, and the effect cannot be undone through this API.
-      tags:
-        - website_key_pages
-      parameters:
-        - name: sid
-          in: path
-          required: true
-          description: The sg_kp_* sid of the row to delete.
-          schema:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^sg_kp_
-            description: The sg_kp_* sid of the row to delete.
-      responses:
-        "200":
-          description: "`delete_simple` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DeleteWebsiteKeyPageResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: delete_website_key_page
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_key_pages
-      x-gs-operation: delete
-      x-gs-envelope: delete_simple
-      x-gs-availability: ga
-      x-gs-dangerous: true
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: trivial
   /api/website-session-owners/search:
     post:
       operationId: search_website_session_owners
@@ -533,7 +236,7 @@ paths:
         Who visited: the team's website visits folded by owner, one row per person, company or unknown visitor by its latest visit, newest first, with how many visits it holds, how many are fresh and its newest three moments. filter takes every leaf of search_website_sessions; companies alone: company_sid is_null false with person_sid is_null true. Counts count owners; page_size 0 for them. One owner's visits: search_website_sessions by its sid. Private context: never tell the lead we know.
 
         Contract:
-        - MCP tool `search_website_session_owners`, registry package `mcp.signals/website_session_owners`, mount `signals.visits`.
+        - MCP tool `search_website_session_owners`, registry package `mcp.signals/website_session_owners`, mount `signals`.
         - Operation `search`, response envelope `search`.
         - Flags: read only.
       tags:
@@ -556,11 +259,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: search_website_session_owners
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: website_session_owners
       x-gs-operation: search
       x-gs-envelope: search
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -574,7 +278,7 @@ paths:
         The visitor feed: every visit to the team's sites, newest first, as one session: who it belongs to when a rung named someone (person_sid, or company_sid when only a company code or the network did; attribution says which), what was seen (pages with engaged time, key_pages, events: forms and custom events), where it came from (referrer_type, the utm set, landing_code), the browser and the network (network_type business, isp, mobile, hosting, education, government or unknown; network_name, network_domain). Scope with site_sid, started_at (the period) and the sids of a person, a company or a visitor; key_page, form and event take a slug or a name (eq or in), and is_null false = any whatever the name (every session that submitted a form, anonymous ones included), true = none; person_sid is_null false = known people, closed_at is_null true = on the site now, is_internal eq true = the team's own traffic. page_size 0 returns the counts by attribution, network type, referrer type, device and key page. "Who visited pricing this week and has not replied": this with key_page pricing and a started_at window, then search_people or search_conversations by the signals visited_key_page and visited_not_replied. What a session saw is private context: use it to decide when to write and what to offer, never tell the lead we know.
 
         Contract:
-        - MCP tool `search_website_sessions`, registry package `mcp.signals/website_sessions`, mount `signals.visits`.
+        - MCP tool `search_website_sessions`, registry package `mcp.signals/website_sessions`, mount `signals`.
         - Operation `search`, response envelope `search`.
         - Flags: read only.
       tags:
@@ -597,87 +301,26 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: search_website_sessions
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: website_sessions
       x-gs-operation: search
       x-gs-envelope: search
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: complex
-  /api/website-sessions/{sid}:
-    get:
-      operationId: get_website_session
-      summary: Get website session
-      description: |-
-        One session with its page list (path, title, engaged time), its forms and events, and with include the visitor, the person or the company it was bound to. Private context: never repeated to the lead.
-
-        Contract:
-        - MCP tool `get_website_session`, registry package `mcp.signals/website_sessions`, mount `signals.visits`.
-        - Operation `get`, response envelope `get`.
-        - Flags: read only.
-      tags:
-        - website_sessions
-      parameters:
-        - name: sid
-          in: path
-          required: true
-          description: The sg_ws_* sid of the row to read.
-          schema:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^sg_ws_
-            description: The sg_ws_* sid of the row to read.
-        - name: include[]
-          in: query
-          required: false
-          description: Relations to attach to the row; omit for the bare row.
-          style: form
-          explode: true
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - visitor
-                - person
-                - company
-              description: "visitor: the browser's row; person and company: the owner's sid (the cards are owed)."
-            description: Relations to attach to the row; omit for the bare row.
-      responses:
-        "200":
-          description: "`get` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetWebsiteSessionResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: get_website_session
-      x-gs-mcp-mount: signals.visits
-      x-gs-entity: website_sessions
-      x-gs-operation: get
-      x-gs-envelope: get
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: trivial
   /api/website-sites:
     post:
       operationId: create_website_site
       summary: Create website site
       description: |-
-        Register a site for the website lane: a host or a URL (reduced to the bare host), its level (identification), the switches (link codes, the two carriers, consent, fingerprint, anonymize_ip, ignored addresses, the live alert level, the inbound table) and its key pages in the same call: key_pages absent = the default four (pricing, demo, signup, contact), [] = none. Ask the person first: explain the level (companies, the default: links carry the recipient's company code and visits show the company, never a person; people: visits from the people the team writes to are shown by name), and that collecting consent from EU, EEA and UK visitors and saying so in their privacy policy is their own duty. Send confirm_identification true, which is required, only after they confirm. Born pending, no codes until verified. A host the team already registered is 409 duplicate_rejected. Not idempotent.
+        Register a site for the website lane: a host or a URL (reduced to the bare host), its level (identification), the switches (link codes, the two carriers, consent, fingerprint, anonymize_ip, ignored addresses, the live alert level, the inbound table), its key pages and its tracked events in the same call: key_pages absent = the default four (pricing, demo, signup, contact), [] = none; tracked_events absent = none. Ask the person first: explain the level (companies, the default: links carry the recipient's company code and visits show the company, never a person; people: visits from the people the team writes to are shown by name), and that collecting consent from EU, EEA and UK visitors and saying so in their privacy policy is their own duty. Send confirm_identification true, which is required, only after they confirm. Born pending, no codes until verified. A host the team already registered is 409 duplicate_rejected. Not idempotent.
 
         Contract:
-        - MCP tool `create_website_site`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `create_website_site`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `create`, response envelope `create`.
         - Flags: none.
       tags:
@@ -700,11 +343,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: create_website_site
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: create
       x-gs-envelope: create
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -715,10 +359,10 @@ paths:
       operationId: search_website_sites
       summary: Search website sites
       description: |-
-        The team's registered sites and their state: find a site sid (sg_si_) by domain or q, read status (pending = waiting for the script, verified = receiving, broken = stopped receiving, see broken_reason, disabled = switched off), last_hit_at and hits_count_24h to answer "why does acme.com show no visits". page_size 0 returns the counts per status. The loader to install is on get_website_site; the visits themselves are search_website_sessions.
+        The team's registered sites and their state: a site sid (sg_si_) by domain or q; status (pending = waiting for the script, verified = receiving, broken = stopped receiving (broken_reason), disabled = off), last_hit_at and hits_count_24h answer why acme.com shows no visits. Each row carries included.key_pages (the slugs filter.key_page of the visit searches takes) and included.tracked_events. page_size 0 = the counts per status. The loader: get_website_site; the visits: search_website_sessions.
 
         Contract:
-        - MCP tool `search_website_sites`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `search_website_sites`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `search`, response envelope `search`.
         - Flags: read only.
       tags:
@@ -741,11 +385,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: search_website_sites
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: search
       x-gs-envelope: search
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -756,10 +401,10 @@ paths:
       operationId: get_website_site
       summary: Get website site
       description: |-
-        One site with its settings, its last check and, in included.loader, the two script tags to paste into its pages: hand the loader to the user after create_website_site, then verify_website_site.
+        One site with its settings and its last check, and next to the row: included.loader, the two script tags to paste into its pages (hand them to the user after create_website_site, then verify_website_site); included.key_pages, the pages whose visits matter, with the slugs the visit searches filter by; included.tracked_events, the custom events that become facts. The two lists are changed with update_website_site.
 
         Contract:
-        - MCP tool `get_website_site`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `get_website_site`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `get`, response envelope `get`.
         - Flags: read only.
       tags:
@@ -787,24 +432,25 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: get_website_site
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: get
       x-gs-envelope: get
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
       x-gs-schedule-required: false
-      x-gs-tool-class: trivial
+      x-gs-tool-class: typical
     patch:
       operationId: update_website_site
       summary: Update website site
       description: |-
-        Change a site's settings: identification, include_subdomains, link_codes_enabled (this site only; team-wide: update_signal_settings), carrier_linkedin and carrier_email (fragment or query), consent_mode, fingerprint_mode, anonymize_ip, ignored_ips (replaced whole), live_alerts, live_alert_tasks, live_alert_task_minutes, inbound_playtable_sid; enabled false switches the site off, true brings it back as verified or pending. A switch to people needs confirm_identification true in the same call (else 422 confirmation_required): first tell the person that visits from the people the team writes to will be shown by name and that collecting consent from EU, EEA and UK visitors and saying so in their privacy policy is their own duty, and send it only after they confirm. A switch to companies (visits show the company, never a person) needs none. confirm_identification true alone records a confirmation for the current level. domain and site_key are not editable (rotate_website_site_key mints a key). Nothing changed is 422 nothing_to_update.
+        Change a site's settings: identification, include_subdomains, link_codes_enabled (this site only; team-wide: update_signal_settings), carrier_linkedin and carrier_email (fragment or query), consent_mode, fingerprint_mode, anonymize_ip, ignored_ips (replaced whole), live_alerts, live_alert_tasks, live_alert_task_minutes, inbound_playtable_sid; or its two lists, key_pages (the pages whose visits matter: slug, label, path glob) and tracked_events (the custom event names that become facts), each replaced whole by the list sent, a kept key or name updated in place, so read get_website_site first and send the list back changed; enabled false switches the site off, true brings it back as verified or pending. A switch to people needs confirm_identification true in the same call (else 422 confirmation_required): first tell the person that visits from the people the team writes to will be shown by name and that collecting consent from EU, EEA and UK visitors and saying so in their privacy policy is their own duty, and send it only after they confirm. A switch to companies (visits show the company, never a person) needs none. confirm_identification true alone records a confirmation for the current level. domain and site_key are not editable (rotate_website_site_key mints a key). Nothing changed is 422 nothing_to_update.
 
         Contract:
-        - MCP tool `update_website_site`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `update_website_site`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `update`, response envelope `update`.
         - Flags: none.
       tags:
@@ -838,11 +484,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: update_website_site
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: update
       x-gs-envelope: update
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -855,7 +502,7 @@ paths:
         Soft-delete a site: its key stops naming it at once, its hits are dropped, its key pages and tracked events follow in a job; sessions and visitors stay. Idempotent (already_deleted on a repeat).
 
         Contract:
-        - MCP tool `delete_website_site`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `delete_website_site`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `delete`, response envelope `delete_simple`.
         - Flags: dangerous: the MCP layer gates it behind a preview/commit token, and the effect cannot be undone through this API.
       tags:
@@ -883,11 +530,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: delete_website_site
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: delete
       x-gs-envelope: delete_simple
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: true
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -901,7 +549,7 @@ paths:
         Mint a new site key. The old key stops naming the site at once, so the loader on the site has to be replaced with result.loader, and the site returns to pending until the new loader is seen (a disabled site stays disabled; the hit history stays). For a key that leaked or was lost; every call is another key.
 
         Contract:
-        - MCP tool `rotate_website_site_key`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `rotate_website_site_key`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `action`, response envelope `action`.
         - Flags: dangerous: the MCP layer gates it behind a preview/commit token, and the effect cannot be undone through this API.
       tags:
@@ -929,11 +577,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: rotate_website_site_key
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: action
       x-gs-envelope: action
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: true
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -947,7 +596,7 @@ paths:
         Check a site now: fetch its home page and up to five key page URLs, look for the loader with this site's key, store the result and apply the health rule. Any page carrying the key verifies the site; a key page without it is flagged in last_check_result.pages. A loader installed through a tag manager is not in the page source: such a site is verified by its first hit instead, so loader_missing on a receiving site is not a fault. A disabled site is 409 invalid_transition. Up to a minute.
 
         Contract:
-        - MCP tool `verify_website_site`, registry package `mcp.signals/website_sites`, mount `signals.website`.
+        - MCP tool `verify_website_site`, registry package `mcp.signals/website_sites`, mount `workspace.website-tracking`.
         - Operation `action`, response envelope `action`.
         - Flags: none.
       tags:
@@ -975,195 +624,17 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: verify_website_site
-      x-gs-mcp-mount: signals.website
+      x-gs-mcp-mount: workspace.website-tracking
       x-gs-entity: website_sites
       x-gs-operation: action
       x-gs-envelope: action
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: typical
-  /api/website-tracked-events:
-    post:
-      operationId: create_website_tracked_event
-      summary: Create website tracked event
-      description: |-
-        Register a custom event of a site so that it counts: site_sid, the name the site sends (event, matched without letter case, immutable), a label and is_conversion. From then on a session that sends the name carries the fact website_event. A name the site already tracks is 409 duplicate_rejected with the existing sid. A page visit is a key page (create_website_key_page) and a marked form is a fact by itself: neither needs this.
-
-        Contract:
-        - MCP tool `create_website_tracked_event`, registry package `mcp.signals/website_tracked_events`, mount `signals.website`.
-        - Operation `create`, response envelope `create`.
-        - Flags: none.
-      tags:
-        - website_tracked_events
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateWebsiteTrackedEventRequest"
-      responses:
-        "200":
-          description: "`create` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreateWebsiteTrackedEventResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: create_website_tracked_event
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_tracked_events
-      x-gs-operation: create
-      x-gs-envelope: create
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
-  /api/website-tracked-events/search:
-    post:
-      operationId: search_website_tracked_events
-      summary: Search website tracked events
-      description: |-
-        The custom events a site sends that the team registered by name (gs('event', name) in the site's script): one row per tracked event with its label and is_conversion. Only a registered name becomes the fact website_event and a session filter (search_website_sessions filter.event); every event is still kept on the session's events[] for the feed. site_sid.eq is the usual scope, q searches event and label.
-
-        Contract:
-        - MCP tool `search_website_tracked_events`, registry package `mcp.signals/website_tracked_events`, mount `signals.website`.
-        - Operation `search`, response envelope `search`.
-        - Flags: read only.
-      tags:
-        - website_tracked_events
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SearchWebsiteTrackedEventsRequest"
-      responses:
-        "200":
-          description: "`search` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SearchWebsiteTrackedEventsResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: search_website_tracked_events
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_tracked_events
-      x-gs-operation: search
-      x-gs-envelope: search
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: typical
-  /api/website-tracked-events/{sid}:
-    patch:
-      operationId: update_website_tracked_event
-      summary: Update website tracked event
-      description: |-
-        Change a tracked event's label or is_conversion; the name and the site are immutable (delete and create for a new name). Nothing changed is 422 nothing_to_update.
-
-        Contract:
-        - MCP tool `update_website_tracked_event`, registry package `mcp.signals/website_tracked_events`, mount `signals.website`.
-        - Operation `update`, response envelope `update`.
-        - Flags: none.
-      tags:
-        - website_tracked_events
-      parameters:
-        - name: sid
-          in: path
-          required: true
-          description: Website tracked event sid (sg_te_...).
-          schema:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^sg_te_
-            description: Website tracked event sid (sg_te_...).
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateWebsiteTrackedEventRequest"
-      responses:
-        "200":
-          description: "`update` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UpdateWebsiteTrackedEventResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: update_website_tracked_event
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_tracked_events
-      x-gs-operation: update
-      x-gs-envelope: update
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: trivial
-    delete:
-      operationId: delete_website_tracked_event
-      summary: Delete website tracked event
-      description: |-
-        Soft-delete a tracked event; the name stops becoming a fact from then on, and facts already written keep it. Idempotent (already_deleted on a repeat).
-
-        Contract:
-        - MCP tool `delete_website_tracked_event`, registry package `mcp.signals/website_tracked_events`, mount `signals.website`.
-        - Operation `delete`, response envelope `delete_simple`.
-        - Flags: dangerous: the MCP layer gates it behind a preview/commit token, and the effect cannot be undone through this API.
-      tags:
-        - website_tracked_events
-      parameters:
-        - name: sid
-          in: path
-          required: true
-          description: The sg_te_* sid of the row to delete.
-          schema:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^sg_te_
-            description: The sg_te_* sid of the row to delete.
-      responses:
-        "200":
-          description: "`delete_simple` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DeleteWebsiteTrackedEventResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: delete_website_tracked_event
-      x-gs-mcp-mount: signals.website
-      x-gs-entity: website_tracked_events
-      x-gs-operation: delete
-      x-gs-envelope: delete_simple
-      x-gs-availability: ga
-      x-gs-dangerous: true
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: trivial
   /api/website-visitors/identify:
     post:
       operationId: identify_website_visitor_by_email
@@ -1172,7 +643,7 @@ paths:
         Name the person behind a browser from the customer's own backend, after a login or a signup: the site, the first-party visitor id the page holds (_gs_vid), the email, and a form name when a form was submitted (it becomes the fact website_form_submitted of the open session). The person is found by email in the team's tables; nobody matched leaves the email on the row as identified_email; an address on the team's own site marks the visit internal; a visitor bound by a code or by hand keeps its person. On a site set to companies it names nobody: no bind, no identified_email, no fact, only the internal rule; the form still joins the session's events. A visitor id the collector has not seen yet is 422 relation_not_found: retry in a few seconds. For an agent in the app, identify_website_visitor is the tool.
 
         Contract:
-        - MCP tool `identify_website_visitor_by_email`, registry package `mcp.signals/website_visitors`, mount `signals.visits`.
+        - REST only: no MCP tool serves this route (registry package `mcp.signals/website_visitors`, surface api).
         - Operation `action`, response envelope `action`.
         - Flags: none.
       tags:
@@ -1195,11 +666,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: identify_website_visitor_by_email
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: website_visitors
       x-gs-operation: action
       x-gs-envelope: action
       x-gs-availability: ga
+      x-gs-surface: api
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -1213,7 +685,7 @@ paths:
         The browsers that visited the team's sites, one row per browser per site: the person it is bound to (person_sid, bound_by: code, identify, fingerprint or manual), the email an identify or a form gave when nobody matched (identified_email: the "Add to table" rows), how often it came (sessions_count), when (first_seen_at, last_seen_at), and what the newest session told about the browser, the place and the network. identified_email is_null false with person_sid is_null true = emails nobody has yet; person_sid eq = one person's browsers ("the same person on two devices"); is_ephemeral eq false hides the one-day strangers. q searches the email and the network name. page_size 0 returns the counts by bound_by and network type. The visits themselves are search_website_sessions; people by a signal are search_people. Private context: never tell the lead we know.
 
         Contract:
-        - MCP tool `search_website_visitors`, registry package `mcp.signals/website_visitors`, mount `signals.visits`.
+        - MCP tool `search_website_visitors`, registry package `mcp.signals/website_visitors`, mount `signals`.
         - Operation `search`, response envelope `search`.
         - Flags: read only.
       tags:
@@ -1236,77 +708,17 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: search_website_visitors
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: website_visitors
       x-gs-operation: search
       x-gs-envelope: search
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: complex
-  /api/website-visitors/{sid}:
-    get:
-      operationId: get_website_visitor
-      summary: Get website visitor
-      description: |-
-        One visitor row, with include the person it is bound to and its newest session (last_session). Private context: never repeated to the lead.
-
-        Contract:
-        - MCP tool `get_website_visitor`, registry package `mcp.signals/website_visitors`, mount `signals.visits`.
-        - Operation `get`, response envelope `get`.
-        - Flags: read only.
-      tags:
-        - website_visitors
-      parameters:
-        - name: sid
-          in: path
-          required: true
-          description: The sg_wv_* sid of the row to read.
-          schema:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^sg_wv_
-            description: The sg_wv_* sid of the row to read.
-        - name: include[]
-          in: query
-          required: false
-          description: Relations to attach to the row; omit for the bare row.
-          style: form
-          explode: true
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - person
-                - last_session
-              description: "person: the bound person's sid (the card is owed); last_session: the visitor's newest session, one ranked read per page."
-            description: Relations to attach to the row; omit for the bare row.
-      responses:
-        "200":
-          description: "`get` success envelope."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetWebsiteVisitorResponse"
-        4XX:
-          $ref: "#/components/responses/McpClientError"
-        5XX:
-          $ref: "#/components/responses/McpServerError"
-      x-gs-mcp-tool: get_website_visitor
-      x-gs-mcp-mount: signals.visits
-      x-gs-entity: website_visitors
-      x-gs-operation: get
-      x-gs-envelope: get
-      x-gs-availability: ga
-      x-gs-dangerous: false
-      x-gs-mass-action: false
-      x-gs-step-eligible: false
-      x-gs-schedule-required: false
-      x-gs-tool-class: trivial
   /api/website-visitors/{sid}/identify:
     post:
       operationId: identify_website_visitor
@@ -1315,7 +727,7 @@ paths:
         Bind a visitor to a person of the team by hand ("the visitor from Acme's network yesterday is John"): person_sid, a live playtables person (cr_pp_), else 422 relation_not_found. It overrides any automatic bind; the visitor's open session and its sessions of the last 30 days nobody owned go to the person, their facts written by a queued job. On a site set to companies it is 409 invalid_transition (companies_level). The same person again changes nothing. Undo with unlink_website_visitor.
 
         Contract:
-        - MCP tool `identify_website_visitor`, registry package `mcp.signals/website_visitors`, mount `signals.visits`.
+        - MCP tool `identify_website_visitor`, registry package `mcp.signals/website_visitors`, mount `signals`.
         - Operation `action`, response envelope `action`.
         - Flags: none.
       tags:
@@ -1349,11 +761,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: identify_website_visitor
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: website_visitors
       x-gs-operation: action
       x-gs-envelope: action
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: false
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -1367,7 +780,7 @@ paths:
         Clear a visitor's bind: person_sid, bound_by, bound_at and identified_email. Sessions already attributed keep their person and the facts written stay. Already unbound answers was_bound false.
 
         Contract:
-        - MCP tool `unlink_website_visitor`, registry package `mcp.signals/website_visitors`, mount `signals.visits`.
+        - MCP tool `unlink_website_visitor`, registry package `mcp.signals/website_visitors`, mount `signals`.
         - Operation `action`, response envelope `action`.
         - Flags: dangerous: the MCP layer gates it behind a preview/commit token, and the effect cannot be undone through this API.
       tags:
@@ -1395,11 +808,12 @@ paths:
         5XX:
           $ref: "#/components/responses/McpServerError"
       x-gs-mcp-tool: unlink_website_visitor
-      x-gs-mcp-mount: signals.visits
+      x-gs-mcp-mount: signals
       x-gs-entity: website_visitors
       x-gs-operation: action
       x-gs-envelope: action
       x-gs-availability: ga
+      x-gs-surface: both
       x-gs-dangerous: true
       x-gs-mass-action: false
       x-gs-step-eligible: false
@@ -1431,179 +845,6 @@ components:
           schema:
             $ref: "#/components/schemas/McpError"
   schemas:
-    CreateWebsiteKeyPageRequest:
-      type: object
-      description: Request body of `create_website_key_page`.
-      properties:
-        site_sid:
-          type: string
-          minLength: 18
-          maxLength: 18
-          pattern: ^sg_si_
-          description: Website site sid (sg_si_...), the page's site.
-        key:
-          type: string
-          maxLength: 64
-          pattern: ^[a-z0-9][a-z0-9_-]*$
-          description: "A stable lowercase slug, unique within the site, immutable: the name facts, the key_page filter and the signal visited_key_page carry."
-        label:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: What the page is called in the feed (Pricing).
-        pattern:
-          type: string
-          maxLength: 2048
-          description: "A path glob or a pasted URL (reduced to its path): * stands for any run of characters, matching ignores case and a trailing slash (/plans*). No path readable is 422 invalid_pattern."
-        is_conversion:
-          type: boolean
-          description: "Count a visit as a conversion. Default false: visiting /signup is not a signup."
-      required:
-        - site_sid
-        - key
-        - label
-        - pattern
-    CreateWebsiteKeyPageResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - create
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Website key page sid (sg_kp_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            site_sid:
-              type: string
-              description: The site the page belongs to (sg_si_...).
-            key:
-              type: string
-              description: The stable lowercase slug (pricing) facts and signals carry; immutable.
-            label:
-              type: string
-              description: What the page is called in the feed.
-            pattern:
-              type: string
-              description: "The path glob as stored: a leading slash, lowercased, no query or fragment, * for any run of characters (/pricing*)."
-            is_conversion:
-              type: boolean
-              description: Counted as a conversion in the feed and the Overview card.
-            created_by:
-              type: object
-              properties:
-                actor_type:
-                  type: string
-                  enum:
-                    - user
-                    - support
-                    - api_key
-                    - system
-                    - agent
-                actor_sid:
-                  type: string
-                  nullable: true
-                team_sid:
-                  type: string
-                actor_name:
-                  type: string
-                  nullable: true
-                  description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
-                oauth_client_sid:
-                  type: string
-                  nullable: true
-                  description: The acting OAuth client (id_oc_*); null off the OAuth path.
-                reason:
-                  type: string
-                  nullable: true
-                  description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
-                permissions:
-                  type: object
-                  additionalProperties: {}
-                  description: "Internal audit context: the grant set the actor held at write time. Not a contract."
-                cluster_id:
-                  type: integer
-                  nullable: true
-                  description: "Internal audit context: the cluster that served the write."
-                trace_id:
-                  type: string
-                  nullable: true
-                  description: "Internal audit context: the trace id of the request that wrote the row."
-              required:
-                - actor_type
-                - actor_sid
-                - team_sid
-                - permissions
-              description: Actor that named the page (the site create, or this entity's create).
-            created_at:
-              type: string
-              description: ISO 8601 UTC.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-            deleted_at:
-              type: string
-              nullable: true
-              description: ISO 8601 UTC; null = live. Also set by the site's cleanup job.
-          required:
-            - sid
-            - team_sid
-            - site_sid
-            - key
-            - label
-            - pattern
-            - is_conversion
-            - created_by
-            - created_at
-            - updated_at
-            - deleted_at
-        already_exists:
-          type: boolean
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - already_exists
-        - meta
     CreateWebsiteSiteRequest:
       type: object
       description: Request body of `create_website_site`.
@@ -1696,7 +937,7 @@ components:
                 type: string
                 maxLength: 64
                 pattern: ^[a-z0-9][a-z0-9_-]*$
-                description: "A stable lowercase slug (pricing), unique within the site, immutable: the name facts and signals carry."
+                description: "A stable lowercase slug (pricing), unique within the site: the name facts, the key_page filter and the signal visited_key_page carry. A key the site already has keeps its row (and sid); a new one is created."
               label:
                 type: string
                 minLength: 1
@@ -1715,6 +956,30 @@ components:
               - pattern
           maxItems: 20
           description: The pages whose visits matter, created with the site in one transaction. Absent or null = the default four (pricing, demo, signup, contact, none a conversion); [] = none. At most 20.
+        tracked_events:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              event:
+                type: string
+                maxLength: 64
+                pattern: ^[A-Za-z0-9][A-Za-z0-9 _.:-]*$
+                description: "The name the site's script sends with gs('event', name) (trial_started): letters, digits, space, _ . : -; matched without letter case. A name the site already tracks keeps its row; a new one is created."
+              label:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: What the event is called in the feed (Trial started).
+              is_conversion:
+                type: boolean
+                description: Count it as a conversion. Default false.
+            required:
+              - event
+              - label
+          maxItems: 50
+          description: The custom events of the site's script that count as facts, created with the site in one transaction. Absent, null or [] = none (a site registers no event by default). At most 50.
       required:
         - domain
         - confirm_identification
@@ -2092,291 +1357,7 @@ components:
         - item
         - already_exists
         - meta
-    CreateWebsiteTrackedEventRequest:
-      type: object
-      description: Request body of `create_website_tracked_event`.
-      properties:
-        site_sid:
-          type: string
-          minLength: 18
-          maxLength: 18
-          pattern: ^sg_si_
-          description: Website site sid (sg_si_...), the event's site.
-        event:
-          type: string
-          maxLength: 64
-          pattern: ^[A-Za-z0-9][A-Za-z0-9 _.:-]*$
-          description: "The name the site's script sends (trial_started), 1..64 characters of letters, digits, space, _ . : -; matched without letter case; immutable."
-        label:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: What the event is called in the feed (Trial started).
-        is_conversion:
-          type: boolean
-          description: Count it as a conversion. Default false.
-      required:
-        - site_sid
-        - event
-        - label
-    CreateWebsiteTrackedEventResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - create
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Website tracked event sid (sg_te_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            site_sid:
-              type: string
-              description: The site the event belongs to (sg_si_...).
-            event:
-              type: string
-              description: The name the site sends, stored as entered, matched without letter case; immutable (a fact's key carries it).
-            label:
-              type: string
-              description: What the event is called in the feed.
-            is_conversion:
-              type: boolean
-              description: Counted as a conversion in the feed and the Overview card.
-            created_by:
-              type: object
-              properties:
-                actor_type:
-                  type: string
-                  enum:
-                    - user
-                    - support
-                    - api_key
-                    - system
-                    - agent
-                actor_sid:
-                  type: string
-                  nullable: true
-                team_sid:
-                  type: string
-                actor_name:
-                  type: string
-                  nullable: true
-                  description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
-                oauth_client_sid:
-                  type: string
-                  nullable: true
-                  description: The acting OAuth client (id_oc_*); null off the OAuth path.
-                reason:
-                  type: string
-                  nullable: true
-                  description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
-                permissions:
-                  type: object
-                  additionalProperties: {}
-                  description: "Internal audit context: the grant set the actor held at write time. Not a contract."
-                cluster_id:
-                  type: integer
-                  nullable: true
-                  description: "Internal audit context: the cluster that served the write."
-                trace_id:
-                  type: string
-                  nullable: true
-                  description: "Internal audit context: the trace id of the request that wrote the row."
-              required:
-                - actor_type
-                - actor_sid
-                - team_sid
-                - permissions
-              description: Actor that registered the event.
-            created_at:
-              type: string
-              description: ISO 8601 UTC.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-            deleted_at:
-              type: string
-              nullable: true
-              description: ISO 8601 UTC; null = live. Also set by the site's cleanup job.
-          required:
-            - sid
-            - team_sid
-            - site_sid
-            - event
-            - label
-            - is_conversion
-            - created_by
-            - created_at
-            - updated_at
-            - deleted_at
-        already_exists:
-          type: boolean
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - already_exists
-        - meta
-    DeleteWebsiteKeyPageResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - delete
-        item:
-          type: object
-          additionalProperties: {}
-        already_deleted:
-          type: boolean
-        soft_deleted:
-          type: boolean
-        retained:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - already_deleted
-        - soft_deleted
-        - retained
-        - meta
     DeleteWebsiteSiteResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - delete
-        item:
-          type: object
-          additionalProperties: {}
-        already_deleted:
-          type: boolean
-        soft_deleted:
-          type: boolean
-        retained:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - already_deleted
-        - soft_deleted
-        - retained
-        - meta
-    DeleteWebsiteTrackedEventResponse:
       type: object
       properties:
         success:
@@ -2594,182 +1575,6 @@ components:
         - included
         - includes
         - meta
-    GetSignalPreferencesResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - get
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Signal preference sid (sg_up_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            user_sid:
-              type: string
-              description: "The member the row belongs to: the caller's actor sid (an agent acting for a member is the member; an api key has a row of its own). Exactly one row per team and user."
-            hidden_types:
-              type: array
-              items:
-                type: string
-              description: Signal types (SignalFeedType) the feed leaves out, as a set in the page's order. Default ["email_bounced"]. Hiding is opt-out, so a type added to the list later shows at once. The shown types are every SignalFeedType not in this list.
-            notify_types:
-              type: array
-              items:
-                type: string
-              description: "Signal types the user is told about (the badge on the Signals menu entry counts the ones that are also shown, and each raises a toast while the user works elsewhere), as a set in the page's order. Default: website_key_page_visited, website_form_submitted, linkedin_connection_request_accepted, linkedin_message_replied, linkedin_inmail_replied, linkedin_invitation_received, email_replied. Opt-in, so a type added later tells nobody until chosen."
-            sender_profile_scope:
-              type: string
-              enum:
-                - all
-                - mine
-                - chosen
-              description: "Whose sender profiles the feed's sender profile filter starts on: all (default, no sender profile filter), mine (the user's own sender profiles) or chosen (sender_profile_sids). A default of the filter and nothing more."
-            sender_profile_sids:
-              type: array
-              items:
-                type: string
-              description: "The chosen sender profiles (unibox sender profile sids, ub_sp_...), at most 200, read when sender_profile_scope is chosen (chosen with [] is every sender profile: no sender profile filter) and kept when it moves off it, so moving back restores the picks. [] by default."
-            toast_enabled:
-              type: boolean
-              description: Whether a notify type raises a toast. Default true.
-            seen_at:
-              type: string
-              description: "ISO 8601 UTC, whole seconds: up to when the user has seen the feed. A fact is new when it reached the ledger after this (created_at > seen_at in search_activities). Born a day before the row, so a first visit shows the last day as new; moved forward by mark_signals_seen only, never back."
-            saved_views:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: 10 base62 characters, minted by the server for an item sent without one and kept across writes.
-                  name:
-                    type: string
-                    description: 1..60 characters.
-                  view:
-                    type: string
-                    enum:
-                      - needs_me
-                      - all
-                      - posts
-                      - moments
-                      - website
-                      - linkedin
-                      - email
-                    description: "all | website | linkedin | email: the view the saved view opens on."
-                  filter:
-                    type: object
-                    properties:
-                      object_type:
-                        type: string
-                        nullable: true
-                        enum:
-                          - person
-                          - company
-                        description: "person | company: the All / People / Companies switch; null = both."
-                      playtable_sid:
-                        type: string
-                        nullable: true
-                        description: The table (pt_tb_...); null = every table.
-                      sender_profile_sids:
-                        type: array
-                        items:
-                          type: string
-                        description: The sender profiles (unibox sender profile sids, ub_sp_...); [] = not filtered.
-                      types:
-                        type: array
-                        items:
-                          type: string
-                        description: "The quick filter: signal types (SignalFeedType) in the page's order; [] = every shown type of the view."
-                      q:
-                        type: string
-                        nullable: true
-                        description: The name search, up to 128 characters; null = none.
-                    required:
-                      - object_type
-                      - playtable_sid
-                      - sender_profile_sids
-                      - types
-                      - q
-                required:
-                  - id
-                  - name
-                  - view
-                  - filter
-              description: The saved views of the page, at most 20, ids unique within the list. [] by default.
-            created_at:
-              type: string
-              description: ISO 8601 UTC, the first call.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-          required:
-            - sid
-            - team_sid
-            - user_sid
-            - hidden_types
-            - notify_types
-            - sender_profile_scope
-            - sender_profile_sids
-            - toast_enabled
-            - seen_at
-            - saved_views
-            - created_at
-            - updated_at
-        included:
-          type: object
-          additionalProperties: {}
-        includes:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - included
-        - includes
-        - meta
     GetSignalSettingsResponse:
       type: object
       properties:
@@ -2818,382 +1623,6 @@ components:
         included:
           type: object
           additionalProperties: {}
-        includes:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - included
-        - includes
-        - meta
-    GetWebsiteSessionResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - get
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Website session sid (sg_ws_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            site_sid:
-              type: string
-              description: The registered site (sg_si_...).
-            visitor_sid:
-              type: string
-              description: The browser behind the visit (sg_wv_...); a person may own several.
-            person_sid:
-              type: string
-              nullable: true
-              description: The person a rung named (cr_pp_..., playtables); null while nobody did. A person always takes a session over from a company.
-            company_sid:
-              type: string
-              nullable: true
-              description: The company a company code in our link or the network named when no person did (cr_co_..., playtables); cleared when a person takes the session over.
-            attribution:
-              type: string
-              enum:
-                - code
-                - identified
-                - fingerprint
-                - manual
-                - company_code
-                - company_network
-                - none
-              description: "Which rung named the owner: code (the person code in our link), identified (an identify or a form), fingerprint (the device), manual (a bind by hand), company_code (the company code in our link: the company, never a person; every code on a site set to companies), company_network (the network, a company); none while nothing did."
-            fingerprint_sid:
-              type: string
-              nullable: true
-              description: The device the fingerprint base saw the session from (sg_fp_...); null when none was stored.
-            started_at:
-              type: string
-              description: ISO 8601 UTC, the receipt time of the first hit. The feed's order, newest first.
-            last_seen_at:
-              type: string
-              description: ISO 8601 UTC, the receipt time of the newest hit; the row grows until the close.
-            closed_at:
-              type: string
-              nullable: true
-              description: ISO 8601 UTC, set by the sweep 30 minutes after last_seen_at; null = the visitor may still be on the site.
-            pageviews_count:
-              type: integer
-              minimum: 0
-              description: Every page view, beyond the cap of pages too.
-            engaged_seconds:
-              type: integer
-              minimum: 0
-              description: The sum over page views of the largest engaged time each reported.
-            entry_path:
-              type: string
-              description: The path of the first page view, with its query.
-            exit_path:
-              type: string
-              description: The path of the last page view.
-            pages:
-              type: array
-              items:
-                type: object
-                properties:
-                  page_id:
-                    type: string
-                    description: The page view's id from the wire (12 characters).
-                  path:
-                    type: string
-                    description: The page's path with its query, the code in our link removed by the script.
-                  title:
-                    type: string
-                    nullable: true
-                    description: The document title; null when none.
-                  engaged_seconds:
-                    type: integer
-                    minimum: 0
-                    description: The largest engaged time a ping of this page view reported, in whole seconds.
-                  first_seen_at:
-                    type: string
-                    description: ISO 8601 UTC, the receipt time of the pageview hit.
-                  scroll_pct:
-                    type: integer
-                    nullable: true
-                    minimum: 0
-                    maximum: 100
-                    description: The deepest scroll a ping of this page view reported, 0 to 100; null until one did (and on visits folded before 2026-10-07).
-                required:
-                  - page_id
-                  - path
-                  - title
-                  - engaged_seconds
-                  - first_seen_at
-                  - scroll_pct
-              description: The first 50 page views, in order, each with its engaged time.
-            events:
-              type: array
-              items:
-                type: object
-                properties:
-                  kind:
-                    type: string
-                    enum:
-                      - event
-                      - form
-                    description: "event: a custom event the site sent; form: a form it reported (a marked form's submit, or a form a server-side identify named)."
-                  name:
-                    type: string
-                    description: The event's name or the form's name as the site sent it. A form's email never rides here.
-                  at:
-                    type: string
-                    description: ISO 8601 UTC, the receipt time of the hit.
-                  page_id:
-                    type: string
-                    description: The page view the hit belonged to.
-                required:
-                  - kind
-                  - name
-                  - at
-                  - page_id
-              description: The first 50 custom events and forms, in order; every event the site sent, registered or not.
-            key_pages:
-              type: array
-              items:
-                type: string
-              description: "The keys (slugs) of the site's key pages reached, in the order first reached: what the key_page filter matches and the signal visited_key_page reads."
-            referrer_type:
-              type: string
-              enum:
-                - direct
-                - internal
-                - search
-                - social
-                - email
-                - ads
-                - referral
-                - ai_assistant
-                - unknown
-              description: "Where the visit came from, decided on the first page view: direct, internal (another page of the site), search, social, email, ads (a click id or a paid utm_medium), referral, ai_assistant (ChatGPT, Perplexity, Claude and the like), unknown."
-            referrer_host:
-              type: string
-              nullable: true
-              description: The referrer's host, lowercased, no www.; null when absent or unreadable.
-            utm_source:
-              type: string
-              nullable: true
-            utm_medium:
-              type: string
-              nullable: true
-            utm_campaign:
-              type: string
-              nullable: true
-            utm_content:
-              type: string
-              nullable: true
-            utm_term:
-              type: string
-              nullable: true
-            landing_code:
-              type: string
-              nullable: true
-              description: The first code a hit of the session carried (the person code or the company code in the link we sent); null when none.
-            browser:
-              type: string
-              nullable: true
-              description: The parser's name (Chrome, Safari, Firefox...); null when unknown.
-            browser_version:
-              type: string
-              nullable: true
-            os:
-              type: string
-              nullable: true
-              description: Windows, macOS, iOS, Android, Linux...; null when unknown.
-            os_version:
-              type: string
-              nullable: true
-            device:
-              type: string
-              enum:
-                - desktop
-                - mobile
-                - tablet
-                - unknown
-              description: desktop | mobile | tablet | unknown.
-            screen:
-              type: string
-              nullable: true
-              description: "{width}x{height} of the screen; null when the first page view did not report it."
-            language:
-              type: string
-              nullable: true
-              description: The browser's first language; null when not reported.
-            timezone:
-              type: string
-              nullable: true
-              description: The browser's IANA zone; null when not reported.
-            geo_country:
-              type: string
-              nullable: true
-              description: ISO 3166-1 alpha-2 from the edge's location header; null when the edge gave none.
-            geo_region:
-              type: string
-              nullable: true
-            geo_city:
-              type: string
-              nullable: true
-            ip:
-              type: string
-              description: The client address of the first hit (IPv4 or IPv6); its network part only once the network answer is stored on a site with anonymize_ip.
-            network_status:
-              type: string
-              enum:
-                - pending
-                - resolved
-                - failed
-                - private
-              description: pending until the data service answered for the address; resolved with the network columns filled; failed (no answer after the asks); private (an address nobody is asked about).
-            network_type:
-              type: string
-              nullable: true
-              description: "The data service's classification of the block: business, isp, mobile, hosting, education, government or unknown; null until resolved."
-            network_name:
-              type: string
-              nullable: true
-              description: The organization the block is registered to, else the registry's name of the block ("Deutsche Telekom", "Hetzner"); null until resolved.
-            network_domain:
-              type: string
-              nullable: true
-              description: The company domain the data service derived for a business network; null when none.
-            asn:
-              type: integer
-              nullable: true
-              description: The origin AS; null until resolved.
-            as_name:
-              type: string
-              nullable: true
-              description: The AS holder; null until resolved.
-            is_internal:
-              type: boolean
-              description: "A hit came from one of the site's ignored_ips, or an identified email of the team's own domains: the team's own traffic, never a fact, never a signal."
-            created_at:
-              type: string
-              description: ISO 8601 UTC.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-          required:
-            - sid
-            - team_sid
-            - site_sid
-            - visitor_sid
-            - person_sid
-            - company_sid
-            - attribution
-            - fingerprint_sid
-            - started_at
-            - last_seen_at
-            - closed_at
-            - pageviews_count
-            - engaged_seconds
-            - entry_path
-            - exit_path
-            - pages
-            - events
-            - key_pages
-            - referrer_type
-            - referrer_host
-            - utm_source
-            - utm_medium
-            - utm_campaign
-            - utm_content
-            - utm_term
-            - landing_code
-            - browser
-            - browser_version
-            - os
-            - os_version
-            - device
-            - screen
-            - language
-            - timezone
-            - geo_country
-            - geo_region
-            - geo_city
-            - ip
-            - network_status
-            - network_type
-            - network_name
-            - network_domain
-            - asn
-            - as_name
-            - is_internal
-            - created_at
-            - updated_at
-        included:
-          type: object
-          properties:
-            visitor:
-              type: object
-              properties:
-                sid:
-                  type: string
-              required:
-                - sid
-              description: The browser behind the visit, the WebsiteVisitorDomain verbatim (bound person, identified email, sessions_count, the latest attributes; // see ./website_visitors.md).
-            person:
-              type: object
-              properties:
-                sid:
-                  type: string
-              required:
-                - sid
-              description: "The person a rung named: { sid } today (cr_pp_...), the compact card is owed. Absent while person_sid is null."
-            company:
-              type: object
-              properties:
-                sid:
-                  type: string
-              required:
-                - sid
-              description: "The company a company code or the network named when nobody else did: { sid } today (cr_co_...). Absent while company_sid is null."
         includes:
           type: array
           items:
@@ -3586,226 +2015,68 @@ components:
               required:
                 - html
                 - script_url
-              description: "The loader of this site, always present on get: what the user pastes into the pages."
-        includes:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
+              description: "The loader of this site, always present on get, never on search: what the user pastes into the pages."
+            key_pages:
+              type: array
+              items:
+                type: object
+                properties:
+                  sid:
+                    type: string
+                    description: "Website key page sid (sg_kp_...): what last_check_result.pages[].key_page_sid names."
+                  key:
+                    type: string
+                    description: The stable lowercase slug (pricing) facts, the key_page filter and the signal visited_key_page carry.
+                  label:
+                    type: string
+                    description: What the page is called in the feed.
+                  pattern:
+                    type: string
+                    description: "The path glob as stored: a leading slash, lowercased, no query or fragment, * for any run of characters (/pricing*)."
+                  is_conversion:
+                    type: boolean
+                    description: Counted as a conversion in the feed and the Overview card.
+                  created_at:
+                    type: string
+                    description: ISO 8601 UTC.
+                required:
+                  - sid
+                  - key
+                  - label
+                  - pattern
+                  - is_conversion
+                  - created_at
+              description: "The site's key pages in the order entered (the default four unless create_website_site said otherwise; [] when none): the pages whose visits are highlighted and become facts. Replaced whole by update_website_site key_pages."
+            tracked_events:
+              type: array
+              items:
+                type: object
+                properties:
+                  sid:
+                    type: string
+                    description: Website tracked event sid (sg_te_...).
+                  event:
+                    type: string
+                    description: The name the site's script sends, stored as entered, matched without letter case.
+                  label:
+                    type: string
+                    description: What the event is called in the feed.
+                  is_conversion:
+                    type: boolean
+                    description: Counted as a conversion in the feed and the Overview card.
+                  created_at:
+                    type: string
+                    description: ISO 8601 UTC.
+                required:
+                  - sid
+                  - event
+                  - label
+                  - is_conversion
+                  - created_at
+              description: "The site's tracked events in the order entered ([] when none): the custom event names that become the fact website_event. Replaced whole by update_website_site tracked_events."
           required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - included
-        - includes
-        - meta
-    GetWebsiteVisitorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - get
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Website visitor sid (sg_wv_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            site_sid:
-              type: string
-              description: "The site the browser visited (sg_si_...): the same browser on two sites is two rows."
-            visitor_id:
-              type: string
-              description: The first-party visitor id the script stores (_gs_vid, a lowercase UUID v4), or eph_ plus 40 hex characters for a hit that carried none.
-            is_ephemeral:
-              type: boolean
-              description: "The row belongs to a day, not to a browser (consent not given, storage blocked): a stranger the next day, never bound."
-            person_sid:
-              type: string
-              nullable: true
-              description: The person the visitor is bound to (cr_pp_..., playtables); null while unbound.
-            identified_email:
-              type: string
-              nullable: true
-              description: 'The email an identify or a form gave when no person matched: the "Add to table" rows of the feed. Null otherwise.'
-            bound_by:
-              type: string
-              nullable: true
-              enum:
-                - code
-                - identify
-                - fingerprint
-                - manual
-              description: "Which rung bound the visitor: code (the person code in our link), identify (an email a person matched), fingerprint (the device), manual (a bind by hand). Null while unbound."
-            bound_at:
-              type: string
-              nullable: true
-              description: ISO 8601 UTC, when the bind was written; null while unbound.
-            first_seen_at:
-              type: string
-              description: ISO 8601 UTC, the receipt time of the first hit.
-            last_seen_at:
-              type: string
-              description: ISO 8601 UTC, the receipt time of the newest hit.
-            sessions_count:
-              type: integer
-              minimum: 0
-              description: "Sessions opened for this visitor: the returning visitors."
-            browser:
-              type: string
-              nullable: true
-              description: From the newest session; null when unknown.
-            browser_version:
-              type: string
-              nullable: true
-            os:
-              type: string
-              nullable: true
-            os_version:
-              type: string
-              nullable: true
-            device:
-              type: string
-              enum:
-                - desktop
-                - mobile
-                - tablet
-                - unknown
-              description: desktop | mobile | tablet | unknown, from the newest session.
-            screen:
-              type: string
-              nullable: true
-            language:
-              type: string
-              nullable: true
-            timezone:
-              type: string
-              nullable: true
-            geo_country:
-              type: string
-              nullable: true
-              description: ISO 3166-1 alpha-2 of the newest session; null when the edge gave none.
-            geo_region:
-              type: string
-              nullable: true
-            geo_city:
-              type: string
-              nullable: true
-            network_type:
-              type: string
-              nullable: true
-              description: "The newest resolved session's classification: business, isp, mobile, hosting, education, government or unknown; null until one resolved."
-            network_name:
-              type: string
-              nullable: true
-              description: The organization behind the newest resolved session's address; null until one resolved.
-            network_domain:
-              type: string
-              nullable: true
-              description: The company domain the data service derived; null when none.
-            asn:
-              type: integer
-              nullable: true
-            as_name:
-              type: string
-              nullable: true
-            is_internal:
-              type: boolean
-              description: The newest session was internal (the site's ignored_ips, or an identified email of the team's own domains).
-            created_at:
-              type: string
-              description: ISO 8601 UTC.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-          required:
-            - sid
-            - team_sid
-            - site_sid
-            - visitor_id
-            - is_ephemeral
-            - person_sid
-            - identified_email
-            - bound_by
-            - bound_at
-            - first_seen_at
-            - last_seen_at
-            - sessions_count
-            - browser
-            - browser_version
-            - os
-            - os_version
-            - device
-            - screen
-            - language
-            - timezone
-            - geo_country
-            - geo_region
-            - geo_city
-            - network_type
-            - network_name
-            - network_domain
-            - asn
-            - as_name
-            - is_internal
-            - created_at
-            - updated_at
-        included:
-          type: object
-          properties:
-            person:
-              type: object
-              properties:
-                sid:
-                  type: string
-              required:
-                - sid
-              description: "The bound person: { sid } today (cr_pp_...), the compact card is owed. Absent while person_sid is null."
-            last_session:
-              type: object
-              properties:
-                sid:
-                  type: string
-              required:
-                - sid
-              description: The visitor's newest session, the WebsiteSessionDomain verbatim (pages, key pages, events, the source, the network; // see ./website_sessions.md). Absent for a visitor with no session.
+            - key_pages
+            - tracked_events
         includes:
           type: array
           items:
@@ -4285,199 +2556,6 @@ components:
           required:
             - bound
             - person_sid
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - action
-        - item
-        - result
-        - meta
-    MarkSignalsSeenRequest:
-      type: object
-      description: Request body of `mark_signals_seen`.
-      properties:
-        seen_at:
-          type: string
-          nullable: true
-          description: "ISO 8601 (an offset is read): the instant the feed was read. Absent or null = now. Cut to the second, capped at now plus one minute, and never moves seen_at back."
-    MarkSignalsSeenResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - action
-        action:
-          type: string
-          description: kebab-case verb; matches the route segment.
-        item:
-          type: object
-          nullable: true
-          properties:
-            sid:
-              type: string
-              description: Signal preference sid (sg_up_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            user_sid:
-              type: string
-              description: "The member the row belongs to: the caller's actor sid (an agent acting for a member is the member; an api key has a row of its own). Exactly one row per team and user."
-            hidden_types:
-              type: array
-              items:
-                type: string
-              description: Signal types (SignalFeedType) the feed leaves out, as a set in the page's order. Default ["email_bounced"]. Hiding is opt-out, so a type added to the list later shows at once. The shown types are every SignalFeedType not in this list.
-            notify_types:
-              type: array
-              items:
-                type: string
-              description: "Signal types the user is told about (the badge on the Signals menu entry counts the ones that are also shown, and each raises a toast while the user works elsewhere), as a set in the page's order. Default: website_key_page_visited, website_form_submitted, linkedin_connection_request_accepted, linkedin_message_replied, linkedin_inmail_replied, linkedin_invitation_received, email_replied. Opt-in, so a type added later tells nobody until chosen."
-            sender_profile_scope:
-              type: string
-              enum:
-                - all
-                - mine
-                - chosen
-              description: "Whose sender profiles the feed's sender profile filter starts on: all (default, no sender profile filter), mine (the user's own sender profiles) or chosen (sender_profile_sids). A default of the filter and nothing more."
-            sender_profile_sids:
-              type: array
-              items:
-                type: string
-              description: "The chosen sender profiles (unibox sender profile sids, ub_sp_...), at most 200, read when sender_profile_scope is chosen (chosen with [] is every sender profile: no sender profile filter) and kept when it moves off it, so moving back restores the picks. [] by default."
-            toast_enabled:
-              type: boolean
-              description: Whether a notify type raises a toast. Default true.
-            seen_at:
-              type: string
-              description: "ISO 8601 UTC, whole seconds: up to when the user has seen the feed. A fact is new when it reached the ledger after this (created_at > seen_at in search_activities). Born a day before the row, so a first visit shows the last day as new; moved forward by mark_signals_seen only, never back."
-            saved_views:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: 10 base62 characters, minted by the server for an item sent without one and kept across writes.
-                  name:
-                    type: string
-                    description: 1..60 characters.
-                  view:
-                    type: string
-                    enum:
-                      - needs_me
-                      - all
-                      - posts
-                      - moments
-                      - website
-                      - linkedin
-                      - email
-                    description: "all | website | linkedin | email: the view the saved view opens on."
-                  filter:
-                    type: object
-                    properties:
-                      object_type:
-                        type: string
-                        nullable: true
-                        enum:
-                          - person
-                          - company
-                        description: "person | company: the All / People / Companies switch; null = both."
-                      playtable_sid:
-                        type: string
-                        nullable: true
-                        description: The table (pt_tb_...); null = every table.
-                      sender_profile_sids:
-                        type: array
-                        items:
-                          type: string
-                        description: The sender profiles (unibox sender profile sids, ub_sp_...); [] = not filtered.
-                      types:
-                        type: array
-                        items:
-                          type: string
-                        description: "The quick filter: signal types (SignalFeedType) in the page's order; [] = every shown type of the view."
-                      q:
-                        type: string
-                        nullable: true
-                        description: The name search, up to 128 characters; null = none.
-                    required:
-                      - object_type
-                      - playtable_sid
-                      - sender_profile_sids
-                      - types
-                      - q
-                required:
-                  - id
-                  - name
-                  - view
-                  - filter
-              description: The saved views of the page, at most 20, ids unique within the list. [] by default.
-            created_at:
-              type: string
-              description: ISO 8601 UTC, the first call.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-          required:
-            - sid
-            - team_sid
-            - user_sid
-            - hidden_types
-            - notify_types
-            - sender_profile_scope
-            - sender_profile_sids
-            - toast_enabled
-            - seen_at
-            - saved_views
-            - created_at
-            - updated_at
-        result:
-          type: object
-          properties:
-            previous_seen_at:
-              type: string
-              description: "ISO 8601 UTC: seen_at before the call."
-            moved:
-              type: boolean
-              description: Whether seen_at moved forward (false for an instant at or before the stored one).
-          required:
-            - previous_seen_at
-            - moved
         meta:
           type: object
           properties:
@@ -5383,302 +3461,6 @@ components:
         - applied_filters
         - includes
         - meta
-    SearchWebsiteKeyPagesRequest:
-      type: object
-      description: Request body of `search_website_key_pages`.
-      properties:
-        filter:
-          type: object
-          properties:
-            q:
-              type: string
-              maxLength: 128
-              description: Free text over key, label and pattern (a LIKE).
-            sid:
-              type: object
-              properties:
-                eq:
-                  type: string
-                  minLength: 18
-                  maxLength: 18
-                  pattern: ^sg_kp_
-                  description: Website key page sid (sg_kp_...).
-                in:
-                  type: array
-                  items:
-                    type: string
-                    minLength: 18
-                    maxLength: 18
-                    pattern: ^sg_kp_
-                    description: Website key page sid (sg_kp_...).
-              additionalProperties: false
-              description: "Key page sid(s), sg_kp_ prefix: also the point lookup (there is no get tool)."
-            site_sid:
-              type: object
-              properties:
-                eq:
-                  type: string
-                  minLength: 18
-                  maxLength: 18
-                  pattern: ^sg_si_
-                  description: Website site sid (sg_si_...), the page's site.
-                in:
-                  type: array
-                  items:
-                    type: string
-                    minLength: 18
-                    maxLength: 18
-                    pattern: ^sg_si_
-                    description: Website site sid (sg_si_...), the page's site.
-              additionalProperties: false
-              description: "The usual scope: one site's pages."
-            key:
-              type: object
-              properties:
-                eq:
-                  type: string
-                in:
-                  type: array
-                  items:
-                    type: string
-              additionalProperties: false
-              description: "The slug(s): key.eq pricing finds the page a session's key_pages name."
-            is_conversion:
-              type: object
-              properties:
-                eq:
-                  type: boolean
-              additionalProperties: false
-              description: The conversion pages only.
-            created_at:
-              type: object
-              properties:
-                gte:
-                  type: string
-                lte:
-                  type: string
-                gt:
-                  type: string
-                lt:
-                  type: string
-              additionalProperties: false
-              description: ISO 8601 range; combine bounds in one object.
-            deleted_at:
-              type: object
-              properties:
-                gte:
-                  type: string
-                lte:
-                  type: string
-                is_null:
-                  type: boolean
-              additionalProperties: false
-              description: "Default scope is { is_null: true } (live rows); stating it at all lifts the soft-delete scope."
-          description: "Field filters, ANDed: {field: {eq | ne | in | nin | gte | lte | gt | lt | is_null}}; q inside it is free text. Omit for every row."
-        sort:
-          type: object
-          properties:
-            field:
-              type: string
-              enum:
-                - created_at
-                - key
-              description: The column to order by.
-            direction:
-              type: string
-              enum:
-                - asc
-                - desc
-              description: asc or desc; default desc.
-          required:
-            - field
-          description: One column and its direction; omit for the default order.
-        page_size:
-          type: integer
-          minimum: 0
-          maximum: 500
-          description: 0..500, default 50; 0 = counts only, 1 = the first row.
-        cursor:
-          type: string
-          nullable: true
-          description: pagination.next_cursor of the previous page.
-    SearchWebsiteKeyPagesResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - search
-        items:
-          type: array
-          items:
-            type: object
-            properties:
-              item:
-                type: object
-                properties:
-                  sid:
-                    type: string
-                    description: Website key page sid (sg_kp_...).
-                  team_sid:
-                    type: string
-                    description: "Owning team (ts_tm_..., external: gs.service.id)."
-                  site_sid:
-                    type: string
-                    description: The site the page belongs to (sg_si_...).
-                  key:
-                    type: string
-                    description: The stable lowercase slug (pricing) facts and signals carry; immutable.
-                  label:
-                    type: string
-                    description: What the page is called in the feed.
-                  pattern:
-                    type: string
-                    description: "The path glob as stored: a leading slash, lowercased, no query or fragment, * for any run of characters (/pricing*)."
-                  is_conversion:
-                    type: boolean
-                    description: Counted as a conversion in the feed and the Overview card.
-                  created_by:
-                    type: object
-                    properties:
-                      actor_type:
-                        type: string
-                        enum:
-                          - user
-                          - support
-                          - api_key
-                          - system
-                          - agent
-                      actor_sid:
-                        type: string
-                        nullable: true
-                      team_sid:
-                        type: string
-                      actor_name:
-                        type: string
-                        nullable: true
-                        description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
-                      oauth_client_sid:
-                        type: string
-                        nullable: true
-                        description: The acting OAuth client (id_oc_*); null off the OAuth path.
-                      reason:
-                        type: string
-                        nullable: true
-                        description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
-                      permissions:
-                        type: object
-                        additionalProperties: {}
-                        description: "Internal audit context: the grant set the actor held at write time. Not a contract."
-                      cluster_id:
-                        type: integer
-                        nullable: true
-                        description: "Internal audit context: the cluster that served the write."
-                      trace_id:
-                        type: string
-                        nullable: true
-                        description: "Internal audit context: the trace id of the request that wrote the row."
-                    required:
-                      - actor_type
-                      - actor_sid
-                      - team_sid
-                      - permissions
-                    description: Actor that named the page (the site create, or this entity's create).
-                  created_at:
-                    type: string
-                    description: ISO 8601 UTC.
-                  updated_at:
-                    type: string
-                    description: ISO 8601 UTC.
-                  deleted_at:
-                    type: string
-                    nullable: true
-                    description: ISO 8601 UTC; null = live. Also set by the site's cleanup job.
-                required:
-                  - sid
-                  - team_sid
-                  - site_sid
-                  - key
-                  - label
-                  - pattern
-                  - is_conversion
-                  - created_by
-                  - created_at
-                  - updated_at
-                  - deleted_at
-              included:
-                type: object
-                additionalProperties: {}
-            required:
-              - item
-              - included
-        pagination:
-          type: object
-          properties:
-            next_cursor:
-              type: string
-              nullable: true
-            has_more:
-              type: boolean
-            total_count:
-              type: integer
-              nullable: true
-          required:
-            - next_cursor
-            - has_more
-            - total_count
-        applied_filters:
-          type: object
-          additionalProperties: {}
-        includes:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-        counts:
-          type: object
-          additionalProperties: {}
-      required:
-        - success
-        - operation
-        - items
-        - pagination
-        - applied_filters
-        - includes
-        - meta
     SearchWebsiteSessionOwnersRequest:
       type: object
       description: Request body of `search_website_session_owners`.
@@ -5925,7 +3707,7 @@ components:
                 is_null:
                   type: boolean
               additionalProperties: false
-              description: "A key page slug (pricing): the sessions that reached it; is_null false = reached any key page, is_null true = none. The slugs are search_website_key_pages' keys."
+              description: "A key page slug (pricing): the sessions that reached it; is_null false = reached any key page, is_null true = none. The slugs are the keys of included.key_pages on get_website_site or search_website_sites."
             form:
               type: object
               properties:
@@ -6051,7 +3833,7 @@ components:
                 lt:
                   type: string
               additionalProperties: false
-              description: "ISO 8601 bounds on when the session was opened here: \"new since I looked\" is created_at gt the member's seen_at (get_signal_preferences). \"When\" stays started_at."
+              description: 'ISO 8601 bounds on when the session was opened here: "new since I looked" is created_at gt the moment the member last looked at the Signals page. "When" stays started_at.'
           description: "Field filters, ANDed: {field: {eq | ne | in | nin | gte | lte | gt | lt | is_null}}; q inside it is free text. Omit for every row."
         include:
           type: array
@@ -6314,7 +4096,7 @@ components:
                 is_null:
                   type: boolean
               additionalProperties: false
-              description: "A key page slug (pricing): the sessions that reached it; is_null false = reached any key page, is_null true = none. The slugs are search_website_key_pages' keys."
+              description: "A key page slug (pricing): the sessions that reached it; is_null false = reached any key page, is_null true = none. The slugs are the keys of included.key_pages on get_website_site or search_website_sites."
             form:
               type: object
               properties:
@@ -6440,7 +4222,7 @@ components:
                 lt:
                   type: string
               additionalProperties: false
-              description: "ISO 8601 bounds on when the session was opened here: \"new since I looked\" is created_at gt the member's seen_at (get_signal_preferences). \"When\" stays started_at."
+              description: 'ISO 8601 bounds on when the session was opened here: "new since I looked" is created_at gt the moment the member last looked at the Signals page. "When" stays started_at.'
           description: 'A second filter with the same leaves that marks visits inside `filter` (a visit is fresh when both keep it): "new since I looked" is created_at {gt: seen_at}. No leaf marks nothing.'
         fresh_owners:
           type: string
@@ -7179,7 +4961,7 @@ components:
                 is_null:
                   type: boolean
               additionalProperties: false
-              description: "A key page slug (pricing): the sessions that reached it; is_null false = reached any key page, is_null true = none. The slugs are search_website_key_pages' keys."
+              description: "A key page slug (pricing): the sessions that reached it; is_null false = reached any key page, is_null true = none. The slugs are the keys of included.key_pages on get_website_site or search_website_sites."
             form:
               type: object
               properties:
@@ -7305,7 +5087,7 @@ components:
                 lt:
                   type: string
               additionalProperties: false
-              description: "ISO 8601 bounds on when the session was opened here: \"new since I looked\" is created_at gt the member's seen_at (get_signal_preferences). \"When\" stays started_at."
+              description: 'ISO 8601 bounds on when the session was opened here: "new since I looked" is created_at gt the moment the member last looked at the Signals page. "When" stays started_at.'
           description: "Field filters, ANDed: {field: {eq | ne | in | nin | gte | lte | gt | lt | is_null}}; q inside it is free text. Omit for every row."
         include:
           type: array
@@ -8317,7 +6099,68 @@ components:
                   - deleted_at
               included:
                 type: object
-                additionalProperties: {}
+                properties:
+                  key_pages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sid:
+                          type: string
+                          description: "Website key page sid (sg_kp_...): what last_check_result.pages[].key_page_sid names."
+                        key:
+                          type: string
+                          description: The stable lowercase slug (pricing) facts, the key_page filter and the signal visited_key_page carry.
+                        label:
+                          type: string
+                          description: What the page is called in the feed.
+                        pattern:
+                          type: string
+                          description: "The path glob as stored: a leading slash, lowercased, no query or fragment, * for any run of characters (/pricing*)."
+                        is_conversion:
+                          type: boolean
+                          description: Counted as a conversion in the feed and the Overview card.
+                        created_at:
+                          type: string
+                          description: ISO 8601 UTC.
+                      required:
+                        - sid
+                        - key
+                        - label
+                        - pattern
+                        - is_conversion
+                        - created_at
+                    description: "The site's key pages in the order entered (the default four unless create_website_site said otherwise; [] when none): the pages whose visits are highlighted and become facts. Replaced whole by update_website_site key_pages."
+                  tracked_events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sid:
+                          type: string
+                          description: Website tracked event sid (sg_te_...).
+                        event:
+                          type: string
+                          description: The name the site's script sends, stored as entered, matched without letter case.
+                        label:
+                          type: string
+                          description: What the event is called in the feed.
+                        is_conversion:
+                          type: boolean
+                          description: Counted as a conversion in the feed and the Overview card.
+                        created_at:
+                          type: string
+                          description: ISO 8601 UTC.
+                      required:
+                        - sid
+                        - event
+                        - label
+                        - is_conversion
+                        - created_at
+                    description: "The site's tracked events in the order entered ([] when none): the custom event names that become the fact website_event. Replaced whole by update_website_site tracked_events."
+                required:
+                  - key_pages
+                  - tracked_events
             required:
               - item
               - included
@@ -8395,298 +6238,6 @@ components:
           required:
             - total_count
             - groups
-      required:
-        - success
-        - operation
-        - items
-        - pagination
-        - applied_filters
-        - includes
-        - meta
-    SearchWebsiteTrackedEventsRequest:
-      type: object
-      description: Request body of `search_website_tracked_events`.
-      properties:
-        filter:
-          type: object
-          properties:
-            q:
-              type: string
-              maxLength: 128
-              description: Free text over event and label (a LIKE).
-            sid:
-              type: object
-              properties:
-                eq:
-                  type: string
-                  minLength: 18
-                  maxLength: 18
-                  pattern: ^sg_te_
-                  description: Website tracked event sid (sg_te_...).
-                in:
-                  type: array
-                  items:
-                    type: string
-                    minLength: 18
-                    maxLength: 18
-                    pattern: ^sg_te_
-                    description: Website tracked event sid (sg_te_...).
-              additionalProperties: false
-              description: "Tracked event sid(s), sg_te_ prefix: also the point lookup (there is no get tool)."
-            site_sid:
-              type: object
-              properties:
-                eq:
-                  type: string
-                  minLength: 18
-                  maxLength: 18
-                  pattern: ^sg_si_
-                  description: Website site sid (sg_si_...), the event's site.
-                in:
-                  type: array
-                  items:
-                    type: string
-                    minLength: 18
-                    maxLength: 18
-                    pattern: ^sg_si_
-                    description: Website site sid (sg_si_...), the event's site.
-              additionalProperties: false
-              description: "The usual scope: one site's events."
-            event:
-              type: object
-              properties:
-                eq:
-                  type: string
-                in:
-                  type: array
-                  items:
-                    type: string
-              additionalProperties: false
-              description: The name(s) as registered.
-            is_conversion:
-              type: object
-              properties:
-                eq:
-                  type: boolean
-              additionalProperties: false
-              description: The conversion events only.
-            created_at:
-              type: object
-              properties:
-                gte:
-                  type: string
-                lte:
-                  type: string
-                gt:
-                  type: string
-                lt:
-                  type: string
-              additionalProperties: false
-              description: ISO 8601 range; combine bounds in one object.
-            deleted_at:
-              type: object
-              properties:
-                gte:
-                  type: string
-                lte:
-                  type: string
-                is_null:
-                  type: boolean
-              additionalProperties: false
-              description: "Default scope is { is_null: true } (live rows); stating it at all lifts the soft-delete scope."
-          description: "Field filters, ANDed: {field: {eq | ne | in | nin | gte | lte | gt | lt | is_null}}; q inside it is free text. Omit for every row."
-        sort:
-          type: object
-          properties:
-            field:
-              type: string
-              enum:
-                - created_at
-                - event
-              description: The column to order by.
-            direction:
-              type: string
-              enum:
-                - asc
-                - desc
-              description: asc or desc; default desc.
-          required:
-            - field
-          description: One column and its direction; omit for the default order.
-        page_size:
-          type: integer
-          minimum: 0
-          maximum: 500
-          description: 0..500, default 50; 0 = counts only, 1 = the first row.
-        cursor:
-          type: string
-          nullable: true
-          description: pagination.next_cursor of the previous page.
-    SearchWebsiteTrackedEventsResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - search
-        items:
-          type: array
-          items:
-            type: object
-            properties:
-              item:
-                type: object
-                properties:
-                  sid:
-                    type: string
-                    description: Website tracked event sid (sg_te_...).
-                  team_sid:
-                    type: string
-                    description: "Owning team (ts_tm_..., external: gs.service.id)."
-                  site_sid:
-                    type: string
-                    description: The site the event belongs to (sg_si_...).
-                  event:
-                    type: string
-                    description: The name the site sends, stored as entered, matched without letter case; immutable (a fact's key carries it).
-                  label:
-                    type: string
-                    description: What the event is called in the feed.
-                  is_conversion:
-                    type: boolean
-                    description: Counted as a conversion in the feed and the Overview card.
-                  created_by:
-                    type: object
-                    properties:
-                      actor_type:
-                        type: string
-                        enum:
-                          - user
-                          - support
-                          - api_key
-                          - system
-                          - agent
-                      actor_sid:
-                        type: string
-                        nullable: true
-                      team_sid:
-                        type: string
-                      actor_name:
-                        type: string
-                        nullable: true
-                        description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
-                      oauth_client_sid:
-                        type: string
-                        nullable: true
-                        description: The acting OAuth client (id_oc_*); null off the OAuth path.
-                      reason:
-                        type: string
-                        nullable: true
-                        description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
-                      permissions:
-                        type: object
-                        additionalProperties: {}
-                        description: "Internal audit context: the grant set the actor held at write time. Not a contract."
-                      cluster_id:
-                        type: integer
-                        nullable: true
-                        description: "Internal audit context: the cluster that served the write."
-                      trace_id:
-                        type: string
-                        nullable: true
-                        description: "Internal audit context: the trace id of the request that wrote the row."
-                    required:
-                      - actor_type
-                      - actor_sid
-                      - team_sid
-                      - permissions
-                    description: Actor that registered the event.
-                  created_at:
-                    type: string
-                    description: ISO 8601 UTC.
-                  updated_at:
-                    type: string
-                    description: ISO 8601 UTC.
-                  deleted_at:
-                    type: string
-                    nullable: true
-                    description: ISO 8601 UTC; null = live. Also set by the site's cleanup job.
-                required:
-                  - sid
-                  - team_sid
-                  - site_sid
-                  - event
-                  - label
-                  - is_conversion
-                  - created_by
-                  - created_at
-                  - updated_at
-                  - deleted_at
-              included:
-                type: object
-                additionalProperties: {}
-            required:
-              - item
-              - included
-        pagination:
-          type: object
-          properties:
-            next_cursor:
-              type: string
-              nullable: true
-            has_more:
-              type: boolean
-            total_count:
-              type: integer
-              nullable: true
-          required:
-            - next_cursor
-            - has_more
-            - total_count
-        applied_filters:
-          type: object
-          additionalProperties: {}
-        includes:
-          type: array
-          items:
-            type: string
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-        counts:
-          type: object
-          additionalProperties: {}
       required:
         - success
         - operation
@@ -9421,365 +6972,6 @@ components:
         - item
         - result
         - meta
-    UpdateSignalPreferencesRequest:
-      type: object
-      description: Request body of `update_signal_preferences`.
-      properties:
-        hidden_types:
-          type: array
-          items:
-            type: string
-            enum:
-              - website_visited
-              - website_key_page_visited
-              - website_form_submitted
-              - website_event
-              - linkedin_connection_request_accepted
-              - linkedin_message_replied
-              - linkedin_inmail_replied
-              - linkedin_invitation_received
-              - linkedin_followed
-              - linkedin_message_reacted
-              - linkedin_message_deleted
-              - linkedin_profile_viewed_us
-              - linkedin_connection_removed
-              - linkedin_blocked
-              - linkedin_post_published
-              - linkedin_birthday
-              - linkedin_work_anniversary
-              - linkedin_job_changed
-              - email_opened
-              - email_link_clicked
-              - email_replied
-              - email_bounced
-              - email_unsubscribed
-              - email_complained
-            description: "A signal type: a ledger type (the type of search_activities) the Signals page lists, the website's first, then LinkedIn's, then email's."
-          description: The signal types the feed leaves out. Replaces the stored list as a set ([] shows every type); duplicates collapse, stored in the page's order.
-        notify_types:
-          type: array
-          items:
-            type: string
-            enum:
-              - website_visited
-              - website_key_page_visited
-              - website_form_submitted
-              - website_event
-              - linkedin_connection_request_accepted
-              - linkedin_message_replied
-              - linkedin_inmail_replied
-              - linkedin_invitation_received
-              - linkedin_followed
-              - linkedin_message_reacted
-              - linkedin_message_deleted
-              - linkedin_profile_viewed_us
-              - linkedin_connection_removed
-              - linkedin_blocked
-              - linkedin_post_published
-              - linkedin_birthday
-              - linkedin_work_anniversary
-              - linkedin_job_changed
-              - email_opened
-              - email_link_clicked
-              - email_replied
-              - email_bounced
-              - email_unsubscribed
-              - email_complained
-            description: "A signal type: a ledger type (the type of search_activities) the Signals page lists, the website's first, then LinkedIn's, then email's."
-          description: "The signal types the user is told about (the badge and the toast). Replaces the stored list as a set ([] tells nothing): to add or drop one type, read the row and send the whole list."
-        sender_profile_scope:
-          type: string
-          enum:
-            - all
-            - mine
-            - chosen
-          description: "all | mine | chosen: whose sender profiles the feed starts on. Moving off chosen keeps sender_profile_sids."
-        sender_profile_sids:
-          type: array
-          items:
-            type: string
-            minLength: 18
-            maxLength: 18
-            pattern: ^ub_sp_
-          maxItems: 200
-          description: The chosen sender profiles (unibox sender profile sids, ub_sp_..., 18 characters), at most 200; duplicates collapse. Read when sender_profile_scope is chosen, where [] means every sender profile.
-        toast_enabled:
-          type: boolean
-          description: false stops the toasts; the badge still counts.
-        saved_views:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-                pattern: ^[0-9A-Za-z]{10}$
-                description: The id of a stored view to keep it (10 base62 characters, unique within the list); absent = the server mints one.
-              name:
-                type: string
-                minLength: 1
-                maxLength: 60
-                description: 1..60 characters.
-              view:
-                type: string
-                enum:
-                  - needs_me
-                  - all
-                  - posts
-                  - moments
-                  - website
-                  - linkedin
-                  - email
-                description: all | website | linkedin | email.
-              filter:
-                type: object
-                properties:
-                  object_type:
-                    type: string
-                    nullable: true
-                    enum:
-                      - person
-                      - company
-                    description: person | company; null or absent = both.
-                  playtable_sid:
-                    type: string
-                    nullable: true
-                    minLength: 18
-                    maxLength: 18
-                    pattern: ^pt_tb_
-                    description: One table (pt_tb_...); null or absent = every table.
-                  sender_profile_sids:
-                    type: array
-                    items:
-                      type: string
-                      minLength: 18
-                      maxLength: 18
-                      pattern: ^ub_sp_
-                    maxItems: 200
-                    description: At most 200 sender profiles (unibox sender profile sids, ub_sp_...), duplicates collapse; absent or [] = not filtered.
-                  types:
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                        - website_visited
-                        - website_key_page_visited
-                        - website_form_submitted
-                        - website_event
-                        - linkedin_connection_request_accepted
-                        - linkedin_message_replied
-                        - linkedin_inmail_replied
-                        - linkedin_invitation_received
-                        - linkedin_followed
-                        - linkedin_message_reacted
-                        - linkedin_message_deleted
-                        - linkedin_profile_viewed_us
-                        - linkedin_connection_removed
-                        - linkedin_blocked
-                        - linkedin_post_published
-                        - linkedin_birthday
-                        - linkedin_work_anniversary
-                        - linkedin_job_changed
-                        - email_opened
-                        - email_link_clicked
-                        - email_replied
-                        - email_bounced
-                        - email_unsubscribed
-                        - email_complained
-                      description: "A signal type: a ledger type (the type of search_activities) the Signals page lists, the website's first, then LinkedIn's, then email's."
-                    description: Signal types, stored as a set in the page's order; absent or [] = every shown type of the view. Not checked against the view's source.
-                  q:
-                    type: string
-                    nullable: true
-                    maxLength: 128
-                    description: A name search, up to 128 characters.
-                description: The view's filter; absent = not filtered. Answered with every key.
-            required:
-              - name
-              - view
-          maxItems: 20
-          description: The whole list of saved views, at most 20; replaces the stored one ([] clears it). Send the stored views with their ids to keep them.
-    UpdateSignalPreferencesResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - update
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Signal preference sid (sg_up_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            user_sid:
-              type: string
-              description: "The member the row belongs to: the caller's actor sid (an agent acting for a member is the member; an api key has a row of its own). Exactly one row per team and user."
-            hidden_types:
-              type: array
-              items:
-                type: string
-              description: Signal types (SignalFeedType) the feed leaves out, as a set in the page's order. Default ["email_bounced"]. Hiding is opt-out, so a type added to the list later shows at once. The shown types are every SignalFeedType not in this list.
-            notify_types:
-              type: array
-              items:
-                type: string
-              description: "Signal types the user is told about (the badge on the Signals menu entry counts the ones that are also shown, and each raises a toast while the user works elsewhere), as a set in the page's order. Default: website_key_page_visited, website_form_submitted, linkedin_connection_request_accepted, linkedin_message_replied, linkedin_inmail_replied, linkedin_invitation_received, email_replied. Opt-in, so a type added later tells nobody until chosen."
-            sender_profile_scope:
-              type: string
-              enum:
-                - all
-                - mine
-                - chosen
-              description: "Whose sender profiles the feed's sender profile filter starts on: all (default, no sender profile filter), mine (the user's own sender profiles) or chosen (sender_profile_sids). A default of the filter and nothing more."
-            sender_profile_sids:
-              type: array
-              items:
-                type: string
-              description: "The chosen sender profiles (unibox sender profile sids, ub_sp_...), at most 200, read when sender_profile_scope is chosen (chosen with [] is every sender profile: no sender profile filter) and kept when it moves off it, so moving back restores the picks. [] by default."
-            toast_enabled:
-              type: boolean
-              description: Whether a notify type raises a toast. Default true.
-            seen_at:
-              type: string
-              description: "ISO 8601 UTC, whole seconds: up to when the user has seen the feed. A fact is new when it reached the ledger after this (created_at > seen_at in search_activities). Born a day before the row, so a first visit shows the last day as new; moved forward by mark_signals_seen only, never back."
-            saved_views:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: 10 base62 characters, minted by the server for an item sent without one and kept across writes.
-                  name:
-                    type: string
-                    description: 1..60 characters.
-                  view:
-                    type: string
-                    enum:
-                      - needs_me
-                      - all
-                      - posts
-                      - moments
-                      - website
-                      - linkedin
-                      - email
-                    description: "all | website | linkedin | email: the view the saved view opens on."
-                  filter:
-                    type: object
-                    properties:
-                      object_type:
-                        type: string
-                        nullable: true
-                        enum:
-                          - person
-                          - company
-                        description: "person | company: the All / People / Companies switch; null = both."
-                      playtable_sid:
-                        type: string
-                        nullable: true
-                        description: The table (pt_tb_...); null = every table.
-                      sender_profile_sids:
-                        type: array
-                        items:
-                          type: string
-                        description: The sender profiles (unibox sender profile sids, ub_sp_...); [] = not filtered.
-                      types:
-                        type: array
-                        items:
-                          type: string
-                        description: "The quick filter: signal types (SignalFeedType) in the page's order; [] = every shown type of the view."
-                      q:
-                        type: string
-                        nullable: true
-                        description: The name search, up to 128 characters; null = none.
-                    required:
-                      - object_type
-                      - playtable_sid
-                      - sender_profile_sids
-                      - types
-                      - q
-                required:
-                  - id
-                  - name
-                  - view
-                  - filter
-              description: The saved views of the page, at most 20, ids unique within the list. [] by default.
-            created_at:
-              type: string
-              description: ISO 8601 UTC, the first call.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-          required:
-            - sid
-            - team_sid
-            - user_sid
-            - hidden_types
-            - notify_types
-            - sender_profile_scope
-            - sender_profile_sids
-            - toast_enabled
-            - seen_at
-            - saved_views
-            - created_at
-            - updated_at
-        updated_fields:
-          type: array
-          items:
-            type: string
-        previous_values:
-          type: object
-          additionalProperties: {}
-        kept_fields:
-          type: array
-          items:
-            type: string
-          description: The fields this write did not change because the person's own value stands on them (stamped person); read the item for what landed.
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - updated_fields
-        - previous_values
-        - meta
     UpdateSignalSettingsRequest:
       type: object
       description: Request body of `update_signal_settings`.
@@ -9844,174 +7036,6 @@ components:
             - profile_views_excluded_sender_profiles
             - created_at
             - updated_at
-        updated_fields:
-          type: array
-          items:
-            type: string
-        previous_values:
-          type: object
-          additionalProperties: {}
-        kept_fields:
-          type: array
-          items:
-            type: string
-          description: The fields this write did not change because the person's own value stands on them (stamped person); read the item for what landed.
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - updated_fields
-        - previous_values
-        - meta
-    UpdateWebsiteKeyPageRequest:
-      type: object
-      description: Request body of `update_website_key_page`.
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: Replacement label.
-        pattern:
-          type: string
-          maxLength: 2048
-          description: Replacement path glob or URL; applies to visits from then on.
-        is_conversion:
-          type: boolean
-          description: Flag or unflag the page as a conversion.
-    UpdateWebsiteKeyPageResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - update
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Website key page sid (sg_kp_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            site_sid:
-              type: string
-              description: The site the page belongs to (sg_si_...).
-            key:
-              type: string
-              description: The stable lowercase slug (pricing) facts and signals carry; immutable.
-            label:
-              type: string
-              description: What the page is called in the feed.
-            pattern:
-              type: string
-              description: "The path glob as stored: a leading slash, lowercased, no query or fragment, * for any run of characters (/pricing*)."
-            is_conversion:
-              type: boolean
-              description: Counted as a conversion in the feed and the Overview card.
-            created_by:
-              type: object
-              properties:
-                actor_type:
-                  type: string
-                  enum:
-                    - user
-                    - support
-                    - api_key
-                    - system
-                    - agent
-                actor_sid:
-                  type: string
-                  nullable: true
-                team_sid:
-                  type: string
-                actor_name:
-                  type: string
-                  nullable: true
-                  description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
-                oauth_client_sid:
-                  type: string
-                  nullable: true
-                  description: The acting OAuth client (id_oc_*); null off the OAuth path.
-                reason:
-                  type: string
-                  nullable: true
-                  description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
-                permissions:
-                  type: object
-                  additionalProperties: {}
-                  description: "Internal audit context: the grant set the actor held at write time. Not a contract."
-                cluster_id:
-                  type: integer
-                  nullable: true
-                  description: "Internal audit context: the cluster that served the write."
-                trace_id:
-                  type: string
-                  nullable: true
-                  description: "Internal audit context: the trace id of the request that wrote the row."
-              required:
-                - actor_type
-                - actor_sid
-                - team_sid
-                - permissions
-              description: Actor that named the page (the site create, or this entity's create).
-            created_at:
-              type: string
-              description: ISO 8601 UTC.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-            deleted_at:
-              type: string
-              nullable: true
-              description: ISO 8601 UTC; null = live. Also set by the site's cleanup job.
-          required:
-            - sid
-            - team_sid
-            - site_sid
-            - key
-            - label
-            - pattern
-            - is_conversion
-            - created_by
-            - created_at
-            - updated_at
-            - deleted_at
         updated_fields:
           type: array
           items:
@@ -10137,6 +7161,59 @@ components:
           maxLength: 18
           pattern: ^pt_tb_
           description: The table an identified visitor nobody has would be handed to; stored only today. null clears it.
+        key_pages:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                maxLength: 64
+                pattern: ^[a-z0-9][a-z0-9_-]*$
+                description: "A stable lowercase slug (pricing), unique within the site: the name facts, the key_page filter and the signal visited_key_page carry. A key the site already has keeps its row (and sid); a new one is created."
+              label:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: What the page is called in the feed (Pricing).
+              pattern:
+                type: string
+                maxLength: 2048
+                description: "A path glob or a pasted URL (reduced to its path): * stands for any run of characters, matching ignores case and a trailing slash (/pricing*)."
+              is_conversion:
+                type: boolean
+                description: Count it as a conversion in the feed and the Overview card. Default false.
+            required:
+              - key
+              - label
+              - pattern
+          maxItems: 20
+          description: "The site's key pages from then on, replaced whole: a kept key is updated in place, a missing key removed, a new key created. [] = none; absent = untouched; at most 20. Read included.key_pages first and send it back changed."
+        tracked_events:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              event:
+                type: string
+                maxLength: 64
+                pattern: ^[A-Za-z0-9][A-Za-z0-9 _.:-]*$
+                description: "The name the site's script sends with gs('event', name) (trial_started): letters, digits, space, _ . : -; matched without letter case. A name the site already tracks keeps its row; a new one is created."
+              label:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: What the event is called in the feed (Trial started).
+              is_conversion:
+                type: boolean
+                description: Count it as a conversion. Default false.
+            required:
+              - event
+              - label
+          maxItems: 50
+          description: "The site's tracked events from then on, replaced whole: a kept name (letter case ignored) is updated in place, a missing name stops becoming a fact, a new name created. [] = none; absent = untouched; at most 50. Read included.tracked_events first."
         enabled:
           type: boolean
           description: "false switches the site off (status disabled: hits dropped, no codes); true brings it back as verified when it had been verified and was not broken, else as pending. Already in that state changes nothing."
@@ -10472,166 +7549,6 @@ components:
             - live_alert_tasks
             - live_alert_task_minutes
             - inbound_playtable_sid
-            - created_by
-            - created_at
-            - updated_at
-            - deleted_at
-        updated_fields:
-          type: array
-          items:
-            type: string
-        previous_values:
-          type: object
-          additionalProperties: {}
-        kept_fields:
-          type: array
-          items:
-            type: string
-          description: The fields this write did not change because the person's own value stands on them (stamped person); read the item for what landed.
-        meta:
-          type: object
-          properties:
-            trace_id:
-              type: string
-              description: UUID v7; same 128-bit value as the X-Trace-Id header.
-            span_id:
-              type: string
-              pattern: ^[0-9a-f]{16}$
-              description: 16 hex chars, root span of this request.
-            timestamp:
-              type: string
-              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
-            duration_ms:
-              type: integer
-              minimum: 0
-              description: Server-side wall clock.
-            team_sid:
-              type: string
-              nullable: true
-              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
-            actor_type:
-              type: string
-              nullable: true
-              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
-          required:
-            - trace_id
-            - span_id
-            - timestamp
-            - duration_ms
-      required:
-        - success
-        - operation
-        - item
-        - updated_fields
-        - previous_values
-        - meta
-    UpdateWebsiteTrackedEventRequest:
-      type: object
-      description: Request body of `update_website_tracked_event`.
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: Replacement label.
-        is_conversion:
-          type: boolean
-          description: Flag or unflag the event as a conversion.
-    UpdateWebsiteTrackedEventResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        operation:
-          type: string
-          enum:
-            - update
-        item:
-          type: object
-          properties:
-            sid:
-              type: string
-              description: Website tracked event sid (sg_te_...).
-            team_sid:
-              type: string
-              description: "Owning team (ts_tm_..., external: gs.service.id)."
-            site_sid:
-              type: string
-              description: The site the event belongs to (sg_si_...).
-            event:
-              type: string
-              description: The name the site sends, stored as entered, matched without letter case; immutable (a fact's key carries it).
-            label:
-              type: string
-              description: What the event is called in the feed.
-            is_conversion:
-              type: boolean
-              description: Counted as a conversion in the feed and the Overview card.
-            created_by:
-              type: object
-              properties:
-                actor_type:
-                  type: string
-                  enum:
-                    - user
-                    - support
-                    - api_key
-                    - system
-                    - agent
-                actor_sid:
-                  type: string
-                  nullable: true
-                team_sid:
-                  type: string
-                actor_name:
-                  type: string
-                  nullable: true
-                  description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
-                oauth_client_sid:
-                  type: string
-                  nullable: true
-                  description: The acting OAuth client (id_oc_*); null off the OAuth path.
-                reason:
-                  type: string
-                  nullable: true
-                  description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
-                permissions:
-                  type: object
-                  additionalProperties: {}
-                  description: "Internal audit context: the grant set the actor held at write time. Not a contract."
-                cluster_id:
-                  type: integer
-                  nullable: true
-                  description: "Internal audit context: the cluster that served the write."
-                trace_id:
-                  type: string
-                  nullable: true
-                  description: "Internal audit context: the trace id of the request that wrote the row."
-              required:
-                - actor_type
-                - actor_sid
-                - team_sid
-                - permissions
-              description: Actor that registered the event.
-            created_at:
-              type: string
-              description: ISO 8601 UTC.
-            updated_at:
-              type: string
-              description: ISO 8601 UTC.
-            deleted_at:
-              type: string
-              nullable: true
-              description: ISO 8601 UTC; null = live. Also set by the site's cleanup job.
-          required:
-            - sid
-            - team_sid
-            - site_sid
-            - event
-            - label
-            - is_conversion
             - created_by
             - created_at
             - updated_at

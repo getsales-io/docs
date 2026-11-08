@@ -8,7 +8,7 @@ that are not Mintlify's:
   monorepo (`product/mcp/gs.mcp`, `pnpm openapi:public`), then run `./sync-openapi.sh`.
 - Every page follows the monorepo writing rules: no em or en dash, no curly quotes, no LLM
   filler, nothing that implies a LinkedIn affiliation, "sender profile" and never "seat".
-- Every URL is written in full (`https://beta.getsales.io/playtables/v1/api/...`), never as a
+- Every URL is written in full (`https://api2.getsales.io/playtables/v1/api/...`), never as a
   bare path a reader would have to resolve.
 
 Run `mint instructions` for the current Mintlify guidance before changing `docs.json`, the

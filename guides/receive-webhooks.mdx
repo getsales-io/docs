@@ -1,6 +1,6 @@
 ---
 title: "Receive webhooks"
-description: "Register an endpoint, verify signed deliveries, pick the events you receive, and read the delivery log. Includes the retry ladder and the auto-disable rule."
+description: "Register an endpoint, verify signed deliveries, pick the events you receive, filter on the payload, read the delivery log and replay what an outage lost. Includes the retry ladder and the auto-disable rule."
 ---
 
 Webhooks live on the Integrations service and cover events from the whole platform: every producing service (Playtables, Unibox, Signals) delivers through the one subscription you register there.
@@ -8,7 +8,7 @@ Webhooks live on the Integrations service and cover events from the whole platfo
 <Tip>
   **Give this to your AI agent** with your endpoint URL:
 
-  "On GetSales (MCP connector at `https://mcp2.getsales.io/mcp`, or REST at beta.getsales.io with my key): register a webhook for my endpoint URL with the events I name. The event vocabulary is the enum on the create-webhook schema, so read it there rather than looking for a catalog call. Then send the test delivery and show me its status and response code."
+  "On GetSales (MCP connector at `https://mcp2.getsales.io/mcp/public`, or REST at api2.getsales.io with my key): register a webhook for my endpoint URL with the events I name. The event vocabulary is the enum on the create-webhook schema, so read it there rather than looking for a catalog call. Then send the test delivery and show me its status and response code."
 </Tip>
 
 ## 1. Register an endpoint
@@ -24,10 +24,40 @@ Webhooks live on the Integrations service and cover events from the whole platfo
 ```
 
 - `target_url` must be `https://` on a public host, and the same URL cannot be registered twice in one workspace (`409 duplicate_rejected`).
-- `events[]` is an exact list of catalog types, validated one by one; a name outside the catalog is a `422`. There is no wildcard: subscribe to the types you handle, and add new ones when you start handling them. The catalog is in [section 6](#6-the-event-catalog).
-- `filters.account_sid` narrows deliveries to one sending identity (a sender profile's LinkedIn account or mailbox), so an endpoint that serves one sender is not woken by the others.
+- `events[]` is an exact list of catalog types, validated one by one: a name outside the catalog is a `422`. A list means what it says, so a type added to the catalog later does not reach it. `["*"]`, alone, subscribes to every event, later ones included, for a receiver that takes everything; a `*` inside a list is a `422`. The catalog is in [section 6](#6-the-event-catalog).
+- `filters.account_sid` names one sender profile (`ub_sp_...`), and a subscription that sets it receives only that sender profile's events: its own, and the messages, conversations and tasks of its threads. An event of no sender profile (tables, imports, workflows, website visits) never reaches it.
 
 The response returns the webhook's `secret`, a 32-character hex string, exactly once. Store it: every later read answers `null` for it, and it is what you verify signatures with.
+
+### Filter on the payload
+
+`filters.where` is a condition on the delivery itself. An event that does not pass it is skipped, and a skipped event leaves no row in the delivery log. Leaves address the envelope you would receive, so `payload.*` plus `type` and `occurred_at`:
+
+```json POST /integrations/v1/api/webhooks
+{
+  "name": "Email sends only",
+  "target_url": "https://example.com/hooks/getsales-email",
+  "events": ["messages.sent"],
+  "filters": {
+    "where": { "field": "payload.channel", "op": { "eq": "email" } }
+  }
+}
+```
+
+A leaf is `{"field": ..., "op": {...}}`, and `and`, `or` and `not` group leaves. `{"any": {"path": ..., "where": ...}}` looks inside an array of objects, with its leaf fields relative to the element; a list of plain values takes `eq` or `in` directly. The atoms are `eq`, `ne`, `in`, `nin`, `gt`, `gte`, `lt`, `lte`, `is_null`, `contains`, `not_contains`, `contains_any`, `not_contains_any` and `starts_with`; two atoms on one leaf must both hold. A subscription spends at most 20 leaves, nesting stops at 5 levels and a group takes 1 to 20 children. What each payload carries is in the delivery schemas of [create-webhook](/api-reference/integrations/webhooks/create-webhook).
+
+A path the event does not have fails every atom but `is_null`, `ne` and `nin` included. On a subscription to several events that matters: a leaf on `payload.channel` also holds back `tasks.created`, which has no such field. Scope it to the events it is about, which costs two leaves:
+
+```json
+{
+  "or": [
+    { "not": { "field": "type", "op": { "in": ["messages.sent"] } } },
+    { "field": "payload.channel", "op": { "eq": "email" } }
+  ]
+}
+```
+
+`filters.where` and `filters.account_sid` combine with AND. `filters` is a closed object, so any other key is a `422 filter_key_unknown`; a broken condition is a `422 filter_grammar_invalid` that names the node, and more than 20 leaves a `422 filter_leaves_limit_exceeded`. `PATCH /api/webhooks/{sid}` with `"filters": null` or `{}` clears both.
 
 ## 2. Verify deliveries
 
@@ -42,13 +72,14 @@ Every delivery is an HTTPS `POST` with a JSON body and these headers:
 | `X-Webhook-Log-Id` | This delivery's sid in the delivery log |
 | `X-Trace-Id` | The trace id, also present in the body |
 
-The body is a fixed envelope, with the event's own data nested under `payload` (trimmed here):
+The body is a fixed envelope, with a reference to what happened nested under `payload`:
 
 ```json
 {
-  "webhook_log_sid": "in_wl_Q8rT2vW4xY6z",
+  "webhook_log_sid": "wh_lg_Q8rT2vW4xY6z",
   "type": "messages.received",
   "emitted_at": "2026-11-01T09:12:44+00:00",
+  "occurred_at": "2026-11-01T09:12:44+00:00",
   "team_sid": "ts_tm_Hx7kQ3mN2pL4",
   "trace_id": "0198f2ab-7c11-7e32-9a41-d2b64f2a91c3",
   "payload": {
@@ -58,7 +89,7 @@ The body is a fixed envelope, with the event's own data nested under `payload` (
 }
 ```
 
-`payload` is the event's own row, under the field names the REST API uses for that entity: a message for `messages.*`, a conversation for `conversations.*`, the data source with its funnel counts for `data-sources.*`, the workflow record for `workflow-records.*`. The reference page of that entity is the field guide.
+`occurred_at` equals `emitted_at` today and becomes the object's own moment once a producer names it. `payload` is a trimmed reference, never the entity's whole row: the sids of what the event is about, with at most a few of its fields under the names the REST API uses. `messages.received` carries ids only, the message's sid and its conversation's, and never the text: read the message back through the REST API or the MCP server when you need its words. The reference page of the entity is the field guide for what you read back.
 
 The signature is `HMAC-SHA256(secret, "{t}.{raw_body}")` over the raw request body, with the timestamp mixed in to block replays. Verify before parsing, and reject signatures older than about 5 minutes:
 
@@ -117,9 +148,11 @@ Compute the HMAC over the raw bytes you received, before any JSON re-serializati
 
 ## 3. Test before relying on it
 
-`POST /api/webhooks/{sid}/test` sends one signed synthetic envelope, of type `webhooks.test` (or the type you name in `override_event_type`), to your endpoint right now and answers what came back: `http_status`, `duration_ms` and `error_kind` (`none`, `http_error` or `network`). It confirms reachability, signature handling and parsing without waiting for a real event.
+`POST /api/webhooks/{sid}/test` sends one signed synthetic envelope, of type `webhooks.test` (or the type you name in `override_event_type`), to your endpoint right now and answers what came back: `http_status`, `duration_ms` and `error_kind` (`none`, `http_error` or `network`). It confirms reachability, signature handling and parsing without waiting for a real event. An `error_message` says what went wrong (`http_503`, or the connection error). The body of your answer is never read back.
 
-Three things to know about it: it writes no row to the delivery log, moves no failure counter and fires no event; it is allowed on a `failed` webhook (the check before you revive it) and refused on one switched `off` (`409`); and it is throttled to 10 calls a minute per webhook.
+To try a filter without waiting for a real event, add `sample_envelope` with the event you have in mind, for example `{"type": "messages.sent", "payload": {"channel": "email"}}`. The answer's `filter_matched` says whether that event would be delivered. The test send itself stays the synthetic one.
+
+Three things to know about it. It writes no row to the delivery log, moves no failure counter and fires no event. It is allowed on a `failed` webhook (the check before you revive it) and refused on one switched `off` (`409`). It is throttled to 10 calls a minute per caller, together with replay.
 
 ## 4. Retries and auto-disable
 
@@ -128,24 +161,24 @@ A delivery is attempted up to **5 times**, with waits of 1 minute, 5 minutes, 30
 | Response | What happens |
 | --- | --- |
 | `2xx` | Delivered, done |
-| `5xx`, `408`, `429`, network error or timeout | Retried on the ladder above |
+| `3xx` (redirects are not followed), `5xx`, `408`, `429`, network error or timeout | Retried on the ladder above |
 | Any other `4xx` | Terminal, no retry: the request was understood and refused |
 | `410 Gone` | Terminal, and it disables the subscription immediately |
 
-After **20 consecutive failed attempts** across the subscription's deliveries (a delivered event resets the counter), or a single `410 Gone`, the subscription flips to `failed` and stops delivering: its waiting deliveries are cancelled, and the transition emits `webhooks.failed`, so a second webhook can page you when the first one dies.
+After **20 consecutive failed attempts** across the subscription's deliveries (a delivered event resets the counter), or a single `410 Gone`, the subscription flips to `failed` and stops delivering: its waiting deliveries are cancelled, and the transition emits `webhooks.failed`, so a second webhook can page you when the first one dies. An endpoint that subscribes to `webhooks.failed` gets the alert about itself too, one last time, in a single attempt.
 
-Bringing it back is two calls: fix the endpoint, then `PATCH /api/webhooks/{sid}` with `{"status": "on"}`, which resets the counter and re-issues nothing. Then re-arm what the outage lost from the delivery log (next section): a delivery that ended `failed` is retried by hand, a delivery the failure cancelled is not (a cancel is final), so revive quickly. Switching a webhook `off` cancels its pending deliveries too, and `off` to `on` leaves the counter alone.
+Bringing it back is two calls: fix the endpoint, then `PATCH /api/webhooks/{sid}` with `{"status": "on"}`, which resets the counter and re-issues nothing. Then `POST /api/webhooks/{sid}/replay` over the window of the outage puts back on the wire what ended `failed` and what the disable cancelled (next section). An event emitted while the subscription was `failed` or `off` has no row in the log and does not come back. Switching a webhook `off` cancels its pending deliveries too, and `off` to `on` leaves the counter alone.
 
 ## 5. Use the delivery log
 
-The log holds **one row per event per subscription**, not one per attempt: a retry updates that row in place, bumping `retry_count` and overwriting the response code. The row is the delivery, and its history is the counter. A row's `status` is `pending`, `in_progress`, `retrying`, `success`, `failed` or `cancelled`.
+The log holds **one row per event per subscription**, not one per attempt: a retry updates that row in place, bumping `retry_count` and overwriting the response code. The row is the delivery, and its history is the counter: `retry_count` is the attempts that went out, so a delivery that landed on the first try reads `1`. A row's `status` is `pending`, `in_progress`, `retrying`, `success`, `failed` or `cancelled`.
 
-- `POST /api/webhook-logs/search` lists deliveries with status, response code and timing; filter by webhook, sending identity, event type, status or response code, and `include` the webhook.
-- `POST /api/webhook-logs/metrics` aggregates outcomes over a required `period` (`from`, `to`): success and failure rates, p50, p95 and p99 latency, total retries, the last success and the last failure; `group_by` splits them by status, event type, response code, webhook or account. The rates count terminal rows only, so a delivery still on its ladder sits in `counts.groups.status.retrying` instead.
-- `POST /api/webhook-logs/{sid}/retry` re-arms one delivery: status back to `pending`, due now, the original envelope to the original URL, `retry_count` kept (it counts attempts that went out). Refused on an `in_progress` row (`409`: cancel it or wait), on a `cancelled` one (that was a decision) and while the parent webhook is deleted or `off` (`422`).
-- `POST /api/webhook-logs/{sid}/cancel` stops a delivery that has not settled, from `pending`, `retrying` or `in_progress`. On an `in_progress` row the attempt in flight may still land as a success, which wins over the cancel; the answer says so with `in_flight_attempt_pending: true`, so read the row again.
+- `POST /api/webhook-logs/search` lists deliveries with status, response code and timing. Filter by webhook, sending identity, event type, status or response code, and `include` the webhook.
+- `POST /api/webhook-logs/metrics` aggregates outcomes over a required `period` (`from`, `to`): success and failure rates, p50, p95 and p99 latency, total retries, the last success and the last failure. `group_by` splits them by status, event type, response code, webhook or account. The rates count terminal rows only, so a delivery still on its ladder sits in `counts.groups.status.retrying` instead.
+- `POST /api/webhooks/{sid}/replay` re-arms a window of deliveries. `from` is required, `to` defaults to now, `statuses` to `failed` and `cancelled` (`success` re-fires delivered events, when you ask for it) and `event_types` to every type. Rows go back oldest first with `scheduled_at` one second apart, and the delivery tick sends what is due once a minute, so up to a minute's rows arrive together. Each goes out with its stored envelope, to the URL stored on the row (a changed `target_url` is not followed), under the same `webhook_log_sid`, so your dedup holds. A `cancelled` row comes back only when the platform cancelled it, never after a manual cancel, and rows in flight are never touched. `retry_count` stays, so a row that spent its 5 attempts gets one more. The webhook has to be `on` (`409`), the window spans at most 30 days (`422 replay_window_too_wide`) and one call re-arms at most 5,000 rows (`429 limit_exceeded`): past either nothing is re-armed, so narrow the call. It is throttled to 10 calls a minute per caller, together with the test send.
+- `POST /api/webhook-logs/{sid}/cancel` stops a delivery that has not settled, from `pending`, `retrying` or `in_progress`; a settled row is a `409`. On an `in_progress` row the attempt in flight may still land as a success, which wins over the cancel: the answer says so with `in_flight_attempt_pending: true`, so read the row again.
 
-Both `retry` and `cancel` take an optional `expected_status`, a compare-and-set guard: when the row moved since you read it, the call answers `409 invalid_transition` instead of acting on a state you did not see.
+`cancel` takes an optional `expected_status`, a compare-and-set guard: when the row moved since you read it, the call answers `409 invalid_transition` instead of acting on a state you did not see.
 
 ## 6. The event catalog
 
@@ -154,7 +187,7 @@ Both `retry` and `cancel` take an optional `expected_status`, a compare-and-set 
 | Service | Events |
 | --- | --- |
 | Playtables | `data-sources.completed`, `data-sources.failed`, `data-sources.paused`, `data-sources.deleted`, `playtable-runs.finished`, `playtable-runs.cancelled`, `workflows.published`, `workflow-records.entered`, `workflow-records.completed`, `workflow-records.failed`, `workflow-records.exited`, `workflow-records.paused`, `workflow-records.resumed` |
-| Unibox | `messages.sent`, `messages.received`, `messages.bounced`, `conversations.created`, `conversations.state-changed`, `conversations.scenario-changed`, `conversations.signals-changed`, `conversations.merged`, `conversations.person-linked`, `conversations.person-unlinked`, `tasks.created`, `tasks.completed`, `sender-profiles.created`, `sender-profiles.deleted`, `sender-profiles.health-changed`, `agents.mode-changed` |
+| Unibox | `messages.sent`, `messages.received`, `messages.bounced`, `conversations.created` (not for the old threads a mailbox's history import brings in), `conversations.state-changed`, `conversations.scenario-changed`, `conversations.signals-changed`, `conversations.merged`, `conversations.person-linked`, `conversations.person-unlinked`, `tasks.created`, `tasks.completed`, `sender-profiles.created`, `sender-profiles.deleted`, `sender-profiles.health-changed`, `agents.mode-changed` |
 | Signals | `signals.website-visited`, `website-sites.broken`, `website-sites.recovered` |
 | Integrations | `webhooks.failed` |
 

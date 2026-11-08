@@ -5,7 +5,7 @@ description: "The documentation has its own MCP endpoint, plus llms.txt and per-
 
 Two different MCP servers exist, and it helps not to mix them up:
 
-- `https://mcp2.getsales.io/mcp` is the **product**: it calls GetSales on your behalf. See [Connect a client](/mcp/connect).
+- `https://mcp2.getsales.io/mcp/public` is the **product**: it works in your GetSales workspace on your behalf. See [Connect a client](/mcp/connect).
 - `https://docs.getsales.io/mcp` is the **documentation**: it searches and reads these pages. It cannot call the API, needs no API key, and is the right thing to wire into a coding assistant that should answer questions about the platform.
 
 ## Add the docs server
@@ -26,6 +26,6 @@ Or in any client's MCP config:
 
 ## Plain-text access
 
-- `https://docs.getsales.io/llms.txt` indexes the site for AI ingestion; `llms-full.txt` carries the full content.
+- `https://docs.getsales.io/llms.txt` indexes the site for AI ingestion, and `llms-full.txt` carries the full content.
 - Append `.md` to any page URL to get that page as Markdown.
 - The contextual menu on each page copies the page as Markdown or opens it in Claude, ChatGPT or Perplexity.

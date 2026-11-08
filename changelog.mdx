@@ -3,6 +3,122 @@ title: "Changelog"
 description: "What's new in the GetSales platform and this documentation."
 ---
 
+<Update label="2026-11-08" description="The reference keeps what an integration builds on">
+  **What only the app calls left the reference.** The REST reference lists 322 operations, where it
+  listed 411. The ones that left keep serving the GetSales app and are not part of the public contract:
+  in ID and Teams the checkout and billing changes, sessions, OAuth clients and grants, white label
+  administration, notifications, a team's deletion and its transfer. In Unibox the connect flows of
+  LinkedIn accounts and mailboxes, the AI SDR's training and drafting helpers, and what acts on a
+  channel from a message (a reaction, a delete on LinkedIn). In Playtables the metrics, suggest and
+  estimate helpers, a column's and a table's cancel routes, and act and draft on an activity. In
+  Signals a site's key pages and tracked events, which the site's own record carries now, and the
+  signal preferences. In Integrations a single delivery's retry (the replay below takes a window) and
+  the OAuth completion step.
+
+  **New in the reference.** `POST /api/workflows/{sid}/add-people` adds people to a workflow in one
+  call, and a person the workflow already holds stays as they are. `POST /api/people/{sid}/move` moves
+  a person to another table. `POST /api/playtables/{sid}/archive`, `unarchive` and `duplicate`.
+  `POST /api/playtable-fields/estimate-credits` prices a run before it starts, and
+  `POST /api/playtable-runs/cancel` stops runs. The sender profile variables (four operations),
+  `POST /api/agents/fix`, `POST /api/provider-connections/{sid}/crm-metadata` and
+  `POST /api/webhooks/{sid}/replay`.
+</Update>
+
+<Update label="2026-11-08" description="Bulk edits on a table, and the Stop's numbers">
+  **Six bulk edits run.** A `bulk` run of `create_playtable_run` carries out every operation it
+  lists: `add_tags`, `remove_tags` and `replace_tags` (`params.tag_sids`), `set_field_value`
+  (`params.playtable_field_sid` and `params.value`, null clears), `add_to_workflow`
+  (`params.workflow_sid`, `params.restart`) and `cancel_from_workflows` (`params.workflow_sids`,
+  or every workflow), beside `delete_objects` and `move_to_playtable`. They answered
+  `501 not_implemented` before. Each operation checks its parameters when the run is created and
+  answers `422` with the field named, so a run that cannot do its work never starts.
+
+  **The Stop shows its numbers first.** Over MCP the first call of `cancel_playtable_runs` stops
+  nothing: it runs the dry run itself and carries the counts in `preview_result` beside the
+  `commit_token`. A REST caller still sends `dry_run: true` to read them.
+
+  **A tool the public address leaves out says so.** On `https://mcp2.getsales.io/mcp/public`,
+  `describe_tool` and `call_tool` with the name of a tool that acts on a channel answer that it is
+  not on this address and is done in the GetSales app.
+</Update>
+
+<Update label="2026-11-07" description="The app's address">
+  The app moved to `https://app.getsales.io`. Pages on `https://beta.getsales.io` redirect there and you
+  sign in once more. Links, webhooks and API calls that name the old address keep working, and the REST
+  base URL `https://api2.getsales.io/{service}/v1` did not change.
+</Update>
+
+<Update label="2026-11-08" description="Twenty tool groups and the public MCP address">
+  **One group per entity.** The MCP server's tools are regrouped into twenty groups named by what
+  they belong to: `playtables.tables`, `playtables.columns`, `playtables.rows`, `playtables.crm`,
+  `playtables.sources`, `playtables.workflows`, `playtables.workflow-records`, `inbox`,
+  `sender-profiles`, `sender-accounts`, `ai-sdr.agents`, `ai-sdr.training`, `signals`,
+  `workspace.team`, `workspace.access`, `workspace.billing`, `workspace.website-tracking`,
+  `workspace.integrations`, `workspace.webhooks` and `workspace.whitelabel`. A group's URL repeats
+  its id (`https://mcp2.getsales.io/mcp/inbox`, `https://mcp2.getsales.io/mcp/ai-sdr/training`),
+  `search_tools` takes the id as `toolset`, and `list_toolsets` answers the map. The
+  [MCP overview](/mcp/overview) lists the groups with what each is for.
+
+  **The public address.** `https://mcp2.getsales.io/mcp/public` is the URL to connect: four
+  meta-tools over the groups, without the tools that send, set up a sender profile's accounts or
+  read LinkedIn itself. [Connect a client](/mcp/connect) uses it in every example. The groups' own
+  URLs and the full facade at `https://mcp2.getsales.io/mcp` serve the tools of each group.
+</Update>
+
+<Update label="2026-11-08" description="Two app features left the reference">
+  **Share is an app feature.** Publishing a chart with Share, and the public page behind it, stay
+  in the GetSales app. `POST /api/result-pages/search` and `DELETE /api/result-pages/{sid}` left
+  this reference and the MCP server.
+
+  **A column form helper too.** `POST /api/playtable-fields/estimate-backfill` left the reference
+  as well: it only feeds the confirm in the app's column form, and a created formula column
+  carries the same number.
+</Update>
+
+<Update label="2026-11-08" description="A file a message carried can be fetched on demand">
+  **Bring an old file in.** A file GetSales does not hold (a message from before the sender
+  profile connected, a message of your own team sent from the channel's app, or a fetch that gave
+  up) can be asked for: `POST /api/messages/{sid}/fetch-attachment` with the file's `index` puts it
+  back on its way, one call per file, one browser action of the sender profile's budget on
+  LinkedIn. The row comes back with the file `pending`. It lands minutes later and
+  `messages.attachments-changed` says so. A voice message is transcribed once it lands. A stored
+  file, a GIF, a file past the cap or one the channel refuses answer `attachment_not_fetchable`.
+</Update>
+
+<Update label="2026-11-08" description="Sender variables: one text for a pool of senders">
+  **Write a text once.** A workflow step's text and a play's message read the sender profile they
+  go out as: `{{sender.first_name}}`, `{{sender.last_name}}`, `{{sender.full_name}}`,
+  `{{sender.label}}` and every variable your team keeps, `{{sender.<slug>}}`.
+
+  **Team variables.** `POST /api/sender-profile-variables` adds a name for the workspace, and
+  `PATCH /api/sender-profiles/{sid}` takes each sender profile's `variables`, merged by slug.
+  `POST /api/sender-profiles/variable-usage` says which workflows and plays use one.
+</Update>
+
+<Update label="2026-11-08" description="Webhooks filter on the payload and replay an outage">
+  **Filter on the payload.** `filters.where` delivers only the events that pass a condition on
+  the payload, and `["*"]` subscribes to every event of the catalog, later ones included.
+  The [webhooks guide](/guides/receive-webhooks) has the grammar and the limits.
+
+  **Replay.** `POST /api/webhooks/{sid}/replay` puts the failed and platform-cancelled deliveries
+  of a window back on the wire.
+
+  **Reads.** `delivery_stats` gives a webhook's 24-hour count and last outcome, `include webhook`
+  attaches a delivery's subscription, the search sorts by the failure columns and filters on
+  `filters.account_sid`, and every delivery carries `occurred_at`. A test send can dry-run a filter
+  on a `sample_envelope`, and a mailbox's history import no longer fires `conversations.created`
+  for its old threads.
+</Update>
+
+<Update label="2026-11-03" description="The production API host">
+  **A production API host.** The REST base URL is now `https://api2.getsales.io/{service}/v1`,
+  and `https://beta.getsales.io` still answers.
+
+  **The webhooks guide catches up.** The [webhooks guide](/guides/receive-webhooks) shows the delivery log sid as
+  `wh_lg_`, says what a payload carries and says which events `filters.account_sid` lets
+  through.
+</Update>
+
 <Update label="2026-11-01" description="The developer documentation opens">
   **The public contract, documented from its source.** The [API reference](/api-reference/overview)
   covers the five services of the platform, 411 operations in all: Playtables (142), Unibox (125),

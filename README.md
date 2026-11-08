@@ -2,8 +2,8 @@
 
 Developer documentation for GetSales, served at [docs.getsales.io](https://docs.getsales.io):
 quickstart, authentication, the response contract, the webhooks guide, MCP setup, and the
-generated reference for the whole public contract: five services, 411 operations (Playtables 142,
-Unibox 125, ID and Teams 88, Signals 30, Integrations 26).
+generated reference for the whole public contract: five services, 422 operations (Playtables 147,
+Unibox 130, ID and Teams 88, Signals 30, Integrations 27).
 
 Related:
 
@@ -53,8 +53,7 @@ mint dev
 
 ## Writing rules
 
-Every page ships under the monorepo writing rules (root `CLAUDE.md` "Writing style: no LLM
-tells" and `marketing/BRAND_RULES.md`): no em or en dash as punctuation, no filler vocabulary,
+Every page ships under our writing rules: no em or en dash as punctuation, no filler vocabulary,
 nothing that implies LinkedIn endorses or partners with GetSales (nominative use, "works with
 LinkedIn", is fine), the sending entity is a sender profile and never a seat, and the brand name
 is GetSales. Run the pre-publish gate greps of `marketing/BRAND_RULES.md` over changed pages
@@ -72,6 +71,3 @@ Mintlify's connect wizard created the repo itself from its template on 2026-11-0
 that way). The working copy lives inside the monorepo checkout at `marketing/docs/gs.docs/`,
 gitignored by the umbrella repo, so `sync-openapi.sh` keeps working: the monorepo checkout is
 its expected home.
-
-The custom domain, the DNS records and the connect-flow gotchas are the same as the reference
-brand's: `gtm.ai/marketing/aeo/DOCS_MINTLIFY_RUNBOOK.md`, steps 1 and 5.

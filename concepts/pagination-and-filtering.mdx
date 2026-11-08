@@ -9,6 +9,7 @@ Every list endpoint (`POST /api/{entity}/search`) takes the same four inputs: `f
 
 - `page_size` defaults to 50 and goes up to 500 on most endpoints. A few heavy tables cap lower (200, 100 or 50); each endpoint's reference states its own range, and asking for more than it allows is a `validation_failed` rather than a clamp.
 - Responses return `pagination.next_cursor`, an opaque string. Pass it back as `cursor` to get the next page; `null` means the last page. Cursors are forward-only, and there is no offset or page number.
+- Over MCP a page can hold fewer rows than `page_size`: a search page over the 48,000-character answer budget comes back shorter, with `truncation.page_shortened: true`. `has_more` and `next_cursor` stay true to the rows it holds, so loop on those, never on the row count.
 - `page_size: 0` is count-only mode: `items` comes back empty and you read `counts.total_count` and `counts.groups`. It is the cheapest way to answer "how many match".
 - `page_size: 1` is the get-first idiom: one row plus a cursor, for "does anything match, and what is the newest one".
 

@@ -8,12 +8,12 @@ This page takes you from nothing to a successful API response.
 <Tip>
   **Give this to your AI agent** and it will handle the API side while you sign up:
 
-  "Connect to GetSales: add the MCP connector at `https://mcp2.getsales.io/mcp` (OAuth) or call the REST API at beta.getsales.io with my key. Then list my playtables and my sender profiles, tell me what each sender profile can send today, and show the newest conversations in the inbox. Read-only for now: do not send, create or change anything."
+  "Connect to GetSales: add the MCP connector at `https://mcp2.getsales.io/mcp/public` (OAuth) or call the REST API at api2.getsales.io with my key. Then list my playtables and my sender profiles, tell me what each sender profile can send today, and show the newest conversations in the inbox. Read-only for now: do not send, create or change anything."
 </Tip>
 
 <Steps>
   <Step title="Create an account">
-    Sign up at [beta.getsales.io/signup](https://beta.getsales.io/signup). Your first workspace starts right away: Playtables stay free with your own API keys, and LinkedIn and email come with a 7-day trial. Connecting a LinkedIn account or a mailbox happens in the app, under a sender profile; the API reads and acts on what is connected.
+    Sign up at [app.getsales.io/signup](https://app.getsales.io/signup). Your first workspace starts right away: Playtables stay free with your own API keys, and LinkedIn and email come with a 7-day trial. Connecting a LinkedIn account or a mailbox happens in the app, under a sender profile, and the API reads and acts on what is connected.
   </Step>
   <Step title="Mint an API key">
     In the app, open Settings, then API keys, and create a key. The full secret looks like `gs_live_` followed by the key body and is shown exactly once: store it now, because the API only ever returns `token_prefix` and `token_last4` afterwards. If you lose it, rotate the key to get a new secret.
@@ -26,7 +26,7 @@ This page takes you from nothing to a successful API response.
     <CodeGroup>
 
     ```bash curl
-    curl -X POST "https://beta.getsales.io/playtables/v1/api/playtables/search" \
+    curl -X POST "https://api2.getsales.io/playtables/v1/api/playtables/search" \
       -H "Authorization: Bearer gs_live_YOUR_KEY" \
       -H "Content-Type: application/json" \
       -d '{"page_size": 5}'
@@ -34,7 +34,7 @@ This page takes you from nothing to a successful API response.
 
     ```typescript TypeScript
     const res = await fetch(
-      "https://beta.getsales.io/playtables/v1/api/playtables/search",
+      "https://api2.getsales.io/playtables/v1/api/playtables/search",
       {
         method: "POST",
         headers: {
@@ -51,7 +51,7 @@ This page takes you from nothing to a successful API response.
     import os, requests
 
     res = requests.post(
-        "https://beta.getsales.io/playtables/v1/api/playtables/search",
+        "https://api2.getsales.io/playtables/v1/api/playtables/search",
         headers={"Authorization": f"Bearer {os.environ['GETSALES_API_KEY']}"},
         json={"page_size": 5},
     )
