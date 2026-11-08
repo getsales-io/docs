@@ -2680,11 +2680,11 @@ paths:
       operationId: create_playtable_field
       summary: Create playtable field
       description: |-
-        Add a column to a playtable: the tool that shapes a table. category is derived from the type prefix, never sent.
+        Add a column to a playtable. category is derived from the type prefix, never sent.
 
-        Patterns. Find people (a company grid): type action_find_people with payload.prompt saying who to find at each company (1 credit per company searched, a miss free); switch config.auto_run on (its default condition is a company with no people yet) so a company that lands later is searched by itself, and a playtable run searches the companies already there. Add as column: a scalar whose payload.template is one lone variable such as {{record.enrich.company.employees}}; existing rows backfill free, every future run re-derives it; never touch the action field for this. Composed text: a template with {{people.first_name}} or {{company.name}} (catalog attributes) and record.<slug> (a column of this tab), each refused unless it exists. action_waterfall: config.preset_sid (a gtm-api preset) or hand-built payload.steps, never both.
+        Patterns. Find people (a company grid): type action_find_people with payload.prompt saying who to find at each company (1 credit per company searched, a miss free); config.auto_run on with config.run_condition {field: company.people_count, op: {eq: 0}} (never set for you) searches each company that lands, and a playtable run the companies already there. LinkedIn reads: type action_gtm_tool, payload.tool_sid from the catalog: a person's LinkedIn profile (get_full_profile: headline, about, experience, education, skills), their newest posts (get_person_posts), a company page (about, industry), a place's timezone (reads and prices: tool_sid). Add as column: a scalar whose payload.template is one lone variable ({{record.enrich.company.employees}}): rows backfill free, each later run re-derives it. Composed text: a template with {{people.first_name}}, {{company.name}} and {{record.<slug>}} (this tab's columns), each refused unless it exists. action_waterfall: config.preset_sid or hand-built payload.steps, never both.
 
-        Formulas and templates form dependency edges; a cycle rolls the save back with 422 and context.cycle_path. Idempotent on (playtable_sid, slug): a duplicate answers already_exists true with the existing row (check item.type). Nothing paid runs on create (a playtable run, estimate first, or auto_run does); a scalar formula backfill is free. At most 100 live columns per object_type: the 101st is 422 (context.limit).
+        Formulas and templates form dependency edges; a cycle is 422 (context.cycle_path). Idempotent on (playtable_sid, slug): a duplicate answers already_exists true with the existing row. Nothing paid runs on create (a playtable run, estimate first, or auto_run does); a scalar formula backfill is free. At most 100 live columns per object_type: the 101st is 422 (context.limit).
 
         Contract:
         - MCP tool `create_playtable_field`, registry package `mcp.playtables/playtable_fields`, mount `playtables.columns`.
@@ -2726,7 +2726,7 @@ paths:
       operationId: estimate_credits
       summary: Estimate credits
       description: |-
-        What anything that spends credits would cost BEFORE it spends them, in one answer: the money-honesty gate (call it, tell the user the range, then act). actions[] carries 1..20 of: column (a saved action column run over the rows: field_sid, force_rerun, cells not_run | error; the columns of one table are priced as ONE run: the registry's per-step ranges, an email lane by outcome, a Use AI column on a sample); column_draft (a Use AI column before it exists: field_type action_ai_research and the draft payload, on the grid playtable_sid + object_type name; one action per model compares models); unit (one call of one tool times the rows: tool_sid, a registry sid or in:{provider}.{operation}); semantic_index (a column's Semantic search switched on or to another embed model: field_sid, provider, model; the backfill now, a later value as a range in per_row); play (one run of a play now: play_sid; matched, acted, skipped, the ceiling and the month in detail). rows is a count (0..1000000) or the run's scope (object_sids XOR view_sid / filter); omitted, a column prices the whole table, a unit one call. Answers min, expected and max in credits (pass max as max_budget to create_playtable_run, never expected), the basis and each action's numbers, rows, per_row and detail. No writes, no charges. What was spent is the credit ledger.
+        What anything that spends credits would cost BEFORE it spends them, in one answer: the money-honesty gate (call it, tell the user the range, then act). actions[] carries 1..20 of: column (a saved action column run over the rows: field_sid, force_rerun, cells not_run | error; the columns of one table are priced as ONE run: the registry's per-step ranges, an email lane by outcome, a Use AI column on a sample); column_draft (a Use AI column before it exists: field_type action_ai_research and the draft payload, on the grid playtable_sid + object_type name; one action per model compares models); unit (one call of one tool times the rows: tool_sid, a column catalog read such as get_person_posts, or in:{provider}.{operation}); semantic_index (a column's Semantic search switched on or to another embed model: field_sid, provider, model; the backfill now, a later value as a range in per_row); play (one run of a play now: play_sid; matched, acted, skipped, the ceiling and the month in detail). rows is a count (0..1000000) or the run's scope (object_sids XOR view_sid / filter); omitted, a column prices the whole table, a unit one call. Answers min, expected and max in credits (pass max as max_budget to create_playtable_run, never expected), the basis and each action's numbers, rows, per_row and detail. No writes, no charges. What was spent is the credit ledger.
 
         Contract:
         - MCP tool `estimate_credits`, registry package `mcp.playtables/playtable_fields`, mount `playtables.columns`.
@@ -2914,7 +2914,7 @@ paths:
       operationId: update_playtable_field
       summary: Update playtable field
       description: |-
-        Partial update of name, type, payload or config; each JSON value is a full replacement, never a deep merge. slug, category and object_type are immutable. Dependency edges are rebuilt and cycle-checked (a cycle is 422). A set or changed scalar formula recomputes the whole column, manually pinned cells included (warn the user when it holds data); action payload or config changes touch only future runs, paid done cells are never re-run by themselves. At least one field.
+        Partial update of name, type, payload or config (auto_run on or off, the run_condition, the daily cap); each a full replacement, no deep merge. slug, category and object_type are immutable. Dependency edges are rebuilt and cycle-checked (a cycle is 422). A set or changed scalar formula recomputes the whole column, pinned cells included (warn the user if it holds data); action payload or config changes touch only future runs, paid done cells are never re-run by themselves. At least one field.
 
         Contract:
         - MCP tool `update_playtable_field`, registry package `mcp.playtables/playtable_fields`, mount `playtables.columns`.
@@ -3120,7 +3120,7 @@ paths:
       operationId: cancel_playtable_runs
       summary: Stop playtable runs
       description: |-
-        Stop runs: exactly one of run_sid (this run), field_sid (every unfinished run holding the column; a run over several columns stops whole) or playtable_sid (every unfinished run of the table). Each run: batch cancelled, queued cells reverted. Cells a worker holds finish and are charged (in_flight_cells_count); spent credits are NOT refunded. The first call stops nothing: tell the user the counts in its preview_result, then confirm. Nothing left running: runs []. Two scopes or none: 422.
+        Stop runs, one scope: run_sid (one run), field_sid (the column: its unfinished runs and its auto-run queue) or playtable_sid (every run and action column of the table). Queued cells go back; cells a worker holds finish, charged; no refunds. A column or table Stop turns config.auto_run off on its columns (auto_run_off_field_sids). The first call stops nothing: tell the user its preview_result and that auto-run goes off (update_playtable_field config.auto_run true brings it back), then confirm.
 
         Contract:
         - MCP tool `cancel_playtable_runs`, registry package `mcp.playtables/playtable_runs`, mount `playtables.columns`.
@@ -7247,7 +7247,7 @@ components:
                       description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                     web_search:
                       type: boolean
-                      description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                      description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
                   required:
                     - prompt
                     - model
@@ -7326,11 +7326,11 @@ components:
                     tool_sid:
                       type: string
                       minLength: 1
-                      description: gtm-api tool registry sid (external format); existence + price validated at save.
+                      description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                     params:
                       type: object
                       additionalProperties: {}
-                      description: Tool params; string values may be Twig templates over the same variable namespace.
+                      description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                     output_mapping:
                       type: array
                       nullable: true
@@ -7400,7 +7400,7 @@ components:
               properties:
                 auto_run:
                   type: boolean
-                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
                 run_condition:
                   anyOf:
                     - type: object
@@ -7553,7 +7553,7 @@ components:
                   nullable: true
                   minimum: 0
                   exclusiveMinimum: true
-                  description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+                  description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
                 preset_sid:
                   type: string
                   nullable: true
@@ -7778,22 +7778,22 @@ components:
           minLength: 18
           maxLength: 18
           pattern: ^pt_rn_
-          description: This run (pt_rn_…). A run already finished or cancelled answers runs [] (nothing to stop).
+          description: "This run (pt_rn_…) alone: its columns keep their auto-run queue and config.auto_run. A run already finished or cancelled answers runs [] (nothing to stop). Two scopes or none: 422."
         field_sid:
           type: string
           minLength: 18
           maxLength: 18
           pattern: ^pt_fd_
-          description: "Every unfinished run holding the column (pt_fd_…): a run over several columns stops whole. A plain or formula column answers runs [] (a formula column fills, and a fill has no stop)."
+          description: "The column (pt_fd_…): its unfinished runs (a run over several columns stops whole), its auto-run queue sent back (backlog_cells_count) and its config.auto_run turned off. A plain or formula column answers runs [] (a fill has no stop)."
         playtable_sid:
           type: string
           minLength: 18
           maxLength: 18
           pattern: ^pt_tb_
-          description: Every unfinished run of the table (pt_tb_…), on every tab.
+          description: "Every unfinished run of the table (pt_tb_…), on every tab, and every action column of it as a field_sid Stop: its auto-run queue back, its config.auto_run off."
         dry_run:
           type: boolean
-          description: "true: answer the counts (the runs, the queued cells that go back, the running cells that finish and are charged), cancel nothing. Over MCP the first call runs it and carries them as preview_result; a REST caller sends it first."
+          description: "true: the counts (the runs, the queued cells that go back, the running cells that finish, charged, the columns whose auto_run goes off), nothing cancelled. Over MCP the first call runs it and carries them as preview_result; a REST caller sends it first."
     CancelPlaytableRunsResponse:
       type: object
       properties:
@@ -7850,7 +7850,7 @@ components:
             reverted_cells_count:
               type: integer
               minimum: 0
-              description: "Queued cells sent back, summed over the runs: each to what it said before the run, its status and reason; one that said nothing to empty, or done when it holds a value."
+              description: "Queued cells sent back, the runs' and the stopped columns' auto-run queue: each to what it said before the run, its status and reason; one that said nothing to empty, or done when it holds a value."
             in_flight_cells_count:
               type: integer
               minimum: 0
@@ -7858,6 +7858,15 @@ components:
             spent_credits:
               type: number
               description: "The runs' spend so far, summed; the in-flight cells may still add to it (the ledger is truth). Spent credits are never refunded: receipts stand."
+            backlog_cells_count:
+              type: integer
+              minimum: 0
+              description: "The stopped columns' own auto-run queue sent back: cells queued with no run yet (a row that landed, a cell waiting for the next day's credit limit), counted in reverted_cells_count too; 0 on a run_sid Stop."
+            auto_run_off_field_sids:
+              type: array
+              items:
+                type: string
+              description: "The columns whose config.auto_run this Stop turned off (a dry run: would turn off); [] on a run_sid Stop. update_playtable_field with the column's config whole and auto_run true turns one back on, for the rows that land from then on."
           required:
             - dry_run
             - runs
@@ -7865,6 +7874,8 @@ components:
             - reverted_cells_count
             - in_flight_cells_count
             - spent_credits
+            - backlog_cells_count
+            - auto_run_off_field_sids
         meta:
           type: object
           properties:
@@ -8643,7 +8654,7 @@ components:
             prompt:
               type: string
               maxLength: 2000
-              description: "ai_search, find_people. Who to find, in words. ai_search: a prompt that is only an http(s) link is read as the link. find_people: empty = everyone at each company. Planned into the search filter at the first collect; no filter from it = plan_failed."
+              description: "ai_search, find_people: who to find, in words, planned at the first collect (no filter: plan_failed). ai_search: a lone http(s) link is the link; a term no search value matches pauses it (filter_unresolved). find_people: empty = everyone at each company."
             filters:
               type: object
               additionalProperties: {}
@@ -8982,7 +8993,7 @@ components:
                       description: "post_engagement: the posts the walk read, newest first, each with its title (the first line), text, author, published_at, counts, the filter's verdict with the reason of a skip, and the walk's cursor per feed (feeds.reactors | comments | resharers: {cursor} or {done: true})."
                 - type: array
                   items: {}
-              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings, next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
+              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings (the unmatched terms of a filter_unresolved pause among them), next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
             field_mapping:
               type: array
               nullable: true
@@ -9061,7 +9072,7 @@ components:
             status_reason:
               type: string
               nullable: true
-              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
+              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, filter_unresolved (an ai_search paused right after its plan: a term of the description matched no search value, named in payload.plan_warnings as \"unresolved: industries 'Marketing and Advertising'\"; resume walks the plan without it, other words are a new source), collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
             next_collect_at:
               type: string
               nullable: true
@@ -11257,7 +11268,7 @@ components:
                   description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                 web_search:
                   type: boolean
-                  description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                  description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
               required:
                 - prompt
                 - model
@@ -11336,11 +11347,11 @@ components:
                 tool_sid:
                   type: string
                   minLength: 1
-                  description: gtm-api tool registry sid (external format); existence + price validated at save.
+                  description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                 params:
                   type: object
                   additionalProperties: {}
-                  description: Tool params; string values may be Twig templates over the same variable namespace.
+                  description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                 output_mapping:
                   type: array
                   nullable: true
@@ -11410,7 +11421,7 @@ components:
           properties:
             auto_run:
               type: boolean
-              description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+              description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
             run_condition:
               anyOf:
                 - type: object
@@ -11563,7 +11574,7 @@ components:
               nullable: true
               minimum: 0
               exclusiveMinimum: true
-              description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+              description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
             preset_sid:
               type: string
               nullable: true
@@ -11788,7 +11799,7 @@ components:
                       description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                     web_search:
                       type: boolean
-                      description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                      description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
                   required:
                     - prompt
                     - model
@@ -11867,11 +11878,11 @@ components:
                     tool_sid:
                       type: string
                       minLength: 1
-                      description: gtm-api tool registry sid (external format); existence + price validated at save.
+                      description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                     params:
                       type: object
                       additionalProperties: {}
-                      description: Tool params; string values may be Twig templates over the same variable namespace.
+                      description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                     output_mapping:
                       type: array
                       nullable: true
@@ -11941,7 +11952,7 @@ components:
               properties:
                 auto_run:
                   type: boolean
-                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
                 run_condition:
                   anyOf:
                     - type: object
@@ -12094,7 +12105,7 @@ components:
                   nullable: true
                   minimum: 0
                   exclusiveMinimum: true
-                  description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+                  description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
                 preset_sid:
                   type: string
                   nullable: true
@@ -18722,12 +18733,12 @@ components:
                 type: object
                 nullable: true
                 additionalProperties: {}
-                description: "column_draft: the drawer's live draft (prompt, model, output, options, web_search), validated like create_playtable_field's; model \"auto\" is the catalog's default, a model the catalog has not is 422."
+                description: "column_draft: the draft (prompt, model, output, options, web_search as it will be saved), validated like create_playtable_field's; model \"auto\" is the catalog's default, an unknown one 422. A column not built or filled yet reads empty: a floor."
               tool_sid:
                 type: string
                 nullable: true
                 maxLength: 255
-                description: "unit: a gtm registry tool sid, or in:{provider}.{operation} for a lane of the integrations catalog (list_provider_catalog); an unknown one is 404 not_found / 422 relation_not_found."
+                description: "unit: a column catalog read times the rows: get_lite_profile (1 credit), get_full_profile (3), get_profile_experience, get_profile_education, get_profile_skills, get_person_posts (2 each), get_company_lite_profile (1), get_company_profile (2), enrich_location (free); or in:{provider}.{operation} (list_provider_catalog). Unknown: 404 not_found or 422 relation_not_found."
               provider:
                 type: string
                 nullable: true
@@ -19705,7 +19716,7 @@ components:
                       description: "post_engagement: the posts the walk read, newest first, each with its title (the first line), text, author, published_at, counts, the filter's verdict with the reason of a skip, and the walk's cursor per feed (feeds.reactors | comments | resharers: {cursor} or {done: true})."
                 - type: array
                   items: {}
-              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings, next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
+              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings (the unmatched terms of a filter_unresolved pause among them), next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
             field_mapping:
               type: array
               nullable: true
@@ -19784,7 +19795,7 @@ components:
             status_reason:
               type: string
               nullable: true
-              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
+              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, filter_unresolved (an ai_search paused right after its plan: a term of the description matched no search value, named in payload.plan_warnings as \"unresolved: industries 'Marketing and Advertising'\"; resume walks the plan without it, other words are a new source), collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
             next_collect_at:
               type: string
               nullable: true
@@ -21266,7 +21277,7 @@ components:
                       description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                     web_search:
                       type: boolean
-                      description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                      description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
                   required:
                     - prompt
                     - model
@@ -21345,11 +21356,11 @@ components:
                     tool_sid:
                       type: string
                       minLength: 1
-                      description: gtm-api tool registry sid (external format); existence + price validated at save.
+                      description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                     params:
                       type: object
                       additionalProperties: {}
-                      description: Tool params; string values may be Twig templates over the same variable namespace.
+                      description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                     output_mapping:
                       type: array
                       nullable: true
@@ -21419,7 +21430,7 @@ components:
               properties:
                 auto_run:
                   type: boolean
-                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
                 run_condition:
                   anyOf:
                     - type: object
@@ -21572,7 +21583,7 @@ components:
                   nullable: true
                   minimum: 0
                   exclusiveMinimum: true
-                  description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+                  description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
                 preset_sid:
                   type: string
                   nullable: true
@@ -21947,6 +21958,7 @@ components:
                 - done
                 - error
                 - run_condition_not_met
+              description: "empty | queued | running | done | error | run_condition_not_met. queued with error_msg daily_credit_limit_reached: an auto_run column's cell waiting for the next UTC day, which the auto run takes after 00:00 UTC."
             cost:
               type: number
               nullable: true
@@ -22002,6 +22014,7 @@ components:
             error_msg:
               type: string
               nullable: true
+              description: "The last run's error (its last step's, or timeout from the reaper). On a queued cell the reason it waits: daily_credit_limit_reached (the column's day is spent; auto_run continues it after 00:00 UTC). A column without auto_run ends error with the same token."
             finished_at:
               type: string
               nullable: true
@@ -30049,7 +30062,7 @@ components:
                       description: "post_engagement: the posts the walk read, newest first, each with its title (the first line), text, author, published_at, counts, the filter's verdict with the reason of a skip, and the walk's cursor per feed (feeds.reactors | comments | resharers: {cursor} or {done: true})."
                 - type: array
                   items: {}
-              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings, next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
+              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings (the unmatched terms of a filter_unresolved pause among them), next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
             field_mapping:
               type: array
               nullable: true
@@ -30128,7 +30141,7 @@ components:
             status_reason:
               type: string
               nullable: true
-              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
+              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, filter_unresolved (an ai_search paused right after its plan: a term of the description matched no search value, named in payload.plan_warnings as \"unresolved: industries 'Marketing and Advertising'\"; resume walks the plan without it, other words are a new source), collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
             next_collect_at:
               type: string
               nullable: true
@@ -34334,7 +34347,7 @@ components:
               description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
             web_search:
               type: boolean
-              description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+              description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
           required:
             - prompt
             - model
@@ -39680,7 +39693,7 @@ components:
                       description: "post_engagement: the posts the walk read, newest first, each with its title (the first line), text, author, published_at, counts, the filter's verdict with the reason of a skip, and the walk's cursor per feed (feeds.reactors | comments | resharers: {cursor} or {done: true})."
                 - type: array
                   items: {}
-              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings, next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
+              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings (the unmatched terms of a filter_unresolved pause among them), next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
             field_mapping:
               type: array
               nullable: true
@@ -39759,7 +39772,7 @@ components:
             status_reason:
               type: string
               nullable: true
-              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
+              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, filter_unresolved (an ai_search paused right after its plan: a term of the description matched no search value, named in payload.plan_warnings as \"unresolved: industries 'Marketing and Advertising'\"; resume walks the plan without it, other words are a new source), collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
             next_collect_at:
               type: string
               nullable: true
@@ -47594,7 +47607,7 @@ components:
                             description: "post_engagement: the posts the walk read, newest first, each with its title (the first line), text, author, published_at, counts, the filter's verdict with the reason of a skip, and the walk's cursor per feed (feeds.reactors | comments | resharers: {cursor} or {done: true})."
                       - type: array
                         items: {}
-                    description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings, next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
+                    description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings (the unmatched terms of a filter_unresolved pause among them), next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
                   field_mapping:
                     type: array
                     nullable: true
@@ -47673,7 +47686,7 @@ components:
                   status_reason:
                     type: string
                     nullable: true
-                    description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
+                    description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, filter_unresolved (an ai_search paused right after its plan: a term of the description matched no search value, named in payload.plan_warnings as \"unresolved: industries 'Marketing and Advertising'\"; resume walks the plan without it, other words are a new source), collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
                   next_collect_at:
                     type: string
                     nullable: true
@@ -50867,7 +50880,7 @@ components:
                       - error
                       - run_condition_not_met
               additionalProperties: false
-              description: Error/progress drill-down; failed cells = in:["error","run_condition_not_met"].
+              description: "Error/progress drill-down; failed cells = in:[\"error\",\"run_condition_not_met\"]. queued with error_msg daily_credit_limit_reached: an auto_run column's cell waiting for its next UTC day."
             is_value_from_formula:
               type: object
               properties:
@@ -50996,6 +51009,7 @@ components:
                       - done
                       - error
                       - run_condition_not_met
+                    description: "empty | queued | running | done | error | run_condition_not_met. queued with error_msg daily_credit_limit_reached: an auto_run column's cell waiting for the next UTC day, which the auto run takes after 00:00 UTC."
                   cost:
                     type: number
                     nullable: true
@@ -51051,6 +51065,7 @@ components:
                   error_msg:
                     type: string
                     nullable: true
+                    description: "The last run's error (its last step's, or timeout from the reaper). On a queued cell the reason it waits: daily_credit_limit_reached (the column's day is spent; auto_run continues it after 00:00 UTC). A column without auto_run ends error with the same token."
                   finished_at:
                     type: string
                     nullable: true
@@ -51659,7 +51674,7 @@ components:
                             description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                           web_search:
                             type: boolean
-                            description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                            description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
                         required:
                           - prompt
                           - model
@@ -51738,11 +51753,11 @@ components:
                           tool_sid:
                             type: string
                             minLength: 1
-                            description: gtm-api tool registry sid (external format); existence + price validated at save.
+                            description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                           params:
                             type: object
                             additionalProperties: {}
-                            description: Tool params; string values may be Twig templates over the same variable namespace.
+                            description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                           output_mapping:
                             type: array
                             nullable: true
@@ -51812,7 +51827,7 @@ components:
                     properties:
                       auto_run:
                         type: boolean
-                        description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+                        description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
                       run_condition:
                         anyOf:
                           - type: object
@@ -51965,7 +51980,7 @@ components:
                         nullable: true
                         minimum: 0
                         exclusiveMinimum: true
-                        description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+                        description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
                       preset_sid:
                         type: string
                         nullable: true
@@ -64604,7 +64619,7 @@ components:
           enum:
             - active
             - paused
-          description: "User transitions only: pause / resume, and failed to active (re-arms the collect clock after a config fix). Anything else is 422 invalid_transition; completed is system-set."
+          description: "User transitions only: pause, resume (an ai_search paused filter_unresolved then walks without the terms payload.plan_warnings names), failed to active (re-arms the collect clock after a fix). Else 422 invalid_transition; completed is system-set."
         field_mapping:
           type: array
           nullable: true
@@ -64923,7 +64938,7 @@ components:
                       description: "post_engagement: the posts the walk read, newest first, each with its title (the first line), text, author, published_at, counts, the filter's verdict with the reason of a skip, and the walk's cursor per feed (feeds.reactors | comments | resharers: {cursor} or {done: true})."
                 - type: array
                   items: {}
-              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings, next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
+              description: "Kind-discriminated config JSON, validated per kind server-side. ai_search: prompt | url + platform + surface, filters + engine (the stored plan), plan_chips / plan_warnings (the unmatched terms of a filter_unresolved pause among them), next_page / latest_page (the walk cursor), collect_error (what stopped the walk: kind transient | refused, http, code, reason, message, fields; with status_reason collect_failed | collect_interrupted). sender_search: url + platform + surface, repeat, and the collector's own cursor (next_page / latest_page for the Recruiter walker, poll_since / poll_cursor / poll_max for the network and inbox pollers; the bus-served surfaces keep none). find_people: company_sids, next_index, per_company_limit, prompt, filters + engine. csv: file_path, file_type, mode, total_rows, config, match. webhook: records_path. post_engagement (2026-10-28): target + post {urn} | person {ln_nickname; ln_id, ln_member_id, name once resolved} | company {ln_nickname, ln_id, name, logo_url}, window, relevance, collect, repeat, and the walk's own state: stage (posts | judge | engage | done), posts (what it read, with verdicts and feed cursors), cycle, next_page / latest_page, migrated_from on a row born as a search with a post link before the kind existed."
             field_mapping:
               type: array
               nullable: true
@@ -65002,7 +65017,7 @@ components:
             status_reason:
               type: string
               nullable: true
-              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
+              description: "Reason token behind a paused or failed state (max 2048): playtable_deleted, sales_nav_required, recruiter_required, recruiter_reauth_required, executor_account_missing, plan_failed, filter_unresolved (an ai_search paused right after its plan: a term of the description matched no search value, named in payload.plan_warnings as \"unresolved: industries 'Marketing and Advertising'\"; resume walks the plan without it, other words are a new source), collect_failed, collect_interrupted, post_unavailable (the post could not be read: deleted or private), target_not_found (no page at the slug), allowance_exhausted (the AI post filter ran out of credits; paused), …"
             next_collect_at:
               type: string
               nullable: true
@@ -67009,7 +67024,7 @@ components:
                   description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                 web_search:
                   type: boolean
-                  description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                  description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
               required:
                 - prompt
                 - model
@@ -67088,11 +67103,11 @@ components:
                 tool_sid:
                   type: string
                   minLength: 1
-                  description: gtm-api tool registry sid (external format); existence + price validated at save.
+                  description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                 params:
                   type: object
                   additionalProperties: {}
-                  description: Tool params; string values may be Twig templates over the same variable namespace.
+                  description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                 output_mapping:
                   type: array
                   nullable: true
@@ -67162,7 +67177,7 @@ components:
           properties:
             auto_run:
               type: boolean
-              description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+              description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
             run_condition:
               anyOf:
                 - type: object
@@ -67315,7 +67330,7 @@ components:
               nullable: true
               minimum: 0
               exclusiveMinimum: true
-              description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+              description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
             preset_sid:
               type: string
               nullable: true
@@ -67326,7 +67341,7 @@ components:
             - nl_condition
             - daily_credit_limit
             - preset_sid
-          description: Full replacement; action fields only (non-default on scalar/widget → 422).
+          description: "Full replacement; action fields only (non-default on scalar/widget → 422). Read it and send it whole: auto_run back on after a Stop keeps the run_condition and daily_credit_limit only when they are sent too."
     UpdatePlaytableFieldResponse:
       type: object
       properties:
@@ -67532,7 +67547,7 @@ components:
                       description: Project a 'json' result onto people/company attributes, fill-if-empty (max 20); null = no attribute writes. Columns pull via extraction formulas instead.
                     web_search:
                       type: boolean
-                      description: "Default false: the model answers with the vendor's server-side web search on. A per-model capability: 422 relation_not_found at save, and web_search_not_supported on a preview, for a model without it."
+                      description: "true = the model searches the web (default false): public facts off LinkedIn, never posts or a profile (catalog reads). The results are billed as input, so a row costs many times a plain answer; a call takes up to 240 s. A model without it: 422."
                   required:
                     - prompt
                     - model
@@ -67611,11 +67626,11 @@ components:
                     tool_sid:
                       type: string
                       minLength: 1
-                      description: gtm-api tool registry sid (external format); existence + price validated at save.
+                      description: "The read. People grid: get_lite_profile (name, photo, the LinkedIn ids; 1 credit), get_full_profile (headline, about, location, role and company, experience, education, skills, no posts; 3, a stored read under 30 days is charged too), get_profile_experience, get_profile_education, get_profile_skills (that list alone; 2 each), get_person_posts (the 10 newest posts: text, date, reactions; always read live; 2; a row with no ln_id or sn_id whose slug does not resolve ends not_dispatchable: get_lite_profile first). Either grid: get_company_lite_profile (id, name, logo; 1), get_company_profile (industry, size, HQ, about, website; 2), enrich_location (a place to its address and timezone; free). Or an integration step: in:{provider}.{operation} (list_provider_catalog), in:tool.{sid} (search_custom_tools). Unknown: 422 relation_not_found. A row without the input is skipped free."
                     params:
                       type: object
                       additionalProperties: {}
-                      description: Tool params; string values may be Twig templates over the same variable namespace.
+                      description: "Templates over the row. Person reads: ln_id, sn_id, nickname ({{people.ln_id}}, {{people.sn_id}}, {{people.ln_nickname}}; the first filled wins). Company reads: company_identifier ({{company.ln_nickname || company.domain}}). enrich_location: location."
                     output_mapping:
                       type: array
                       nullable: true
@@ -67685,7 +67700,7 @@ components:
               properties:
                 auto_run:
                   type: boolean
-                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false."
+                  description: "Action auto-fires when a row enters the table / the cell is empty (paid: empty→queued only). Default false. A Stop by column or table (cancel_playtable_runs) turns it off; true again takes the rows that land from then on."
                 run_condition:
                   anyOf:
                     - type: object
@@ -67838,7 +67853,7 @@ components:
                   nullable: true
                   minimum: 0
                   exclusiveMinimum: true
-                  description: Max credits this field may spend per UTC day (int > 0, enforced at run time); null = no cap.
+                  description: Max credits the column spends per UTC day (int > 0); null = no cap. On an auto_run column a cell that meets it waits queued (error_msg daily_credit_limit_reached) and the auto run takes it after 00:00 UTC; without auto_run it ends error.
                 preset_sid:
                   type: string
                   nullable: true
@@ -74322,6 +74337,7 @@ components:
                 - done
                 - error
                 - run_condition_not_met
+              description: "empty | queued | running | done | error | run_condition_not_met. queued with error_msg daily_credit_limit_reached: an auto_run column's cell waiting for the next UTC day, which the auto run takes after 00:00 UTC."
             cost:
               type: number
               nullable: true
@@ -74377,6 +74393,7 @@ components:
             error_msg:
               type: string
               nullable: true
+              description: "The last run's error (its last step's, or timeout from the reaper). On a queued cell the reason it waits: daily_credit_limit_reached (the column's day is spent; auto_run continues it after 00:00 UTC). A column without auto_run ends error with the same token."
             finished_at:
               type: string
               nullable: true

@@ -3,6 +3,31 @@ title: "Changelog"
 description: "What's new in the GetSales platform and this documentation."
 ---
 
+<Update label="2026-11-08" description="A Stop that holds, a daily limit that waits, and searches that say what they could not match">
+  **A Stop on a column or a table stops the column.** `POST /api/playtable-runs/cancel` with
+  `field_sid` or `playtable_sid` also turns `config.auto_run` off on the action columns it stops and
+  sends back the cells queued in their auto-run queue, so new rows do not start them again a minute
+  later. The answer adds `backlog_cells_count` (those cells, also counted in `reverted_cells_count`)
+  and `auto_run_off_field_sids`; a `dry_run` names the columns it would turn off. A cancel by
+  `run_sid` stops that run alone, as before. To run a column by itself again, update its `config`
+  with `auto_run: true`, sending the whole `config` back.
+
+  **A daily credit limit waits instead of failing.** A cell of an `auto_run` column that meets the
+  column's `daily_credit_limit` before it spends anything stays `queued` with `error_msg`
+  `daily_credit_limit_reached` and runs after 00:00 UTC, when the day's spend starts over. On a
+  column without `auto_run` it still ends `error` with the same reason.
+
+  **An AI search that could not match a word stops and says which.** When a word of an `ai_search`
+  description matches no search value, the source pauses after planning with `status_reason`
+  `filter_unresolved`, and `payload.plan_warnings` names the words. Resuming it searches without
+  them; other words mean a new source.
+
+  **Web search is priced as research.** `POST /api/playtable-fields/estimate-credits` prices an Ask AI
+  column with `web_search` on the results each search reads back as input, and such a call may take up
+  to 240 seconds. The column's `tool_sid` for `action_gtm_tool` lists every read it takes, the
+  latest posts and the full profile among them.
+</Update>
+
 <Update label="2026-11-08" description="The reference keeps what an integration builds on">
   **What only the app calls left the reference.** The REST reference lists 322 operations, where it
   listed 411. The ones that left keep serving the GetSales app and are not part of the public contract:
