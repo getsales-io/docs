@@ -11,7 +11,7 @@ info:
 
     GENERATED. This document is projected from the Zod MCP tool registry in `product/mcp/gs.mcp` (one tool per public endpoint, 1:1). Do not edit it by hand; edit the tool definition and regenerate with `pnpm openapi:public`.
 
-    Surface: the public `/api` contract of `gs.service.playtables`, 120 operations. This is the only OpenAPI document the platform publishes. Internal (`/internal`) and health endpoints are deliberately absent: they are not part of any contract, they can change without notice, and the service source is their only description.
+    Surface: the public `/api` contract of `gs.service.playtables`, 121 operations. This is the only OpenAPI document the platform publishes. Internal (`/internal`) and health endpoints are deliberately absent: they are not part of any contract, they can change without notice, and the service source is their only description.
 
     Conventions:
     - Auth is a bearer JWT, optionally narrowed by the `Team-SID` header.
@@ -3970,7 +3970,7 @@ paths:
       operationId: read_sender_profile_stats
       summary: Sender profile stats
       description: |-
-        What up to 200 sender profiles did, one row per sid. Today: each LinkedIn account against its caps (each action with its hold and why) and the emails sent against the mailboxes' daily limits. From..to: the ledger's done sends and visits. The queue: what waits to go out now, by kind. The load: journeys and tasks by status. An unknown sid is left out. For "who is out of invites today" and "who is held"; identity and health: search_sender_profiles; day by day: get_sender_profile_performance.
+        What up to 200 sender profiles did. Today: each LinkedIn account against its caps (and its holds and why) and emails sent against the mailboxes' limits. From..to: its sends and visits, whoever sent them (a workflow, a play, a hand, the account itself). The queue: what waits to go out, by kind. The load: journeys and tasks by status. Unknown sids are left out. For "who is out of invites today" and "who is held"; identity: search_sender_profiles; day by day: get_sender_profile_performance.
 
         Contract:
         - MCP tool `read_sender_profile_stats`, registry package `mcp.playtables/sender_profiles`, mount `sender-profiles`.
@@ -4012,7 +4012,7 @@ paths:
       operationId: get_sender_profile_performance
       summary: Sender profile performance
       description: |-
-        How one sender profile's outreach went, day by day in the workspace's timezone: the sends by type, requests accepted, people who replied, bounces and people moved to a positive stage after a reply, 2 x days long with the previous window first. Only outreach counts: a person this sender profile reached through a workflow, a reply only after that first touch. include shares: who splits its daily limits now, by workflow priority. The fleet: search_sender_profiles, read_sender_profile_stats.
+        How one sender profile's outreach went, day by day in the workspace's timezone: the sends by type (whoever sent them: a workflow, a play, a hand, the account itself), requests accepted, people who replied, bounces, positives after a reply; 2 x days, the previous window first. Only outreach counts: a reply after this sender profile first reached the person. include shares: who splits its daily limits now, by workflow priority. The fleet: search_sender_profiles, read_sender_profile_stats.
 
         Contract:
         - MCP tool `get_sender_profile_performance`, registry package `mcp.playtables/sender_profiles`, mount `sender-profiles`.
@@ -5741,6 +5741,63 @@ paths:
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: typical
+  /api/workflows/{sid}/duplicate:
+    post:
+      operationId: duplicate_workflow
+      summary: Duplicate workflow
+      description: |-
+        Copy a workflow as a draft, into its own table or into another one (playtable_sid). The copy carries the steps, the sender profiles that still exist, rotation, priority, schedule, on_reply, the AI SDR pick and the canvas notes on the same steps; it has no audience (add a source or add_workflow_people after publishing), no version and no history, and every step is numbered again from 1. Every call makes a new copy.
+
+        In another table a run_column step takes that table's action column of the same slug, or comes over with field_sid null when there is none; slugs in texts, conditions and set_field steps are kept as written. result.missing_columns names every column the steps read that the copy's table lacks: fix those steps (update_workflow) or add the columns (create_playtable_field) before publish_workflow, since a text that reads a missing column fails each send by the step's empty-value rule. dry_run: true answers missing_columns alone and writes nothing: call it first to tell the user what would not carry over.
+
+        Use it for "the same sequence for another table" and "a variant of this workflow to edit". A whole table with its workflows is duplicate_playtable.
+
+        Contract:
+        - MCP tool `duplicate_workflow`, registry package `mcp.playtables/workflows`, mount `playtables.workflows`.
+        - Operation `action`, response envelope `action`.
+        - Flags: none.
+      tags:
+        - workflows
+      parameters:
+        - name: sid
+          in: path
+          required: true
+          description: The workflow (wf_wf_…) to copy, in any status. Another team's is 403.
+          schema:
+            type: string
+            minLength: 18
+            maxLength: 18
+            pattern: ^wf_wf_
+            description: The workflow (wf_wf_…) to copy, in any status. Another team's is 403.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DuplicateWorkflowRequest"
+      responses:
+        "200":
+          description: "`action` success envelope."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateWorkflowResponse"
+        4XX:
+          $ref: "#/components/responses/McpClientError"
+        5XX:
+          $ref: "#/components/responses/McpServerError"
+      x-gs-mcp-tool: duplicate_workflow
+      x-gs-mcp-mount: playtables.workflows
+      x-gs-entity: workflows
+      x-gs-operation: action
+      x-gs-envelope: action
+      x-gs-availability: ga
+      x-gs-surface: both
+      x-gs-dangerous: false
+      x-gs-mass-action: false
+      x-gs-step-eligible: false
+      x-gs-schedule-required: false
+      x-gs-tool-class: complex
   /api/workflows/{sid}/pause:
     post:
       operationId: pause_workflow
@@ -6425,7 +6482,7 @@ components:
           properties:
             sid:
               type: string
-              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries; rides gtm's rows as client_reference.
+              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries.
             team_sid:
               type: string
               description: Owning team (ts_tm_…, external - gs.service.id).
@@ -7268,7 +7325,7 @@ components:
                           params:
                             type: object
                             additionalProperties: {}
-                            description: Tool params; string values may be Twig templates over the same variable namespace.
+                            description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                         required:
                           - tool_sid
                           - params
@@ -7309,7 +7366,7 @@ components:
                         params:
                           type: object
                           additionalProperties: {}
-                          description: Tool params; string values may be Twig templates over the same variable namespace.
+                          description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                       required:
                         - tool_sid
                         - params
@@ -7941,7 +7998,7 @@ components:
           properties:
             sid:
               type: string
-              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries; rides gtm's rows as client_reference.
+              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries.
             team_sid:
               type: string
               description: Owning team (ts_tm_…, external - gs.service.id).
@@ -11289,7 +11346,7 @@ components:
                       params:
                         type: object
                         additionalProperties: {}
-                        description: Tool params; string values may be Twig templates over the same variable namespace.
+                        description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                     required:
                       - tool_sid
                       - params
@@ -11330,7 +11387,7 @@ components:
                     params:
                       type: object
                       additionalProperties: {}
-                      description: Tool params; string values may be Twig templates over the same variable namespace.
+                      description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                   required:
                     - tool_sid
                     - params
@@ -11820,7 +11877,7 @@ components:
                           params:
                             type: object
                             additionalProperties: {}
-                            description: Tool params; string values may be Twig templates over the same variable namespace.
+                            description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                         required:
                           - tool_sid
                           - params
@@ -11861,7 +11918,7 @@ components:
                         params:
                           type: object
                           additionalProperties: {}
-                          description: Tool params; string values may be Twig templates over the same variable namespace.
+                          description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                       required:
                         - tool_sid
                         - params
@@ -18633,6 +18690,1173 @@ components:
         - item
         - result
         - meta
+    DuplicateWorkflowRequest:
+      type: object
+      description: Request body of `duplicate_workflow`.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: "The copy's name; {{name}} in it stands for the original's (\"{{name}} (copy)\" when left out). Made free in the team: \"name 2\", \"name 3\", ..."
+        playtable_sid:
+          type: string
+          minLength: 18
+          maxLength: 18
+          pattern: ^pt_tb_
+          description: The table the copy is homed on (pt_tb_…); the original's own when left out. Unknown or deleted → 422 validation_failed on playtable_sid; another team's → 403.
+        dry_run:
+          type: boolean
+          description: "true: answer result.missing_columns for that table and write nothing (item null)."
+    DuplicateWorkflowResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        operation:
+          type: string
+          enum:
+            - action
+        action:
+          type: string
+          description: kebab-case verb; matches the route segment.
+        item:
+          type: object
+          nullable: true
+          properties:
+            sid:
+              type: string
+            team_sid:
+              type: string
+            name:
+              type: string
+            description:
+              type: string
+              nullable: true
+            status:
+              type: string
+              enum:
+                - draft
+                - active
+                - paused
+                - archived
+            published_version_sid:
+              type: string
+              nullable: true
+              description: wf_vr_… [ro] - written ONLY by publish; null until first publish. Old versions are never repointed back to (no rollback verb - republish the old steps instead).
+            draft_steps:
+              type: array
+              items:
+                oneOf:
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_send_connection_request
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      message:
+                        type: string
+                        nullable: true
+                        description: "Invite note - max 300 RENDERED chars (server-checked); null/omitted = blank invite. Template namespaces: {{people.*}} {{company.*}} {{record.<slug>}} {{sender.*}} {{ai.<key>}}; per-variable fallback {{record.slug|text}}."
+                      required_fields:
+                        type: object
+                        nullable: true
+                        properties:
+                          refs:
+                            type: array
+                            items:
+                              type: string
+                              maxLength: 160
+                              pattern: ^(people|company|record|ai|api)\.[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$
+                            maxItems: 20
+                            description: 0..20 bare template refs required on top of the text's own variables (people.first_name, company.name, record.<slug>, company.record.<slug>, ai.<key>).
+                          on_missing:
+                            type: string
+                            enum:
+                              - fail
+                              - skip
+                            description: fail | skip - what to do when a value the text needs is empty at task time; no policy (null) sends the text as it renders.
+                        required:
+                          - refs
+                          - on_missing
+                        additionalProperties: false
+                    required:
+                      - type
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_send_message
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      message:
+                        type: string
+                        minLength: 1
+                        maxLength: 8000
+                        description: Message template (same namespaces as all templates).
+                      required_fields:
+                        type: object
+                        nullable: true
+                        properties:
+                          refs:
+                            type: array
+                            items:
+                              type: string
+                              maxLength: 160
+                              pattern: ^(people|company|record|ai|api)\.[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$
+                            maxItems: 20
+                            description: 0..20 bare template refs required on top of the text's own variables (people.first_name, company.name, record.<slug>, company.record.<slug>, ai.<key>).
+                          on_missing:
+                            type: string
+                            enum:
+                              - fail
+                              - skip
+                            description: fail | skip - what to do when a value the text needs is empty at task time; no policy (null) sends the text as it renders.
+                        required:
+                          - refs
+                          - on_missing
+                        additionalProperties: false
+                    required:
+                      - type
+                      - message
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_send_inmail
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      subject:
+                        type: string
+                        nullable: true
+                        maxLength: 200
+                      message:
+                        type: string
+                        minLength: 1
+                        maxLength: 8000
+                      required_fields:
+                        type: object
+                        nullable: true
+                        properties:
+                          refs:
+                            type: array
+                            items:
+                              type: string
+                              maxLength: 160
+                              pattern: ^(people|company|record|ai|api)\.[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$
+                            maxItems: 20
+                            description: 0..20 bare template refs required on top of the text's own variables (people.first_name, company.name, record.<slug>, company.record.<slug>, ai.<key>).
+                          on_missing:
+                            type: string
+                            enum:
+                              - fail
+                              - skip
+                            description: fail | skip - what to do when a value the text needs is empty at task time; no policy (null) sends the text as it renders.
+                        required:
+                          - refs
+                          - on_missing
+                        additionalProperties: false
+                    required:
+                      - type
+                      - message
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_visit_profile
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                    required:
+                      - type
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_endorse_skills
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      skills_count:
+                        type: integer
+                        minimum: 1
+                        maximum: 10
+                        description: Endorse the person's top N listed skills, 1..10.
+                    required:
+                      - type
+                      - skills_count
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_withdraw_connection_request
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                    required:
+                      - type
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_like_latest_post
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                    required:
+                      - type
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - linkedin_comment_latest_post
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      comment:
+                        type: string
+                        minLength: 1
+                        maxLength: 1250
+                        description: Comment template on the person's latest post, 1..1250 rendered; same namespaces as message templates.
+                      required_fields:
+                        type: object
+                        nullable: true
+                        properties:
+                          refs:
+                            type: array
+                            items:
+                              type: string
+                              maxLength: 160
+                              pattern: ^(people|company|record|ai|api)\.[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$
+                            maxItems: 20
+                            description: 0..20 bare template refs required on top of the text's own variables (people.first_name, company.name, record.<slug>, company.record.<slug>, ai.<key>).
+                          on_missing:
+                            type: string
+                            enum:
+                              - fail
+                              - skip
+                            description: fail | skip - what to do when a value the text needs is empty at task time; no policy (null) sends the text as it renders.
+                        required:
+                          - refs
+                          - on_missing
+                        additionalProperties: false
+                    required:
+                      - type
+                      - comment
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - email_send
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      subject:
+                        type: string
+                        minLength: 1
+                        maxLength: 255
+                      body:
+                        type: string
+                        minLength: 1
+                        maxLength: 100000
+                        description: HTML body template.
+                      required_fields:
+                        type: object
+                        nullable: true
+                        properties:
+                          refs:
+                            type: array
+                            items:
+                              type: string
+                              maxLength: 160
+                              pattern: ^(people|company|record|ai|api)\.[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$
+                            maxItems: 20
+                            description: 0..20 bare template refs required on top of the text's own variables (people.first_name, company.name, record.<slug>, company.record.<slug>, ai.<key>).
+                          on_missing:
+                            type: string
+                            enum:
+                              - fail
+                              - skip
+                            description: fail | skip - what to do when a value the text needs is empty at task time; no policy (null) sends the text as it renders.
+                        required:
+                          - refs
+                          - on_missing
+                        additionalProperties: false
+                      email_field:
+                        type: string
+                        nullable: true
+                        description: "Which address the send uses: any | work_email | personal_email; omitted or any = the best one."
+                      cc:
+                        type: array
+                        nullable: true
+                        items:
+                          type: string
+                          maxLength: 320
+                          format: email
+                        maxItems: 5
+                        description: Up to 5 literal copy addresses.
+                      bcc:
+                        type: array
+                        nullable: true
+                        items:
+                          type: string
+                          maxLength: 320
+                          format: email
+                        maxItems: 5
+                        description: Up to 5 literal blind-copy addresses.
+                      attachments:
+                        type: array
+                        nullable: true
+                        items:
+                          type: object
+                          properties:
+                            sid:
+                              type: string
+                              minLength: 18
+                              maxLength: 18
+                              pattern: ^wf_at_
+                            name:
+                              type: string
+                              minLength: 1
+                              maxLength: 255
+                          required:
+                            - sid
+                            - name
+                          additionalProperties: false
+                        maxItems: 5
+                        description: "Up to 5 library files ({sid: wf_at_…, name}) sent with the email."
+                      reply_in_thread:
+                        type: boolean
+                        nullable: true
+                      track_opens:
+                        type: boolean
+                        nullable: true
+                      track_clicks:
+                        type: boolean
+                        nullable: true
+                      unsubscribe_link:
+                        type: boolean
+                        nullable: true
+                    required:
+                      - type
+                      - subject
+                      - body
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - wait
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      for:
+                        type: string
+                        pattern: ^[1-9][0-9]*[mhd]$
+                        description: 'Duration string: ^[1-9][0-9]*(m|h|d)$ - e.g. "45m", "12h", "14d". Publish lints the range 1m..365d.'
+                    required:
+                      - type
+                      - for
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - wait_for_event
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      event:
+                        type: string
+                        enum:
+                          - linkedin_connection_request_accepted
+                          - email_opened
+                          - email_link_clicked
+                        description: Event observed via the activities ingest.
+                      timeout:
+                        type: object
+                        properties:
+                          after:
+                            type: string
+                            pattern: ^[1-9][0-9]*[mhd]$
+                            description: 'Duration string: ^[1-9][0-9]*(m|h|d)$ - e.g. "45m", "12h", "14d". Publish lints the range 1m..365d.'
+                          steps:
+                            type: object
+                            additionalProperties: {}
+                            description: "Recursive node: the same object shape repeats here. A static OpenAPI document cannot express the cycle, so this level is documented as an open object."
+                        required:
+                          - after
+                          - steps
+                        additionalProperties: false
+                        description: "Required since 2026-10-11: a wait always has a time limit. Bundled: a timeout path cannot exist without a duration."
+                    required:
+                      - type
+                      - event
+                      - timeout
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - condition
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      branches:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              minimum: 1
+                              description: Server-assigned - SAME id-space as step ids; omit on new branches, carry on kept ones. The fired branch id lands on the condition task result.
+                            label:
+                              type: string
+                              nullable: true
+                              maxLength: 255
+                              description: Editor caption.
+                            when:
+                              type: object
+                              additionalProperties: {}
+                              description: "NON-nullable filter AST, LOOSE mode (predicate-only, never compiled to ES): leaf paths people.* / company.* / record.<slug> / ai.<output_key> / api.<output_key>.<path>; a path missing from the record's playtable makes the leaf false."
+                            steps:
+                              type: object
+                              additionalProperties: {}
+                              description: "Recursive node: the same object shape repeats here. A static OpenAPI document cannot express the cycle, so this level is documented as an open object."
+                          required:
+                            - when
+                            - steps
+                          additionalProperties: false
+                        minItems: 1
+                        maxItems: 9
+                        description: 1..9 branches, evaluated in order, first match wins.
+                      else:
+                        type: object
+                        additionalProperties: {}
+                        description: "Recursive node: the same object shape repeats here. A static OpenAPI document cannot express the cycle, so this level is documented as an open object."
+                    required:
+                      - type
+                      - branches
+                      - else
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - ab_test
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      branches:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              minimum: 1
+                              description: Server-assigned - SAME id-space as step ids; omit on new arms, carry on kept ones. The assigned arm id lands on the ab_test task result.
+                            label:
+                              type: string
+                              nullable: true
+                              maxLength: 255
+                              description: Editor caption ("Variant A").
+                            weight:
+                              type: integer
+                              minimum: 1
+                              description: Relative weight (int >= 1; need not sum to 100). Record assigned by crc32(record.sid) mod sum(weights) - see workflow_versions.md ab_test algorithm.
+                            steps:
+                              type: object
+                              additionalProperties: {}
+                              description: "Recursive node: the same object shape repeats here. A static OpenAPI document cannot express the cycle, so this level is documented as an open object."
+                          required:
+                            - weight
+                            - steps
+                          additionalProperties: false
+                        minItems: 2
+                        maxItems: 9
+                        description: 2..9 weighted arms; the record is assigned deterministically by hashing its sid into the weight distribution. No `else`.
+                    required:
+                      - type
+                      - branches
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - end
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                    required:
+                      - type
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - api_call
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      method:
+                        type: string
+                        enum:
+                          - GET
+                          - POST
+                          - PUT
+                          - PATCH
+                          - DELETE
+                      url:
+                        type: string
+                        minLength: 1
+                        maxLength: 2048
+                        description: https-only (publish check); a template - variables may stand in the path and the query.
+                      headers:
+                        type: object
+                        nullable: true
+                        additionalProperties:
+                          type: string
+                          maxLength: 1024
+                      query:
+                        type: object
+                        nullable: true
+                        additionalProperties:
+                          type: string
+                          maxLength: 2048
+                      body:
+                        type: string
+                        nullable: true
+                        maxLength: 16000
+                        description: JSON body template, variables inside quotes; null = the fixed payload; must be null on GET / DELETE.
+                      provider_connection_sid:
+                        type: string
+                        nullable: true
+                        minLength: 18
+                        maxLength: 18
+                        pattern: ^in_cn_
+                        description: A `custom` provider connection whose auth the integration platform injects at call time; null = no auth.
+                      timeout_secs:
+                        type: integer
+                        nullable: true
+                        minimum: 1
+                        maximum: 120
+                      retry_on_error:
+                        type: boolean
+                        nullable: true
+                      remove_empty_values:
+                        type: boolean
+                        nullable: true
+                      output_key:
+                        type: string
+                        nullable: true
+                        pattern: ^[a-z][a-z0-9_]{0,63}$
+                        description: "The answer's name for later steps (2026-10-11): a slug, unique within the version with the ask_ai keys; later steps read {{api.<output_key>.<path>}} and condition leaves filter on api.<output_key>.<path>; null = the answer is not kept."
+                    required:
+                      - type
+                      - method
+                      - url
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - ask_ai
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      prompt:
+                        type: string
+                        minLength: 1
+                        maxLength: 8000
+                        description: Same variable namespaces as message templates.
+                      output_key:
+                        type: string
+                        pattern: ^[a-z][a-z0-9_]{0,63}$
+                        description: Slug, unique within the version (publish check) - later steps read {{ai.<output_key>}} / condition leaves on ai.<output_key>.
+                      preset_sid:
+                        type: string
+                        nullable: true
+                        description: gtm-api preset for the AI call; null = team default.
+                    required:
+                      - type
+                      - prompt
+                      - output_key
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - manual_task
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      title:
+                        type: string
+                        minLength: 1
+                        maxLength: 255
+                      instructions:
+                        type: string
+                        nullable: true
+                        maxLength: 4000
+                        description: Rendered into the human todo; the journey waits until the task is completed.
+                    required:
+                      - type
+                      - title
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - move_to_workflow
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      target_workflow_sid:
+                        type: string
+                        minLength: 18
+                        maxLength: 18
+                        pattern: ^wf_wf_
+                        description: Enroll the person into this campaign (wf_wf_…); reuses the existing record per the re-entry policy. THIS record then completes - terminal-for-this-record.
+                      mode:
+                        type: string
+                        nullable: true
+                        enum:
+                          - from_start
+                          - from_current
+                        description: "Re-entry mode when the person is ALREADY in the target (workflow_records.md, Re-entry): from_start (default; reset to the entry step) | from_current (resume the pinned step, else the entry step). A re-entry is loop-guarded at re_entered_count 10."
+                    required:
+                      - type
+                      - target_workflow_sid
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - add_tag
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      tag_sids:
+                        type: array
+                        items:
+                          type: string
+                          minLength: 18
+                          maxLength: 18
+                          pattern: ^cr_tg_
+                        minItems: 1
+                        maxItems: 20
+                        description: 1..20 CRM tags (cr_tg_…) attached to the person mid-flow, then falls through.
+                    required:
+                      - type
+                      - tag_sids
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - remove_tag
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      tag_sids:
+                        type: array
+                        items:
+                          type: string
+                          minLength: 18
+                          maxLength: 18
+                          pattern: ^cr_tg_
+                        minItems: 1
+                        maxItems: 20
+                        description: 1..20 CRM tags (cr_tg_…) detached from the person mid-flow, then falls through.
+                    required:
+                      - type
+                      - tag_sids
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - set_field
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      field_slug:
+                        type: string
+                        pattern: ^[a-z][a-z0-9_]{0,63}$
+                        description: Playtable field slug to write (pipeline_stage is a scalar_select field).
+                      value:
+                        anyOf:
+                          - type: string
+                          - type: number
+                          - type: boolean
+                          - {}
+                          - {}
+                        description: Scalar cell value (one cell; no arrays/objects); null clears the field.
+                    required:
+                      - type
+                      - field_slug
+                      - value
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - change_sender
+                      id:
+                        type: integer
+                        minimum: 1
+                        description: Server-assigned (workflows.step_id_seq). OMIT on new steps, CARRY verbatim on kept steps; always present on read.
+                      name:
+                        type: string
+                        nullable: true
+                        maxLength: 255
+                        description: Editor label.
+                      sender_profile_sid:
+                        type: string
+                        nullable: true
+                        minLength: 18
+                        maxLength: 18
+                        pattern: ^ub_sp_
+                        description: Explicit forward-only re-pin (ub_sp_…). Exactly one of sender_profile_sid / rotation (publish check). NOT a restart-from-top.
+                      rotation:
+                        type: string
+                        nullable: true
+                        enum:
+                          - fair
+                          - random
+                          - new_sender
+                          - prior_engagement
+                        description: Re-pick the sender from the workflow pool by this strategy instead of a fixed sid. Exactly one of sender_profile_sid / rotation (publish check).
+                    required:
+                      - type
+                    additionalProperties: false
+              description: Working copy of the step document (chain-and-blocks v2); step ids always present on read (server-assigned). Not executable until published. Max 100 steps incl. nested / 512 KB.
+            schedule:
+              type: object
+              nullable: true
+              properties:
+                timeblocks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      dow:
+                        type: integer
+                        minimum: 0
+                        maximum: 6
+                        description: Day of week, 0=Sunday … 6=Saturday (legacy Carbon dayOfWeek convention).
+                      start_minute:
+                        type: integer
+                        minimum: 0
+                        maximum: 1439
+                        description: "Minutes from local midnight (legacy key: min)."
+                      end_minute:
+                        type: integer
+                        minimum: 1
+                        maximum: 1440
+                        description: "Minutes from local midnight; must be > start_minute (server-validated). Legacy key: max."
+                    required:
+                      - dow
+                      - start_minute
+                      - end_minute
+                    additionalProperties: false
+                timezone:
+                  type: string
+                  description: IANA tz name - base timezone for the blocks.
+                use_people_timezone:
+                  type: boolean
+                  description: Resolve blocks in the person's timezone when known, falling back to `timezone`.
+              required:
+                - timeblocks
+                - timezone
+                - use_people_timezone
+              description: "The campaign's sending windows, the one send-window gate: null = any time (each account's daily caps still apply). A sender profile carries no window of its own (founder 2026-09-22)."
+            on_reply:
+              type: string
+              enum:
+                - ai_sdr
+                - stop
+                - continue
+              description: "What a reply does (default ai_sdr): ai_sdr = the records pause and the thread goes to the AI SDR (agent_sid), whose scenarios decide what it sends on its own; stop = the records pause and the thread is the human's; continue = the records keep sending (nurture), the agent stays out. Reply scope = all the person's live records. Frozen onto each thread the workflow acts on as its automation_ref mode (copilot under the scenarios' levels; off for stop and continue)."
+            agent_sid:
+              type: string
+              nullable: true
+              description: "The AI SDR picked for this workflow (ub_ag_…, block 10 step 10.2): the agent that works the threads it starts, every setting on the agent itself (update_agent). Null = its home table's pick, else the team's default. The campaign's own setup of before (ai_sdr_setup, 2026-10-12 to 2026-10-30) became an agent of its own in step 10.3."
+            sender_profile_sids:
+              type: array
+              items:
+                type: string
+              description: "ub_sp_… each - the sender pool; a record is pinned to ONE sender at enrollment by rotation_strategy. May name a sender profile deleted since: it sends nothing and stays until an update leaves it out, and a record pinned to it picks again when its next send is due."
+            rotation_strategy:
+              type: string
+              enum:
+                - fair
+                - random
+                - new_sender
+                - prior_engagement
+            priority:
+              type: integer
+              description: 1..3 (low / medium / high) - the workflow's SHARE of a sender profile it shares with other workflows (three actions of high for one of low), never a rank (see ./workflow_tasks.md).
+            created_by:
+              type: object
+              properties:
+                actor_type:
+                  type: string
+                  enum:
+                    - user
+                    - support
+                    - api_key
+                    - system
+                    - agent
+                actor_sid:
+                  type: string
+                  nullable: true
+                team_sid:
+                  type: string
+                actor_name:
+                  type: string
+                  nullable: true
+                  description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
+                oauth_client_sid:
+                  type: string
+                  nullable: true
+                  description: The acting OAuth client (id_oc_*); null off the OAuth path.
+                reason:
+                  type: string
+                  nullable: true
+                  description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
+                permissions:
+                  type: object
+                  additionalProperties: {}
+                  description: "Internal audit context: the grant set the actor held at write time. Not a contract."
+                cluster_id:
+                  type: integer
+                  nullable: true
+                  description: "Internal audit context: the cluster that served the write."
+                trace_id:
+                  type: string
+                  nullable: true
+                  description: "Internal audit context: the trace id of the request that wrote the row."
+              required:
+                - actor_type
+                - actor_sid
+                - team_sid
+                - permissions
+            deleted_by:
+              type: object
+              nullable: true
+              properties:
+                actor_type:
+                  type: string
+                  enum:
+                    - user
+                    - support
+                    - api_key
+                    - system
+                    - agent
+                actor_sid:
+                  type: string
+                  nullable: true
+                team_sid:
+                  type: string
+                actor_name:
+                  type: string
+                  nullable: true
+                  description: The OAuth client that acted ("Claude", "n8n"); null for a user, an API key or a system job.
+                oauth_client_sid:
+                  type: string
+                  nullable: true
+                  description: The acting OAuth client (id_oc_*); null off the OAuth path.
+                reason:
+                  type: string
+                  nullable: true
+                  description: Why a system actor wrote the row (snapshot_capture_job, ...); null otherwise.
+                permissions:
+                  type: object
+                  additionalProperties: {}
+                  description: "Internal audit context: the grant set the actor held at write time. Not a contract."
+                cluster_id:
+                  type: integer
+                  nullable: true
+                  description: "Internal audit context: the cluster that served the write."
+                trace_id:
+                  type: string
+                  nullable: true
+                  description: "Internal audit context: the trace id of the request that wrote the row."
+              required:
+                - actor_type
+                - actor_sid
+                - team_sid
+                - permissions
+            created_at:
+              type: string
+            updated_at:
+              type: string
+            deleted_at:
+              type: string
+              nullable: true
+          required:
+            - sid
+            - team_sid
+            - name
+            - description
+            - status
+            - published_version_sid
+            - draft_steps
+            - schedule
+            - on_reply
+            - agent_sid
+            - sender_profile_sids
+            - rotation_strategy
+            - priority
+            - created_by
+            - deleted_by
+            - created_at
+            - updated_at
+            - deleted_at
+        result:
+          type: object
+          properties:
+            source_sid:
+              type: string
+              description: The workflow copied (wf_wf_…).
+            playtable_sid:
+              type: string
+              nullable: true
+              description: The copy's home table (pt_tb_…).
+            dry_run:
+              type: boolean
+              description: "true: nothing was written and item is null."
+            missing_columns:
+              type: array
+              items:
+                type: object
+                properties:
+                  ref:
+                    type: string
+                    description: "How the steps name the column: record.<slug> on the People tab, company.record.<slug> on the Companies tab."
+                  name:
+                    type: string
+                    nullable: true
+                    description: The column's name in the original's table; null when that table has no column of that slug either.
+                  step_ids:
+                    type: array
+                    items:
+                      type: integer
+                      minimum: 0
+                      exclusiveMinimum: true
+                    description: "The copy's steps that name it (on a dry run: the ids the copy would get)."
+                required:
+                  - ref
+                  - name
+                  - step_ids
+              description: "The columns the copy's steps name that its table does not have, each once: a slug a text, a condition or a set_field step reads, or the column of a run_column step that found no action column of its slug (that step comes over with field_sid null). Empty = the table has them all. Fix each with update_workflow on the copy, or add the column with create_playtable_field."
+          required:
+            - source_sid
+            - playtable_sid
+            - dry_run
+            - missing_columns
+        meta:
+          type: object
+          properties:
+            trace_id:
+              type: string
+              description: UUID v7; same 128-bit value as the X-Trace-Id header.
+            span_id:
+              type: string
+              pattern: ^[0-9a-f]{16}$
+              description: 16 hex chars, root span of this request.
+            timestamp:
+              type: string
+              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
+            duration_ms:
+              type: integer
+              minimum: 0
+              description: Server-side wall clock.
+            team_sid:
+              type: string
+              nullable: true
+              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
+            actor_type:
+              type: string
+              nullable: true
+              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
+          required:
+            - trace_id
+            - span_id
+            - timestamp
+            - duration_ms
+      required:
+        - success
+        - operation
+        - action
+        - item
+        - result
+        - meta
     EstimateCreditsRequest:
       type: object
       description: Request body of `estimate_credits`.
@@ -21298,7 +22522,7 @@ components:
                           params:
                             type: object
                             additionalProperties: {}
-                            description: Tool params; string values may be Twig templates over the same variable namespace.
+                            description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                         required:
                           - tool_sid
                           - params
@@ -21339,7 +22563,7 @@ components:
                         params:
                           type: object
                           additionalProperties: {}
-                          description: Tool params; string values may be Twig templates over the same variable namespace.
+                          description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                       required:
                         - tool_sid
                         - params
@@ -23362,7 +24586,7 @@ components:
                         daily_limit:
                           type: integer
                           nullable: true
-                          description: "The action's cap today; null where none is kept (email: gtm paces it per mailbox)."
+                          description: "The action's cap today; null where none is kept (email: each mailbox paces its own sends)."
                         daily_share:
                           type: integer
                           nullable: true
@@ -34621,7 +35845,7 @@ components:
           minLength: 18
           maxLength: 18
           pattern: ^ub_sp_
-          description: "The sender profile whose LinkedIn account reads the link (ub_sp_), the one the source will run on; one that cannot read LinkedIn now is 422 with gtm's reason; a busy one 409 preview_unavailable (context.retry_after_seconds): create still works."
+          description: "The sender profile whose LinkedIn account reads the link (ub_sp_), the one the source will run on; one that cannot read LinkedIn now is 422 naming why; a busy one 409 preview_unavailable (context.retry_after_seconds): create still works."
       required:
         - url
         - sender_profile_sid
@@ -37187,7 +38411,7 @@ components:
                       synced_at:
                         type: string
                         nullable: true
-                        description: When the pacing mirror last read gtm's counters (ISO 8601 UTC, the latest of the four kinds); null when never synced.
+                        description: When these counters were last synced (ISO 8601 UTC, the latest of the four kinds); null when never synced.
                       invites:
                         type: object
                         properties:
@@ -37209,7 +38433,7 @@ components:
                           hold_reason:
                             type: string
                             nullable: true
-                            description: "Why it is held: daily_limit_reached (the cap is spent, or gtm reported the day saturated; lifts at gtm's next day), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
+                            description: "Why it is held: daily_limit_reached (the cap is spent, or the account's day was reported full; lifts when that day ends), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
                         required:
                           - done
                           - limit
@@ -37238,7 +38462,7 @@ components:
                           hold_reason:
                             type: string
                             nullable: true
-                            description: "Why it is held: daily_limit_reached (the cap is spent, or gtm reported the day saturated; lifts at gtm's next day), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
+                            description: "Why it is held: daily_limit_reached (the cap is spent, or the account's day was reported full; lifts when that day ends), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
                         required:
                           - done
                           - limit
@@ -37266,7 +38490,7 @@ components:
                           hold_reason:
                             type: string
                             nullable: true
-                            description: "Why it is held: daily_limit_reached (the cap is spent, or gtm reported the day saturated; lifts at gtm's next day), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
+                            description: "Why it is held: daily_limit_reached (the cap is spent, or the account's day was reported full; lifts when that day ends), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
                         required:
                           - done
                           - limit
@@ -37294,7 +38518,7 @@ components:
                           hold_reason:
                             type: string
                             nullable: true
-                            description: "Why it is held: daily_limit_reached (the cap is spent, or gtm reported the day saturated; lifts at gtm's next day), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
+                            description: "Why it is held: daily_limit_reached (the cap is spent, or the account's day was reported full; lifts when that day ends), linkedin_limit_hit (LinkedIn itself refused the action: the account is off that kind until the hold lifts) or limit_hold (a hold of another cause); null while not held."
                         required:
                           - done
                           - limit
@@ -39198,7 +40422,7 @@ components:
           properties:
             sid:
               type: string
-              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries; rides gtm's rows as client_reference.
+              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries.
             team_sid:
               type: string
               description: Owning team (ts_tm_…, external - gs.service.id).
@@ -41229,7 +42453,7 @@ components:
                           linkedin_account_sid:
                             type: string
                             nullable: true
-                            description: The gtm LinkedIn account that read the card; null on a re-check.
+                            description: The LinkedIn account that read the card; null on a re-check.
                         required:
                           - origin
                           - changes
@@ -41469,7 +42693,7 @@ components:
                           linkedin_account_sid:
                             type: string
                             nullable: true
-                            description: The gtm LinkedIn account that read the card.
+                            description: The LinkedIn account that read the card.
                           card_sid:
                             type: string
                             nullable: true
@@ -41664,7 +42888,7 @@ components:
                             description: External Messaging LinkedIn account.
                           invitation_sid:
                             type: string
-                            description: ln_ci_… the gtm invitation row.
+                            description: ln_ci_… the invitation.
                           note:
                             type: string
                             nullable: true
@@ -41690,7 +42914,7 @@ components:
                             description: External Messaging LinkedIn account.
                           connection_sid:
                             type: string
-                            description: ln_cn_… the gtm connection row that was severed.
+                            description: ln_cn_… the connection that was severed.
                           removal_kind:
                             type: string
                             nullable: true
@@ -41711,7 +42935,7 @@ components:
                             description: External Messaging LinkedIn account.
                           block_log_sid:
                             type: string
-                            description: "The gtm linkedin-account-block-log row: the verdict, permanent for the account and the person."
+                            description: "The block on record: the verdict, permanent for the account and the person."
                           connection_sid:
                             type: string
                             nullable: true
@@ -41719,7 +42943,7 @@ components:
                           activity_log_sid:
                             type: string
                             nullable: true
-                            description: ln_al_… the read of gtm's activity log that established the block; null when unknown.
+                            description: ln_al_… the activity read that established the block; null when unknown.
                         required:
                           - sender_profile_sid
                           - linkedin_account_sid
@@ -41737,7 +42961,7 @@ components:
                             description: External Messaging LinkedIn account.
                           follower_sid:
                             type: string
-                            description: ln_fw_… the gtm follower row.
+                            description: ln_fw_… the follower record.
                         required:
                           - sender_profile_sid
                           - linkedin_account_sid
@@ -41785,7 +43009,7 @@ components:
                           linkedin_account_sid:
                             type: string
                             nullable: true
-                            description: The gtm account the list was read on; null when unknown.
+                            description: The LinkedIn account the list was read on; null when unknown.
                           viewed_at_text:
                             type: string
                             nullable: true
@@ -41822,7 +43046,7 @@ components:
                           bounce_log_sid:
                             type: string
                             nullable: true
-                            description: em_bl_… gtm's bounce log row behind the complaint; null when it did not ride the event.
+                            description: em_bl_… the bounce record behind the complaint; null when it did not ride the event.
                         required:
                           - sender_profile_sid
                           - mailbox_sid
@@ -41985,7 +43209,7 @@ components:
                           linkedin_account_sid:
                             type: string
                             nullable: true
-                            description: The gtm LinkedIn account that followed.
+                            description: The LinkedIn account that followed.
                         required:
                           - sender_profile_sid
                       - type: object
@@ -42062,7 +43286,7 @@ components:
                           bounce_type:
                             type: string
                             nullable: true
-                            description: hard | soft | policy, gtm's classification (2026-09-28); null on facts written before it.
+                            description: hard | soft | policy, the class of the bounce (since 2026-09-28); null on facts written before it.
                         required:
                           - sender_profile_sid
                           - mailbox_sid
@@ -43859,7 +45083,7 @@ components:
                               linkedin_account_sid:
                                 type: string
                                 nullable: true
-                                description: The gtm LinkedIn account that read the card; null on a re-check.
+                                description: The LinkedIn account that read the card; null on a re-check.
                             required:
                               - origin
                               - changes
@@ -44099,7 +45323,7 @@ components:
                               linkedin_account_sid:
                                 type: string
                                 nullable: true
-                                description: The gtm LinkedIn account that read the card.
+                                description: The LinkedIn account that read the card.
                               card_sid:
                                 type: string
                                 nullable: true
@@ -44294,7 +45518,7 @@ components:
                                 description: External Messaging LinkedIn account.
                               invitation_sid:
                                 type: string
-                                description: ln_ci_… the gtm invitation row.
+                                description: ln_ci_… the invitation.
                               note:
                                 type: string
                                 nullable: true
@@ -44320,7 +45544,7 @@ components:
                                 description: External Messaging LinkedIn account.
                               connection_sid:
                                 type: string
-                                description: ln_cn_… the gtm connection row that was severed.
+                                description: ln_cn_… the connection that was severed.
                               removal_kind:
                                 type: string
                                 nullable: true
@@ -44341,7 +45565,7 @@ components:
                                 description: External Messaging LinkedIn account.
                               block_log_sid:
                                 type: string
-                                description: "The gtm linkedin-account-block-log row: the verdict, permanent for the account and the person."
+                                description: "The block on record: the verdict, permanent for the account and the person."
                               connection_sid:
                                 type: string
                                 nullable: true
@@ -44349,7 +45573,7 @@ components:
                               activity_log_sid:
                                 type: string
                                 nullable: true
-                                description: ln_al_… the read of gtm's activity log that established the block; null when unknown.
+                                description: ln_al_… the activity read that established the block; null when unknown.
                             required:
                               - sender_profile_sid
                               - linkedin_account_sid
@@ -44367,7 +45591,7 @@ components:
                                 description: External Messaging LinkedIn account.
                               follower_sid:
                                 type: string
-                                description: ln_fw_… the gtm follower row.
+                                description: ln_fw_… the follower record.
                             required:
                               - sender_profile_sid
                               - linkedin_account_sid
@@ -44415,7 +45639,7 @@ components:
                               linkedin_account_sid:
                                 type: string
                                 nullable: true
-                                description: The gtm account the list was read on; null when unknown.
+                                description: The LinkedIn account the list was read on; null when unknown.
                               viewed_at_text:
                                 type: string
                                 nullable: true
@@ -44452,7 +45676,7 @@ components:
                               bounce_log_sid:
                                 type: string
                                 nullable: true
-                                description: em_bl_… gtm's bounce log row behind the complaint; null when it did not ride the event.
+                                description: em_bl_… the bounce record behind the complaint; null when it did not ride the event.
                             required:
                               - sender_profile_sid
                               - mailbox_sid
@@ -44615,7 +45839,7 @@ components:
                               linkedin_account_sid:
                                 type: string
                                 nullable: true
-                                description: The gtm LinkedIn account that followed.
+                                description: The LinkedIn account that followed.
                             required:
                               - sender_profile_sid
                           - type: object
@@ -44692,7 +45916,7 @@ components:
                               bounce_type:
                                 type: string
                                 nullable: true
-                                description: hard | soft | policy, gtm's classification (2026-09-28); null on facts written before it.
+                                description: hard | soft | policy, the class of the bounce (since 2026-09-28); null on facts written before it.
                             required:
                               - sender_profile_sid
                               - mailbox_sid
@@ -51695,7 +52919,7 @@ components:
                                 params:
                                   type: object
                                   additionalProperties: {}
-                                  description: Tool params; string values may be Twig templates over the same variable namespace.
+                                  description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                               required:
                                 - tool_sid
                                 - params
@@ -51736,7 +52960,7 @@ components:
                               params:
                                 type: object
                                 additionalProperties: {}
-                                description: Tool params; string values may be Twig templates over the same variable namespace.
+                                description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                             required:
                               - tool_sid
                               - params
@@ -56857,7 +58081,7 @@ components:
                 properties:
                   sid:
                     type: string
-                    description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries; rides gtm's rows as client_reference.
+                    description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries.
                   team_sid:
                     type: string
                     description: Owning team (ts_tm_…, external - gs.service.id).
@@ -67045,7 +68269,7 @@ components:
                       params:
                         type: object
                         additionalProperties: {}
-                        description: Tool params; string values may be Twig templates over the same variable namespace.
+                        description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                     required:
                       - tool_sid
                       - params
@@ -67086,7 +68310,7 @@ components:
                     params:
                       type: object
                       additionalProperties: {}
-                      description: Tool params; string values may be Twig templates over the same variable namespace.
+                      description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                   required:
                     - tool_sid
                     - params
@@ -67568,7 +68792,7 @@ components:
                           params:
                             type: object
                             additionalProperties: {}
-                            description: Tool params; string values may be Twig templates over the same variable namespace.
+                            description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                         required:
                           - tool_sid
                           - params
@@ -67609,7 +68833,7 @@ components:
                         params:
                           type: object
                           additionalProperties: {}
-                          description: Tool params; string values may be Twig templates over the same variable namespace.
+                          description: "Step params; strings may be templates. An email finder (in:{provider}.email.find) takes {}: the save writes full_name, linkedin_nickname, company_name and domain from the row. Send a key only to read another column, null to switch it off."
                       required:
                         - tool_sid
                         - params
@@ -71919,7 +73143,7 @@ components:
           properties:
             sid:
               type: string
-              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries; rides gtm's rows as client_reference.
+              description: Task sid (wf_tk_…) - one row per step of a journey, kept across retries.
             team_sid:
               type: string
               description: Owning team (ts_tm_…, external - gs.service.id).

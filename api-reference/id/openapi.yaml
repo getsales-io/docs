@@ -993,7 +993,7 @@ paths:
       operationId: search_gtm_connections
       summary: Search gtm connections
       description: |-
-        The gtm-api workspaces this team reaches: the managed one first, then every linked one, with its status, who connected it and the accounts in use through it. No filter: a team holds a handful.
+        The gtm-api workspaces this team reaches: the managed one first, then every linked one, with its status, who connected it and the accounts held through it. No filter: a team holds a handful.
 
         Contract:
         - MCP tool `search_gtm_connections`, registry package `mcp.id/gtm_connections`, mount `sender-accounts`.
@@ -1065,7 +1065,7 @@ paths:
       operationId: revoke_gtm_connection
       summary: Revoke gtm connection
       description: |-
-        Disconnect a linked gtm-api workspace (scope workspace, the default) or the whole consent it came from (scope consent: every sibling row of the same grant). The sender profiles that ran on it read disconnected, their work holds; nothing is deleted. The managed row is platform-owned and refuses (409).
+        Disconnect a linked gtm-api workspace (scope workspace, the default) or the whole consent it came from (scope consent: every sibling row of the same grant). The sender profiles whose accounts came through it read disconnected, their work holds; nothing is deleted. The managed row is platform-owned and refuses (409).
 
         Contract:
         - MCP tool `revoke_gtm_connection`, registry package `mcp.id/gtm_connections`, mount `sender-accounts`.
@@ -4709,16 +4709,16 @@ components:
                   description: Retired on 2026-10-25, always 0 here (credits_per_month replaced it).
                 accounts:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 cloud_browser:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 webhooks:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 proxy_5g:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
               required:
                 - linkedin_sender_profiles
                 - email_inboxes
@@ -8661,16 +8661,16 @@ components:
                   description: Retired on 2026-10-25, always 0 here (credits_per_month replaced it).
                 accounts:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 cloud_browser:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 webhooks:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 proxy_5g:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
               required:
                 - linkedin_sender_profiles
                 - email_inboxes
@@ -10332,7 +10332,7 @@ components:
               type: array
               items:
                 type: string
-              description: The gtm account sids the team's sender profiles use through this row, as unibox last reported them.
+              description: The account sids (ln_ac_, em_ac_) the team's sender profiles hold through this connection, as unibox last reported them.
             linked_at:
               type: string
               nullable: true
@@ -11295,13 +11295,13 @@ components:
                         description: "0: White label is part of the Business service level, not a line."
                       accounts:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                       cloud_browser:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                       webhooks:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                     required:
                       - linkedin_seats
                       - email_seats
@@ -12468,7 +12468,7 @@ components:
                     type: array
                     items:
                       type: string
-                    description: The gtm account sids the team's sender profiles use through this row, as unibox last reported them.
+                    description: The account sids (ln_ac_, em_ac_) the team's sender profiles hold through this connection, as unibox last reported them.
                   linked_at:
                     type: string
                     nullable: true
@@ -14446,16 +14446,16 @@ components:
                         description: Retired on 2026-10-25, always 0 here (credits_per_month replaced it).
                       accounts:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                       cloud_browser:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                       webhooks:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                       proxy_5g:
                         type: integer
-                        description: A gtm key, 0 on this product.
+                        description: "Not used on GetSales: always 0."
                     required:
                       - linkedin_sender_profiles
                       - email_inboxes
@@ -16378,16 +16378,16 @@ components:
                   description: Retired on 2026-10-25, always 0 here (credits_per_month replaced it).
                 accounts:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 cloud_browser:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 webhooks:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
                 proxy_5g:
                   type: integer
-                  description: A gtm key, 0 on this product.
+                  description: "Not used on GetSales: always 0."
               required:
                 - linkedin_sender_profiles
                 - email_inboxes

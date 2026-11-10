@@ -3,6 +3,36 @@ title: "Changelog"
 description: "What's new in the GetSales platform and this documentation."
 ---
 
+<Update label="2026-11-10" description="A workflow copied to another table, who sent a message, and finders that read the row">
+  **A workflow can be copied, into its own table or another one.** `POST /api/workflows/{sid}/duplicate`
+  makes a draft copy with the steps, the sender profiles that still exist, the rotation, priority,
+  schedule, `on_reply` and the AI SDR pick. The copy has no audience, no version and no history, and
+  its steps are numbered again from 1. `playtable_sid` homes it on another table and `name` names it
+  (`{{name}}` stands for the original's name). In another table a `run_column` step takes that
+  table's action column of the same slug, or comes over with `field_sid` null when there is none.
+  `result.missing_columns` lists every column the steps read that the copy's table lacks, with the
+  steps that read it. With `dry_run: true` the call answers that list alone and writes nothing, so you
+  can see what a copy would miss before you make it.
+
+  **A message says who sent it.** Every message the messages API returns carries `sent_by`, the
+  identity that called the send: `actor_type` `user` with a member sid is a teammate writing in the
+  inbox, `api_key` with a key sid is an API key, `agent` with a member sid and `actor_name` set is an
+  app (an OAuth connector) sending for that member, and `agent` with an AI SDR sid (`ub_ag_...`) is
+  the AI SDR on its own turn. It is null on a message nobody sent from GetSales (an inbound one, one
+  imported from the channel, a workflow's or a play's send, which `automation_ref` names) and on the
+  messages sent before this change. The server stamps it and no write changes it.
+
+  **An email finder reads the row.** A waterfall step of an email finder (`in:{provider}.email.find`)
+  in a column's `payload.steps` can take empty `params`: the save fills `full_name`,
+  `linkedin_nickname`, `company_name` and `domain` from the row. Send a key only to read another
+  column, or null to switch that input off.
+
+  **A sender profile's numbers count every send.** `POST /api/sender-profiles/stats` and
+  `POST /api/sender-profiles/{sid}/performance` count the sender profile's own sends and visits,
+  whoever made it send: a workflow, a play, a teammate in the inbox, or the account itself. They
+  counted only the sends a workflow made before, so an account that worked from the inbox read zero.
+</Update>
+
 <Update label="2026-11-08" description="A Stop that holds, a daily limit that waits, and searches that say what they could not match">
   **A Stop on a column or a table stops the column.** `POST /api/playtable-runs/cancel` with
   `field_sid` or `playtable_sid` also turns `config.auto_run` off on the action columns it stops and
