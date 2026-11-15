@@ -131,10 +131,6 @@
       "href": "https://app.getsales.io/signup"
     }
   },
-  "banner": {
-    "content": "GetSales is an independent product and is not affiliated with, endorsed by, or sponsored by LinkedIn Corporation. LinkedIn and the LinkedIn logo are trademarks of LinkedIn Corporation. Use of GetSales is at your own risk and subject to the applicable third-party platform terms.",
-    "dismissible": false
-  },
   "footer": {
     "socials": {
       "github": "https://github.com/getsales-io",

@@ -1,0 +1,16 @@
+/* The non-affiliation line, at the foot of every page.
+ * The footer settings in docs.json take links and social icons only, so the
+ * line is drawn here, under the "Powered by" row, in the footer links' ink. */
+#footer > div::after {
+  content: "GetSales is an independent product and is not affiliated with, endorsed by, or sponsored by LinkedIn Corporation. LinkedIn and the LinkedIn logo are trademarks of LinkedIn Corporation. Use of GetSales is at your own risk and subject to the applicable third-party platform terms.";
+  display: block;
+  margin-top: -1.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  text-wrap: pretty;
+  color: rgb(var(--gray-950, 3 7 18) / 0.5);
+}
+
+html.dark #footer > div::after {
+  color: rgb(255 255 255 / 0.5);
+}
