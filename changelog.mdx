@@ -3,6 +3,45 @@ title: "Changelog"
 description: "What's new in the GetSales platform and this documentation."
 ---
 
+<Update label="2026-11-15" description="Post engagement with no sender profile and by keyword, CSV columns matched on upload, json columns that declare their outputs">
+  **A post engagement names no sender profile.** `POST /api/data-sources` with `type` `post_engagement`
+  refuses `sender_profile_sid` now and picks how each read runs: a LinkedIn account of your workspace
+  reads it free when there is one, and our managed infrastructure reads it for credits when there is
+  not. `POST /api/data-sources/post-engagement-preview` takes the link alone.
+
+  **A post engagement can watch a keyword.** `payload.target` `keyword` with `payload.keyword.text` (up
+  to 200 characters, quotes and AND, OR, NOT as on LinkedIn) and no `url` collects the people who engaged
+  with the posts a LinkedIn content search finds for those words, newest first. Its `payload.window` is
+  `{days: 1 | 7 | 30}`, 7 by default. The preview takes `keyword` in place of `url`, with `window_days`,
+  and answers the first page of posts, `result.keyword` (the words as they are searched, to send as
+  `payload.keyword.text`) and `result.has_more`.
+
+  **A CSV upload suggests its mapping.** A CSV source's `included.csv_preview` carries
+  `suggested_mapping`: what each column of the file is for, matched on upload.
+  `POST /api/data-sources/{sid}/import` takes `auto_identifiers`. Absent or true, the LinkedIn and email
+  identifiers the upload found join a mapping that names none of their kind (a new import only). False
+  keeps `field_mapping` as the last word on who the rows are.
+
+  **A json Use AI column declares its outputs.** `POST /api/playtable-fields`,
+  `PATCH /api/playtable-fields/{sid}` and `POST /api/playtable-fields/preview-run` take
+  `payload.output_schema` with `output` `json`: the JSON Schema of the answer, each value a property of
+  type `[<type>, "null"]`, read in a formula as `record.<slug>.response.<key>`.
+
+  **A wait's event exit takes steps.** A `wait_for_event` step in a workflow's `draft_steps` takes
+  `on_event`: steps for the people who met the event alone, run before the steps after the wait, which
+  they go on to unless they end with `end`.
+
+  **A LinkedIn read takes the profile as it was pasted.** `POST /api/people/read-linkedin` takes in
+  `ln_nickname` the slug, a `linkedin.com/in/` link, a profile id, or a Sales Navigator or Recruiter link.
+
+  **A Stop also returns the companies a Find people column has waiting.** `POST /api/playtable-runs/cancel`
+  sends them back with the queued cells, and turning a column's `config.auto_run` off sends its waiting
+  queue back.
+
+  **A cell holds up to 1 MB.** `POST /api/playtable-field-values/write` takes a `value` of up to
+  1,048,576 characters.
+</Update>
+
 <Update label="2026-11-10" description="A workflow copied to another table, who sent a message, and finders that read the row">
   **A workflow can be copied, into its own table or another one.** `POST /api/workflows/{sid}/duplicate`
   makes a draft copy with the steps, the sender profiles that still exist, the rotation, priority,
