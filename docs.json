@@ -37,7 +37,8 @@
           {
             "group": "Guides",
             "pages": [
-              "guides/receive-webhooks"
+              "guides/receive-webhooks",
+              "guides/hubspot"
             ]
           }
         ]
