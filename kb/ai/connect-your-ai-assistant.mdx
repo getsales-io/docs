@@ -1,0 +1,443 @@
+---
+title: "Connect your AI assistant"
+description: "Connect Claude, ChatGPT, Cursor, Claude Code or any MCP client to GetSales at https://mcp2.getsales.io/mcp/public (260 tools in 19 groups behind four meta-tools): you sign in on a GetSales consent page and pick the workspaces, and the assistant works tables, workflows, the inbox, the AI SDR, signals and settings with your permissions. A delete, a cancel, a publish or a plan change answers a preview first, whose token expires in 300 seconds. This address has no tool that sends a message, approves a draft or connects an account, but a workflow the assistant publishes still sends, and so does the AI SDR on a thread whose mode is Auto-pilot. 600 calls and 120 writes a minute per workspace. Disconnect it under Settings, Connected apps. A headless client uses an API key (gs_live_)."
+---
+
+Connect an AI assistant to GetSales once, and it works in your workspace when you ask: it builds tables and
+workflows, reads the inbox and the AI SDR's drafts, and tells you how a table is doing.
+
+<Tip>
+**Give this to your assistant once it is connected**, as its first task:
+
+"Using the GetSales connector: tell me which workspace you are working in and list my other workspaces. Then list
+my tables with how many people and companies each holds, my sender profiles with what each sent today, and the
+inbox threads waiting for a reply. Read only: do not create, change or send anything."
+</Tip>
+
+## How does an AI assistant work in GetSales?
+
+An AI assistant works in GetSales through the GetSales MCP server at `https://mcp2.getsales.io/mcp/public`. MCP
+(Model Context Protocol) is the open standard assistants use to call another product's tools. The order of
+events:
+
+1. You add the address to your assistant. Its first call is refused (`401`) with a pointer to the GetSales
+   sign-in, and the assistant registers itself: there is nothing to set up in GetSales beforehand.
+2. A GetSales page opens in your browser. You sign in, choose the workspaces the assistant may act in, and click
+   **Allow**.
+3. The assistant receives a token that lasts one hour and renews itself. Your sign-in never passes through the
+   assistant.
+4. From then on the assistant finds the tool it needs among 260 tools in 19 groups, through four tools of its
+   own: `search_tools`, `describe_tool`, `call_tool` and `list_toolsets`.
+
+The assistant never does more than you can: in each workspace it holds at most the permissions you hold there
+(see [Team members and roles](/kb/workspace/team-members-and-roles)). Every tool is also an API operation: the
+[API reference](/api-reference/overview) documents each one, with the tool's name as its operation id.
+
+## What do I need before I connect an assistant?
+
+- A GetSales account. Sign up at https://app.getsales.io/signup if you have none.
+- An assistant that takes a remote MCP server by its URL: claude.ai, the Claude desktop app, Claude Code, ChatGPT,
+  Cursor, VS Code, Codex or another MCP client.
+
+The connection itself costs nothing: what the assistant runs spends credits as the same work does in the app. In a
+suspended workspace, the work tools answer `payment_required` (reason `subscription_required`) until a plan covers
+it, the plan resumes or the payment lands. A workspace is suspended when no plan covers it (a workspace you created
+later, or one whose share was taken back under **Settings**, **Subscription**), when its plan is paused, or when its
+renewal is still unpaid 3 days after it failed. Over a sign-in, a suspended workspace's billing, General and
+Teammates settings, API keys, connected apps, white label, integrations and webhooks still answer, while its website
+tracking, pipeline stages, stoplist and per-step credit receipts
+([`search_credit_ledger_entries`](/api-reference/playtables/credit_ledger_entries/search-credit-ledger-entries))
+answer `payment_required` too, and an API key is refused on every call. A workspace that moved to the Free plan when
+its trial or its plan ended is not suspended: its tables and workflows keep working, while their LinkedIn and email
+steps fail as they come due until a plan covers the accounts, and a failed step goes out only when it is run again
+([the Free plan](/kb/workspace/plans-credits-and-billing#what-is-the-free-plan)).
+
+## How do I add GetSales to Claude, ChatGPT, Cursor or another assistant?
+
+Every assistant takes the same address, `https://mcp2.getsales.io/mcp/public`, and signs in the same way (OAuth).
+Use this address: it is the one made for assistants, and it leaves out the tools that send messages or connect
+accounts. The full address `https://mcp2.getsales.io/mcp` and the per-group addresses (such as
+`https://mcp2.getsales.io/mcp/inbox`) serve those tools too, with the same sign-in.
+
+<Tabs>
+  <Tab title="Claude">
+    The same steps work in claude.ai and in the Claude desktop app.
+
+    1. In Claude, open **Settings**, then **Connectors**, and click **Add custom connector**.
+    2. Enter the name `GetSales` and the URL `https://mcp2.getsales.io/mcp/public`, then click **Add**.
+    3. Click **Connect** on the new GetSales entry. The GetSales consent page opens in your browser
+       ([what it asks](#what-happens-on-the-getsales-consent-page)).
+    4. After **Allow** you are back in Claude, and the entry shows **Configure** instead of **Connect**.
+  </Tab>
+  <Tab title="ChatGPT">
+    1. In ChatGPT, open **Settings**, then **Connectors**, and click **Create**.
+    2. Enter the URL `https://mcp2.getsales.io/mcp/public` and choose OAuth as the authentication.
+    3. ChatGPT registers itself and opens the GetSales consent page.
+
+    If ChatGPT shows no way to add a custom MCP server, custom servers are off for your plan or workspace: not
+    every ChatGPT plan offers them, and on a Business or Enterprise workspace an admin either allows them for you
+    or adds GetSales for the whole workspace. There is no developer mode to turn on any more.
+  </Tab>
+  <Tab title="Cursor">
+    Add the server to `.cursor/mcp.json`, or in Cursor's settings under MCP, with the URL alone:
+
+    ```json
+    {
+      "mcpServers": {
+        "getsales": { "url": "https://mcp2.getsales.io/mcp/public" }
+      }
+    }
+    ```
+
+    Cursor shows **Connect** on the server and opens the GetSales consent page itself.
+  </Tab>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http getsales https://mcp2.getsales.io/mcp/public
+    ```
+
+    Then run `/mcp` in a session and choose to authenticate: the consent page opens in your browser.
+    `claude mcp list` shows `getsales` as connected once you have clicked **Allow**.
+  </Tab>
+  <Tab title="Other clients">
+    - **Codex**: `codex mcp add getsales --url https://mcp2.getsales.io/mcp/public`, then
+      `codex mcp login getsales`, which opens the consent page.
+    - **VS Code**, and any client that takes a URL: add `https://mcp2.getsales.io/mcp/public` over the streamable
+      HTTP transport and let the client run the OAuth sign-in.
+    - **A client that can only start a command**, or one running where no browser opens: see
+      [Connect a client](/mcp/connect), the developer page, and [the API key route](#how-do-i-connect-with-an-api-key-instead-of-signing-in).
+  </Tab>
+</Tabs>
+
+## What happens on the GetSales consent page?
+
+The GetSales consent page, `https://app.getsales.io/oauth/consent`, is where you decide what the assistant may
+reach. It has three steps.
+
+1. **Sign in**, if you are not signed in already: **Log in to your workspace** asks for your **Work email**.
+   Click **Continue with email** and type the 6-digit code GetSales sends you, or click **Continue with Google**.
+   There is no password.
+2. **Authorize access** reads "{app} wants to access your GetSales workspace", with the name your assistant
+   registered. Under **Grant access to** ("Choose which workspaces this app can act in."), choose:
+   - **Selected workspaces** (the default): tick each workspace the assistant may act in. Each row shows your role
+     there, **Owner** or **Member**. Your default workspace is ticked for you. At least one must be ticked.
+   - **All my workspaces**: every workspace you belong to, including workspaces you join later.
+3. Click **Allow**. The browser returns to your assistant with the connection live. **Deny** returns it with
+   nothing granted.
+
+**Requested permissions**, above the workspaces, lists what the assistant asked for in areas, each with how many
+permissions it holds: **Workspace and members**, **API keys, apps and sessions**, **Billing**, **LinkedIn**,
+**Email**, **Integrations and automation**, **White label and domains**, and **Other permissions**, which holds the
+permissions on the work itself: **Playtables** (tables), **People**, **Workflows**, **Conversations** (the inbox),
+**Agents** (the AI SDR), **Sender profiles**, **Signals** and **Stoplist**. Click an area to see one line per object
+with its verbs (**View**, **Manage** and the like). An assistant that registers itself asks for every permission of
+the catalog, 80 today: more than the 46 the permission picker under **Teammates** lists, since the consent card also
+shows permissions that picker leaves out, most of them under **LinkedIn** and **Email**. A permission you do not hold
+in the workspace you are signed in to is dimmed, with a minus sign instead of a tick: in any workspace, the assistant
+never gets a permission you lack there. The consent page does not narrow them: **Scope** under Connected apps does,
+after Allow. The card ends with **Signed in as** and your email, the account that
+grants the access.
+
+<Frame caption="Authorize access for Claude: the requested permissions in eight areas, Grant access to set to Selected workspaces with Acme Analytics ticked, then Deny or Allow.">
+  <img src="/images/kb/ai/oauth-consent.png" alt="The Authorize access card. The Claude initial C and the GetSales logo side by side, then Claude wants to access your GetSales workspace. Requested permissions, every area closed: Workspace and members (11), API keys, apps and sessions (6), Billing (2), LinkedIn (19), Email (12), Integrations and automation (6), White label and domains (4) and Other permissions (20). Grant access to, Choose which workspaces this app can act in: Selected workspaces chosen over All my workspaces, and the Acme Analytics workspace ticked, tagged Member. The Deny and Allow buttons, and Signed in as maya@acme.example below them." />
+</Frame>
+
+"Authorization request not found" means the request is more than 10 minutes old or was already used. Start the
+connection again from your assistant.
+
+## How do I check that the assistant is connected?
+
+Ask your assistant to **list my tables**. A connected assistant answers with the tables of the workspace it acts
+in (the tool is [`search_playtables`](/api-reference/playtables/playtables/search-playtables)). If you belong
+to several workspaces, name the one you mean: "in the Acme Analytics workspace, list my tables".
+
+An assistant that answers with tools it cannot find, or asks you to sign in again, is not connected: remove the
+connector in the assistant and add it again.
+
+## Which workspace does the assistant work in?
+
+The assistant works in one workspace per call, chosen among the workspaces you allowed on the consent page.
+Unless you name one, it uses your default workspace when the connection covers it, else the workspace you were in
+when you clicked **Allow**, else the first one you ticked.
+
+To work in another allowed workspace, name it in your request. The assistant finds the workspace's id
+([`get_current_user`](/api-reference/id/users/get-current-user) or
+[`search_teams`](/api-reference/id/teams/search-teams)) and passes it with the call, and every answer says which
+workspace it ran in.
+
+A workspace you did not allow, or have left, is refused with `forbidden` (reason `workspace_not_covered`): "This
+connection cannot act in workspace ..." To add it, connect the assistant again and, on the consent page, tick it
+together with every other workspace the assistant should keep: the connection covers only what that consent ticks.
+The new consent also resets the assistant's permissions to what it asked for, so if you had narrowed them under
+**Scope**, narrow them again. The refusal also points at the Connected apps page, but that page changes a
+connection's permissions only, never its workspaces.
+
+## What can the assistant do in GetSales?
+
+An assistant connected to GetSales works almost everything you work on in the app, within your permissions: tables,
+columns, rows, sources and workflows, the inbox and the AI SDR, signals and plays, and the workspace's team, keys,
+billing, website tracking, integrations, webhooks and white label. It reads sender profiles and what each did today,
+but it cannot act on a channel: it never sends, approves a draft or connects an account
+([what it cannot do](#what-can-the-assistant-not-do)). Its tools come in 19 groups named after what they belong to,
+and if it looks in the wrong place, name the group: "look in playtables.crm".
+
+| Group | What the assistant can do | Try asking |
+|---|---|---|
+| `playtables.tables` | List, create, rename, archive, duplicate (columns, views and workflows, no rows) or delete tables, save views, read how a table or the workspace is doing | "How is the Q4 table doing against the previous 30 days?" |
+| `playtables.columns` | Add columns (Use AI, Find work email, API tool call, Find people on a Companies tab), try a prompt on one row, estimate and run with a cap, stop a run, read why a cell failed, change many rows at once | "Estimate the work email column on the 40 people without one. Do not run it." |
+| `playtables.rows` | Search people and companies, open a person's card, edit, merge companies, move a person, read the activity feed | "Who in the fintech table has a work email but no reply yet?" |
+| `playtables.crm` | Pipeline stages, tags, notes, and the stoplist (check, add, remove) | "Is maria@acme.example on the stoplist, and since when?" |
+| `playtables.sources` | Create a source (an AI search, a sender search on a sender profile's own account, a post engagement source, a Find people search, a webhook), import a CSV through an upload link, read a source's funnel, pause or delete it | "Why did only 80 of the 120 rows of yesterday's CSV make it in?" |
+| `playtables.workflows` | Build a workflow from a description (validated first), set its senders and sending windows, attach an audience, publish, pause, resume, delete | "Draft a workflow: an email, two days of waiting, a follow-up. Show me before you publish." |
+| `playtables.workflow-records` | See where each person is and why one stopped, pause, resume, restart or take a person out, edit a planned text or its time, skip a step | "Which step is Anna Keller on, and why did she stop?" |
+| `inbox` | Find and read threads, edit an AI SDR draft or ask for a new one, dismiss a draft or cancel a message not sent yet, close, snooze, set one thread's AI SDR mode, link a thread to a person, merge two threads, tasks | "Which replies are waiting for me, and what did the AI SDR draft for each?" |
+| `sender-profiles` | List sender profiles with their LinkedIn account and mailboxes, what each did today against its daily limits, who is on hold and why, sender variables | "Which sender profiles are on hold, and why?" |
+| `ai-sdr.agents` | Read and change an AI SDR's Brief, mode, Dialog Rules and scenarios, read its plans and why it acted, see how it did | "What does the AI SDR do when someone asks for pricing?" |
+| `ai-sdr.training` | The AI SDR's Knowledge and documents, the golden set, the hints, a test reply on a real thread with nothing sent | "Test the AI SDR on Lina's last reply and show me what it would send." |
+| `signals` | The visitor feed, who visited, binding a visitor to a person, who viewed your sender profiles, the plays of a table (create, price, switch on or off) | "Who visited the pricing page this week and has not replied?" |
+| `workspace.team` | Your account and workspaces, the workspace profile, members and invites, notifications | "Invite dana@acme.example with the same permissions as Marta." |
+| `workspace.access` | List API keys and revoke one, list connected apps and disconnect one | "Which keys have not been used in 60 days?" |
+| `workspace.billing` | Subscriptions, the price of a change before it is made, invoices and their PDF, the credit balance, what the credits went on | "How many credits do we have left, and what did enrichment cost this month?" |
+| `workspace.website-tracking` | Register a site (its level and your consent duty confirmed first), get the script, check the install, key pages and events | "Why does acme.example show no visits since Tuesday?" |
+| `workspace.integrations` | The price list of paid operations, your own API connections and tools, CRM connections and their fields, the call log | "What does email verification cost?" |
+| `workspace.webhooks` | Subscribe an endpoint to events, send a signed test, read deliveries, send failed deliveries again | "Which webhook deliveries failed this week, and why?" |
+| `workspace.whitelabel` | Brands on your own domain, their certificate and email domain, who registered (white label accounts only) | "Why is the partnerco.example certificate not live yet?" |
+
+A plan change ([`change_billing_subscription`](/api-reference/id/billing_subscriptions/change-the-plan:-linkedin-accounts-inboxes-credits))
+is open only to the subscription's owner. A CSV file does not travel through the chat: the assistant gets a
+single-use upload link that works for 15 minutes, the file goes to it as one plain HTTP `PUT`, and
+[`import_data_source`](/api-reference/playtables/data_sources/import-data-source) then confirms the column mapping
+and starts the import. An assistant that can run commands sends the file itself. With one that cannot, import the
+file yourself in the app: open the table, click **Data sources**, then **CSV** (see
+[How do I import a CSV file?](/kb/tables/add-people-and-companies#how-do-i-import-a-csv-file)).
+
+## What does the assistant ask before it changes something?
+
+The GetSales server holds back the actions it marks dangerous (deletes, cancels, publishing or resuming a workflow,
+a plan change and the rest listed here) until you confirm them. The first call of such an action changes nothing:
+it answers a preview of what would happen and a confirmation token. The assistant shows you the preview, and the
+same call with the same arguments and the token runs it.
+
+<Note>
+A confirmation token works once, for that action, those arguments and that workspace, and expires after 300
+seconds. A late, changed or reused token is refused, and the assistant asks for a fresh preview.
+</Note>
+
+The actions that preview first:
+
+- Deleting one object (a table, a view, a column, a person, a company, a source, a workflow, a play, a member, an
+  API key, a site, a webhook, an AI SDR and the rest), and taking a company out of a table.
+- Cancelling runs, messages or a workflow step.
+- [`publish_workflow`](/api-reference/playtables/workflows/publish-workflow) and resuming a workflow, and resuming,
+  restarting or taking out one person.
+- Merging two threads, and stoplisting a person from a thread.
+- Every change through `update_agent` (an AI SDR's Brief, mode, state or default), resetting a scenario, and
+  forgetting golden-set replies.
+- Unlinking a visitor from a person, and rotating a site key or a webhook source's ingest key.
+- A subscription change, disconnecting an app, and creating, changing or replaying a webhook.
+
+These run on the first call, with no server preview:
+
+- An enrichment run, an AI search source, and a column set to run on every new row.
+- A bulk run over many rows: tags, a value, adding people to or taking them out of workflows, moving them, deleting
+  them.
+- Merging two companies (it moves the people, with no undo).
+- Adding people to a workflow, pausing a workflow, and editing a planned step's text or time.
+- Switching a play on (it then runs by itself), and changing a scenario's level or one thread's AI SDR mode.
+- Inviting a member (the email goes out).
+
+A well-behaved assistant asks you first, but the server does not hold these, so say "show me before you run
+anything" when it matters.
+
+## What does the assistant spend?
+
+The assistant spends credits from the workspace's balance only on paid work, the same work that costs credits in
+the app: email finding and verification, AI columns, Find people, enrichment, AI searches, a post's engagers read on
+our managed infrastructure, and the plays it switches on. Reading and editing are free. Two previews are paid:
+seeing the filters an AI search would use
+([`plan_data_source_filters`](/api-reference/playtables/data_sources/plan-data-source-filters)) costs what building
+the filter costs, one AI call plus 1 credit for each term it looks up (a term already looked up in the past week, or
+one that matches nothing, costs nothing), and trying a prompt on one row
+([`preview_playtable_field_run`](/api-reference/playtables/playtable_fields/preview-playtable-field-run)) costs what
+that row costs. Prices are in
+[Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
+
+- Before a column run or a play, the assistant can price it with
+  [`estimate_credits`](/api-reference/playtables/playtable_fields/estimate-credits), which answers a minimum, an
+  expected and a maximum.
+- A run takes a cap, `max_budget`, and stops at it. A run with no cap is uncapped.
+- A column can carry a daily credit limit of its own (`daily_credit_limit`, per UTC day).
+- An AI search source has no estimate and no cap: it spends 3 credits on every page of results that returns
+  someone, up to 100 pages, so a careful assistant says so and waits for your yes.
+- A plan change spends money, not credits: after its preview shows the amount, the confirm charges the
+  subscription's card. Only the subscription's owner can make it, and the assistant never types a card.
+
+## What can the assistant not do?
+
+An assistant connected at `https://mcp2.getsales.io/mcp/public` has no tool that acts on a channel: it never sends a
+message, approves a draft or connects a LinkedIn account or mailbox itself, though a workflow it publishes still
+sends, and so does the AI SDR on any thread whose mode is Auto-pilot
+([which changes lead to sends](#which-of-the-assistant%E2%80%99s-changes-lead-to-messages-being-sent)). These stay
+in the GetSales app, where you do them yourself or ask Creator, the assistant inside the app, which has the tools for
+most of them and runs each one on your word. Keys, cards and the workspace itself are yours alone, and so is signing
+in to LinkedIn or to a mailbox: Creator starts a LinkedIn connect only for someone else's account, by emailing them a
+sign-in link.
+
+- **Sending**: sending or replying to a message, approving an AI SDR draft (approving sends it), sending a failed
+  message again.
+- **Steps that act on a channel**: approving or retrying a workflow step that sends, running a play right now,
+  handing a thread to a teammate, asking the AI SDR to try a thread again, approving, steering or rewriting an AI
+  SDR plan, scheduling follow-ups.
+- **Reading LinkedIn live**: one profile, company page or post read on the spot. A column that reads profiles
+  across a table's rows is enrichment, and the assistant can add and run it.
+- **Sender profiles and accounts**: creating, editing or deleting a sender profile, changing its daily limits or
+  reading the LinkedIn account's limit settings and their history (it reads today's daily limits and use, and
+  each mailbox's daily limit and **Warmup**), filling a sender profile's own variable values, and connecting,
+  detaching or pausing its LinkedIn account and mailboxes.
+- **Keys, cards and the workspace itself**: creating, rotating or editing an API key, typing a card (the assistant
+  gives you a link to the payment page instead), pausing, resuming or cancelling a subscription, deleting a
+  workspace or moving its ownership.
+
+Asked for a tool of the first four groups, the server answers that the tool "is not on this address: it acts on a
+channel (a send, an approval, a connected account), and a person does that in the GetSales app". The last group has
+no tool on any MCP address, so a name the assistant tries for one answers "Unknown tool". The assistant writes the
+draft or builds the workflow, and you send, approve and connect in the app, yourself or through Creator. The sign-in
+to a LinkedIn account or a mailbox is always a person's own.
+
+## Which of the assistant's changes lead to messages being sent?
+
+The assistant cannot send, but GetSales sends on its own after these changes the assistant can make: publishing or
+resuming a workflow, adding people to a live workflow, attaching an audience to one, widening a view or filter
+audience (or changing tags or values so more people match it), moving a person into another table, handing a thread
+back to its workflow, resuming or restarting one person, moving a planned step's time into the past, switching a play
+on, putting a thread on **Auto-pilot** (or the agent, for threads outside workflows), and raising a scenario's level
+on **Auto-pilot** threads. When it matters, tell it to show you before any of these:
+
+- **A workflow it publishes and resumes** sends its steps on schedule, and both calls preview first. People it
+  adds to a live workflow ([`add_workflow_people`](/api-reference/playtables/workflows/add-people-to-workflow), or a
+  bulk run) enter it on the first call.
+- **An audience it attaches, or a person it moves**: a view or filter audience on a live workflow
+  ([`create_workflow_source`](/api-reference/playtables/workflow_sources/create-workflow-source) with `auto_add` on,
+  or [`update_workflow_source`](/api-reference/playtables/workflow_sources/update-workflow-source) turning
+  `auto_add` on or changing the view or filter) takes in everyone who matches at once, then every 10 minutes
+  whoever comes to match
+  ([auto-add](/kb/workflows/build-a-workflow#how-do-auto-add-and-a-workflow-source%E2%80%99s-limits-work)). An event
+  audience takes in each person who does its activity (a reply, an accepted invitation, a visit). A person moved
+  into another table ([`move_person`](/api-reference/playtables/people/move-person), or a bulk move) enters at once
+  every live workflow of that table whose view or filter audience takes them in, and so does anyone that editing a
+  saved view's filter, or a bulk change of tags or a column value, brings into such an audience. Handing a thread
+  back to its workflow
+  ([`return_conversation_to_orchestration`](/api-reference/unibox/conversations/return-conversation-to-orchestration))
+  resumes every workflow of that person that paused on their reply (a manual pause stays). All of these run on the
+  first call. Resuming or restarting one person in a workflow sends too, after a preview.
+- **A planned step it edits** ([`update_workflow_task`](/api-reference/playtables/workflow_tasks/update-workflow-task)):
+  a time moved into the past sends the step at once.
+- **A play it switches on** runs every day by itself, and a people play adds people to its workflow
+  ([plays](/kb/signals/signals#what-is-a-play-and-how-do-i-switch-one-on)).
+- **The AI SDR's mode**: the thread's mode decides, as its mode pill in Unibox shows it. The AI SDR sends without
+  approval only on a thread whose mode is **Auto-pilot**. On **Co-pilot** every message it writes waits as a draft.
+  How a thread's mode is decided:
+  [AI SDR](/kb/inbox/ai-sdr#how-does-the-ai-sdr-decide-between-sending-on-its-own-and-waiting-for-your-ok). The
+  assistant can change the agent's **Outside a workflow** mode
+  ([`update_agent`](/api-reference/unibox/agents/update-agent), after a preview), a scenario's level
+  ([`update_agent_scenario`](/api-reference/unibox/agent_scenarios/update-agent-scenario)) and one thread's mode
+  ([`update_conversation`](/api-reference/unibox/conversations/update-conversation)), the last two on the first call.
+
+## What limits apply to an assistant?
+
+The GetSales server meters every workspace, so a looping assistant cannot flood it.
+
+<Note>
+- 600 calls and 120 writes a minute per workspace (for an API key, per key).
+- A batch of at most 16 calls, and 25 seconds for each call.
+- An answer over 48,000 characters loses rows off the end of its list, with a note saying how many and how to get
+  them. A search page is then asked again at the size that fits, which counts as two calls. One record is never cut.
+
+Over the call or write limit, the call answers `rate_limited` with `retry_after` in seconds, and nothing ran: the
+assistant waits and goes on. A batch of more than 16 calls is refused whole with HTTP `413` (reason
+`batch_too_large`) before any of it runs: send it again in batches of 16 or fewer, or one call at a time. A call
+still running after 25 seconds answers `service_unavailable` (reason `timeout`), "The request timed out. Retry, or
+narrow the query.", but its work may still finish on the server, so the assistant checks whether a change went
+through before it makes it again. A second run on a column that is already running answers `409`, and a run past
+the workspace's cap on runs at once answers `429`, until one ends.
+</Note>
+
+## How does the assistant learn how GetSales works?
+
+The GetSales connector gives an assistant the tools, and these docs give it the product: how sender profiles,
+tables, workflows and the inbox behave, and what each limit means. The GetSales connector does not search these
+docs. Add the documentation's own MCP server as a second connector, the same way as the GetSales one:
+
+- Address: `https://docs.getsales.io/mcp`. Its tools, `search_get_sales` and `query_docs_filesystem_get_sales`,
+  search and read the knowledge base, the guides and the API reference. It needs no sign-in and cannot change
+  anything in your workspace.
+- In Claude Code: `claude mcp add --transport http getsales-docs https://docs.getsales.io/mcp`.
+
+Every page is also plain text: add `.md` to its address, or read the index at https://docs.getsales.io/llms.txt.
+More in [Use these docs from your AI tools](/mcp/use-docs-with-ai).
+
+## How do I connect with an API key instead of signing in?
+
+An API key connects a client that cannot open a browser, such as a script, a server or CI. Create it in
+GetSales, then send it on every request instead of signing in.
+
+1. Open **Settings**, then **API keys** under **Workspace** (https://app.getsales.io/settings/apikeys), and click
+   **New key**. The button needs the API keys Manage permission.
+2. Enter a **Name**, pick an **Expiry** (**Three years** by default, **On a date**, or **Never**), then the
+   **Permissions**: the preset **Full access**, the preset **Automation platform** (what the n8n, Zapier and Make
+   apps call), or tokens you tick by hand (**Custom**). A key made this way acts with its permissions wherever you
+   can act in the workspace: to keep an assistant away from some sender profiles or tables, give it a workspace of
+   its own.
+3. Click **Create key** and copy the secret: it starts with `gs_live_` and is shown only this once.
+4. Send it as a header: `Authorization: Bearer gs_live_...`. In Claude Code:
+
+```bash
+claude mcp add --transport http getsales https://mcp2.getsales.io/mcp/public --header "Authorization: Bearer gs_live_..."
+```
+
+<Warning>
+Use one mode per connection. A client that sends a key header and also runs the sign-in overwrites one with the
+other, and the connection fails in a way that looks like a server problem. A key works in its own workspace only:
+it cannot switch to another, so make a key in each workspace, or sign in instead.
+</Warning>
+
+The same key works on the REST API ([Authentication](/authentication)). The assistant can list keys and revoke one,
+but it never creates or rotates a key, so a key's secret never passes through it. GetSales sends a notice 7 days
+before a key expires.
+
+## How do I disconnect an assistant or revoke a key?
+
+Disconnect an assistant under **Settings**, then **Connected apps** (https://app.getsales.io/settings/oauth). The
+page lists the apps you connected, each with the workspaces it covers. Pick one to see its **Teams** (the
+workspaces: **All my teams**, or how many), **Permissions**, **Tokens** and **Last used**.
+
+1. Pick the app, open its more-actions menu and click **Disconnect**.
+2. Confirm **Disconnect {app}?**: "Every token this app holds is cut. It has to ask for consent again."
+
+Every token of that app stops at once, in every workspace. **Scope** on the same page changes which permissions the
+app holds, never past what it registered for or what you hold, without disconnecting it. The workspaces stay as
+consent set them. The assistant itself can disconnect an app through
+[`revoke_oauth_authorization`](/api-reference/id/oauth_authorizations/disconnect-app-revoke-grant), after a
+preview.
+
+To revoke an API key, open **API keys**, pick the key, and choose **Revoke** in its more-actions menu. Calls with the
+key are refused at once, and on every GetSales service within 5 minutes. **Rotate** shows a new secret once and
+keeps the old one working for 24 hours, so running jobs survive the swap.
+
+Over the API or MCP, [`search_api_keys`](/api-reference/id/api_keys/search-api-keys) lists keys and
+[`delete_api_key`](/api-reference/id/api_keys/revoke-api-key) revokes one.
+[`rotate_api_key`](/api-reference/id/api_keys/rotate-api-key) rotates one over the REST API only.
+
+## What do I send support when the assistant shows an error?
+
+Write to support@getsales.io with what you asked, what came back and roughly when. Paste the error whole: every
+preview and most error texts end with a line `trace: <id>`, which lets us find the call. If the assistant only
+summarized the error, ask it to repeat the error text word for word.
+
+## Related
+
+- [Connect a client](/mcp/connect) and [MCP server](/mcp/overview), the developer pages
+- [Get started](/kb/start/get-started), [Team members and roles](/kb/workspace/team-members-and-roles),
+  [Plans, credits and billing](/kb/workspace/plans-credits-and-billing)
+- [AI SDR](/kb/inbox/ai-sdr), [Build an outreach workflow](/kb/workflows/build-a-workflow),
+  [Signals](/kb/signals/signals)

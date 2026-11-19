@@ -17,10 +17,12 @@ Related:
 gs.docs/
 ├── docs.json                  # navigation, theme, branding
 ├── index.mdx ...              # hand-written pages (Guides, MCP, Changelog tabs)
+├── guides/webhook-events.mdx  # GENERATED: every webhook event's payload, from the Integrations spec
 ├── api-reference/
 │   ├── overview.mdx           # hand-written intro to the reference
 │   └── {playtables,unibox,signals,integrations,id}/openapi.yaml   # GENERATED, synced copies
-├── sync-openapi.sh            # pulls the specs in from gs.openapi.public
+├── sync-openapi.sh            # pulls the specs in from gs.openapi.public, then renders the events page
+├── scripts/webhook-events.mjs # renders guides/webhook-events.mdx from the Integrations copy
 └── logo/, favicon.svg         # brand assets (the app's own mark and the landing's wordmark)
 ```
 
@@ -39,6 +41,14 @@ To update the reference: change the tool definition, regenerate
 (`cd product/mcp/gs.mcp && pnpm openapi:public`), then run `./sync-openapi.sh`.
 `./sync-openapi.sh --check` fails on any drift between the copies and the source; run it
 before committing.
+
+`guides/webhook-events.mdx` is generated the same way, one step further:
+`scripts/webhook-events.mjs` renders it from `api-reference/integrations/openapi.yaml` (the body
+create-webhook's delivery callback POSTs, one schema per event type), `./sync-openapi.sh` runs it
+after every copy, and its `--check` fails when the page is not what the copy renders. To change
+what the page says about an event, change the event's schema upstream and sync. The script reads
+YAML with the parser of `product/mcp/gs.mcp/packages/openapi`, so run `pnpm install` in
+`product/mcp/gs.mcp` once.
 
 ## Preview locally
 

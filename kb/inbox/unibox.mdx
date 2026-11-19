@@ -1,0 +1,314 @@
+---
+title: "Unibox"
+description: "Unibox is a GetSales workspace's one inbox (Messages in the sidebar, https://app.getsales.io/messages): every reply to every sender profile, LinkedIn and email, as threads (one person and one account of a sender profile) whose status (Needs you, AI SDR handling, Waiting on lead, Stalled, Snoozed, Closed, in the API needs_you, agent, waiting, stalled, later, done) is set again after every message, draft or task. Its views are All replies, Sent, Snoozed and Tasks, with four saved filters kept in your browser and Agent scenarios counting the replied threads by the classification of their reply. The person's card beside a thread shows the AI SDR Summary, Conversations, Workflows (each with its state and step, such as Paused on reply #3), their Playtable row, CRM when the team has one connected, and Tags. A reply goes out as the thread's sender profile and spends no credits, Mark done and Snooze sit under the composer, and Return to orchestration resumes the workflows a reply paused. A LinkedIn reply arrives on the account's Messages sync, every 180 minutes by default or real-time at 15 minutes, inside its sync hours (Monday to Friday, 08:00 to 20:00 by default), and an email reply, once a mailbox is connected, on the mailbox's sync, every 15 minutes. A mailbox connects once the plan has an email package (one dedicated email server for the workspace), so on the trial, which has no email, only LinkedIn replies reach Unibox. API: search_conversations, update_conversation, send_message, retry_messages, return_conversation_to_orchestration."
+---
+
+Unibox is your GetSales workspace's one inbox. Every reply that reaches one of your sender profiles, on LinkedIn or
+by email, lands in it, and each thread carries a status that says whose move it is. Open it from **Messages** in
+the sidebar, at https://app.getsales.io/messages.
+
+## What is a Unibox thread?
+
+A Unibox thread is one person and one account of a sender profile: its LinkedIn account, or one of its mailboxes
+(the `conversations` object in the API, sid `ub_cv_`). LinkedIn replies land once a sender profile's LinkedIn
+account is connected, and email replies once one of its mailboxes is: see
+[sender profiles](/kb/sender-profiles/sender-profiles). A mailbox connects once the workspace's plan has an email
+package, which is one dedicated email server for the workspace. The trial has no email, so on the trial only
+LinkedIn replies reach Unibox: see [connect a mailbox](/kb/sender-profiles/connect-a-mailbox).
+
+A LinkedIn thread and an email thread with the same person stay separate until someone merges them:
+**Link & merge** on the thread's suggestion card, or **Merge** in the link dialog
+([`merge_conversation`](/api-reference/unibox/conversations/merge-conversation)). The merged thread carries a mark
+for each channel. A merge cannot be undone.
+
+Each workspace has its own Unibox: a workspace's threads never show in another one. A thread opens at its own
+address, https://app.getsales.io/messages/ followed by its sid. Over the API,
+[`search_conversations`](/api-reference/unibox/conversations/search-conversations) lists threads,
+[`get_conversation`](/api-reference/unibox/conversations/get-conversation) reads one, with its 30 newest messages
+when asked for `include` `messages_tail`, and [`search_messages`](/api-reference/unibox/messages/search-messages)
+pages the older ones.
+
+## Which conversations does Unibox show?
+
+Unibox is a list of replies: a thread shows up once the person has written at least once. A message of yours that
+nobody answered, such as a connection request or a first email from a workflow, waits under **Sent**. When they
+reply, the thread moves to **All replies**.
+
+| View | What it holds |
+|---|---|
+| **All replies** | Every thread with a reply, closed ones included, except the snoozed ones. The thread with the newest message is on top. |
+| **Sent** | The threads nobody answered yet. Nothing there is unread. |
+| **Snoozed** | Threads put away until a date. |
+| **Tasks** | Replied threads with a task open: a hand-off of the AI SDR, a **Manual task** of a workflow (see [the Manual task step](/kb/workflows/build-a-workflow#what-does-a-manual-task-step-do)), a task someone made with **Create task** under the composer. A task on a thread nobody answered yet sits on that thread under **Sent**, and a workflow's **Manual task** for someone you have no conversation with does not show in Unibox. |
+
+**Senders** lists your sender profiles with the unread replies of each. From 8 sender profiles up, a search box
+(**Sender or assignee**) finds a sender profile by its name or its assignee's name, and, unless they all have the
+same assignee or none, the sender profiles fold under their assignee: one closed row per person, **Nobody** last
+for those without an assignee, each with its number of sender profiles and their unread replies. The arrow opens a
+row, and a click on the name shows the threads of that person's sender profiles. While a search is typed, the
+matches show as one list. A channel whose import takes **Only with people in my playtables** also keeps out live
+replies from people in none of your tables (see [why a reply is not in Unibox yet](#why-is-a-reply-not-in-unibox-yet)).
+
+## What does a Unibox thread's status mean?
+
+A Unibox thread's status says whose move it is, and GetSales sets it again after every message, draft or task, so
+a thread sits in **Needs you** only while it waits on a person:
+
+| Status | `state` | Whose move |
+|---|---|---|
+| **Needs you** | `needs_you` | Yours: the person's word is the last one and nothing answers it, a draft or a plan waits for your OK, a task is due, a plan step failed, or the AI SDR handed the thread to you |
+| **AI SDR handling** | `agent` | The AI SDR's: it is reading the reply, writing, or running a step of its plan |
+| **Waiting on lead** | `waiting` | Theirs: your side wrote last, or the AI SDR waits for their answer |
+| **Stalled** | `stalled` | Yours to decide: the AI SDR waited for an answer, none came, and it has no follow-up left to send |
+| **Snoozed** | `later` | Put away until a date. A reply from them, or a task that comes due, ends the snooze |
+| **Closed** | `done` | Done. A reply from them, or a task that comes due, opens it again |
+
+## How does Unibox decide a thread's status?
+
+Unibox decides a live thread's status from the thread's facts, and the first rule that matches wins:
+
+1. An open task due by the end of the current day in UTC (overdue included), or with no due date: **Needs you**.
+   A task due on a later day counts from the start of that day in UTC, and once its due time passes, the due check
+   (every 5 minutes) moves the thread to **Needs you** even if nothing else happens on it. A live website-visit
+   alert's task that expires by itself never counts. One opened while its site's **Task expiration** is
+   **No expiration** never expires and counts like any other task: see
+   [what happens when a known person is on your site](/kb/signals/signals#what-happens-when-a-known-person-is-on-my-site).
+2. An AI SDR draft waiting for approval, or a plan waiting for approval: **Needs you**.
+3. The AI SDR handed the thread over, or tried and gave up: **Needs you**.
+4. While the AI SDR works the thread:
+   - a plan step that failed with nobody writing since, or a step that waits for your OK: **Needs you**.
+   - a plan that waits for their reply: **Waiting on lead**.
+   - a plan that waits until a date: **Snoozed**.
+   - any other step, or a reply it is reading: **AI SDR handling**.
+5. Otherwise, the last word decides: the person's is **Needs you**, your side's is **Waiting on lead**. A person
+   marked **Hidden by LinkedIn** is owed no reply, so their last word reads **Waiting on lead**.
+
+**Stalled**, **Snoozed** by a person and **Closed** stay put until something brings them back. A task that comes
+due, the snooze's date, **Clear snooze** or **Mark done** pressed again moves the thread to **Needs you**, and a
+reply from them reopens it into the rules above: **AI SDR handling** while the AI SDR reads the reply, else
+**Needs you**, or **Waiting on lead** for a person marked **Hidden by LinkedIn**. Your own message also takes a
+**Stalled** thread back to the rules above. A thread the history import brings in lands **Closed** when its last
+message is more than 90 days older than the newest message that import has found, not 90 days before today.
+
+## When is a Unibox thread unread?
+
+A Unibox thread is unread from the moment a new reply lands until someone opens the thread in GetSales or answers
+it. Opening counts for a member whose **Messages** permission includes **Act**. Any answer clears the mark: one sent
+from GetSales, one typed in LinkedIn's own app once it syncs, or the AI SDR's. Unread is shared by the whole team,
+not kept per person. Reading a reply in LinkedIn's own app does not mark it read in Unibox. Messages written before
+the account was connected to the sender profile arrive read when the history import brings them in. A reply written
+after that arrives unread, whichever sync brings it, unless someone on the team has answered it since. A new reply
+also opens a closed thread again and ends a snooze. **Mark unread**, in the head of a thread with a reply, puts the
+mark back for everyone, and **Only unread** above the list (or the U key) shows the unread threads alone.
+
+## How do you find threads in Unibox?
+
+To find threads in Unibox, start from the four saved filters that come ready on the left: **Needs you**, **AI SDR
+handling**, **Waiting on lead** and **Stalled**. Under them, **Agent scenarios** counts the replied threads by the
+classification of their reply, one row per kind, such as **Interested**, **Info request**, **Meeting request**,
+**Not interested**, **Not now** or **Out of office**. A click on one of those rows, or on a sender profile under
+**Senders**, shows its threads with a **Classification** or **Sender profile** chip, and a second click turns it
+off. Click **Filter** to add chips: the status, the classification of the reply, a signal, the channel, the AI SDR,
+the agent mode, the sender profile, the assignee, the workflow, the origin, the date of the last reply, the first
+touch or the last message, the playtable, the stage, a tag, whether a person is linked, and the company. Job title,
+industry and company size are not filterable yet. The search box (⌘ or Ctrl and K) matches names, headlines, email
+addresses, the company, and the first 500 characters of each of a thread's 30 newest messages.
+
+**Save** keeps a set of chips under a name. After you change a saved filter, **Save** offers **Save to** that filter
+or **Save as new filter**. A saved filter is yours alone: it is kept in your browser for this workspace, and
+teammates do not see it.
+
+## How do you reply from Unibox?
+
+To reply from Unibox, type in the composer under the thread: **Reply to ... on ... as ...** names the person, the
+channel and the sender profile your answer goes out as. Press **Send** (⌘ or Ctrl and Enter). The microphone beside
+it dictates the reply. Over the API, [`send_message`](/api-reference/unibox/messages/write-send-or-reply-to-a-message)
+sends or replies.
+
+- **Reply in** picks the conversation to answer in, LinkedIn or email. By default it is the one with the latest
+  message, and the answer goes out as that conversation's sender profile. Its list ends with **New LinkedIn
+  group**, **New email thread** and **Hand over to a teammate** where they apply.
+- To send from another sender profile, pick it after **as** in the composer (the **Send as** menu). It opens its own
+  thread with the person.
+- An email that starts a new thread needs a **Subject**.
+- **New message** starts a conversation from scratch, to a LinkedIn profile or an email address. Two or more
+  LinkedIn profiles start a group.
+
+A LinkedIn message or InMail you sent can be deleted for both sides with **Delete** within **one hour** of sending
+it, in LinkedIn's own messenger only, not in Sales Navigator. The person sees that a message was deleted. An email
+cannot be taken back.
+
+## What happens when a send from Unibox fails?
+
+When a send from Unibox cannot go out, the message says why under it, in plain words, with the next step when there
+is one. A LinkedIn message whose sender profile cannot send right now (its browser is down, its account signed out)
+waits as **Queued, waiting for the sender**, with the reason, and goes out once the account works again. A message
+that failed reads **Send failed** with its reason:
+
+- **Send again** ([`retry_messages`](/api-reference/unibox/messages/send-failed-messages-again)) first checks whether
+  the message went out after all, and one that did is not sent twice. When it cannot tell, it says they may get it
+  twice, and **Send anyway** sends it.
+- **Cancel** ([`cancel_messages`](/api-reference/unibox/messages/cancel-messages-that-have-not-gone-out)), on a
+  failed or a still queued message, drops it: it never goes out.
+
+Where a second try cannot help, only **Cancel** is offered: the recipient's server rejected the address, the address
+is on the do-not-send list, an email that starts a thread has no subject, LinkedIn restricted the sender's account,
+or the quoted message cannot be quoted.
+
+## How do you close, snooze or send a Unibox thread back to its workflows?
+
+A Unibox thread closes or snoozes with the buttons under the composer, beside **Send**, and goes back to its
+workflows or onto the stoplist from **Agent actions**, the menu in the thread's head:
+
+| Action | What it does | API |
+|---|---|---|
+| **Mark done** (or the E key) | Closes the thread. It stays in **All replies** with every message: nothing is deleted. Pressed again, it reopens the thread in **Needs you**. | [`update_conversation`](/api-reference/unibox/conversations/update-conversation) `state` |
+| **Snooze** (or the H key, for one day) | Puts it away for hours, days, weeks or months, one day by default. Days and longer end at 09:00 your time. It comes back then, when they reply, when a task on it comes due, or on **Clear snooze**. An open task on it already past its due date, such as the AI SDR's hand-off, brings it back within five minutes of the snooze. | `update_conversation` `snoozed_until` |
+| **Return to orchestration** | Sends the person back to their workflows: every journey their reply paused resumes, and the thread closes. It needs a thread linked to a person in a table. | [`return_conversation_to_orchestration`](/api-reference/unibox/conversations/return-conversation-to-orchestration) |
+| **Add to stoplist** | The AI SDR stops on the thread, the thread closes, and the person goes to your [stoplist](/kb/tables/tables#what-does-the-stoplist-block-and-how-do-i-add-to-it), so no workflow reaches them. A row they have in a table stays there, marked **Stoplist**, and if they have none, a data source that brings them in later still creates one, marked **Stoplisted**. | [`stoplist_conversation_counterpart`](/api-reference/unibox/conversations/stoplist-conversation-counterpart) |
+
+A reply pauses the person in every live workflow, unless that workflow is set to **Continue the sequence**: see
+[when a workflow does not send](/kb/workflows/troubleshooting).
+
+## What does the person's card in Unibox show?
+
+The person's card, beside the thread, shows from top to bottom who they are and how to reach them, the **AI SDR
+Summary**, **Conversations**, **Workflows**, **Playtable**, **CRM** when the team has a CRM connected, and **Tags**.
+The person's pipeline stage is on the bar above the thread: see
+[what moves a person to another pipeline stage](/kb/tables/tables#what-moves-a-person-or-a-company-to-another-pipeline-stage).
+On a LinkedIn group thread the card shows the members and the
+conversations only.
+
+- **The head**: their name, company and headline, then their LinkedIn, email and phone and their company's website.
+  An empty row offers to fill it, such as **Add LinkedIn** or **Add phone**.
+- **AI SDR Summary**: where the lead stands, from the AI SDR's latest reading of their reply, dated **as of**, with
+  the points that apply: **Needs**, **Objection**, **Account**, **Goal** and **Next** (the AI SDR's plan, or the
+  reply the sender profile owes and since when). A thread with none of these has no summary.
+- **Conversations**: one row per channel of this thread, with the faces of the sender profile and the person, the
+  number of messages and the date of the last reply. A click unfolds the people on it. **New** starts an **Email
+  thread** or a **LinkedIn group** with the person, and holds **Hand over to a teammate**, where they apply.
+- **Workflows**: one row per workflow they are in, with its state and the step it stands on, numbered as in the
+  workflow builder, such as **Paused on reply** #3. Pointing at a row puts its actions in place of the state:
+  **Return to orchestration** on a journey their reply paused (on a **Closed** thread, **Resume** instead),
+  **Pause** or **Resume** on another live one, **Open workflow**, and **Exit workflow** in its menu. The **+** is
+  **Add to workflow**.
+- **Playtable**: their table's name, then their row and their company's row in it on two tabs, each counting its
+  columns. Every column is edited in place, **Find a column by name or value** narrows them, and the section's head
+  has **Add a note** and **Open the playtable on this person's row**.
+- **CRM**: for each CRM the team connected, whether they are a contact there and how they were matched (such as
+  **Matched by email**, or **Not in HubSpot yet** when they are not), and the recent calls about them: see
+  [what GetSales wrote to your CRM, and what failed](/kb/integrations/connect-your-crm#how-do-i-see-what-getsales-wrote-to-my-crm-and-what-failed).
+- **Tags**: their tags, picked or created in place.
+
+<Frame caption="The person's card for Priya Nair: her contact rows, the AI SDR Summary with its Next point, one LinkedIn conversation, the workflow Finance leaders outreach on Paused on reply #3, and her row in the playtable SaaS finance leaders.">
+  <img src="/images/kb/inbox/unibox-person-card.png" alt="Card of Priya Nair, CFO at Quarry Health: her email and her company's website, with Add LinkedIn and Add phone on the empty rows. AI SDR Summary as of today, 07:23, a sentence on where she stands and Next: Maya Chen owes a reply since today, 07:21. Conversations 1 with New and one LinkedIn row with the faces of Maya Chen and Priya, 2 messages, last reply 18 Nov. Workflows 1 with Finance leaders outreach on Paused on reply #3. Playtable SaaS finance leaders with the tabs Priya Nair 7 and Quarry Health 5, the box Find a column by name or value, and her columns Data source, Company, Work email, Fit score, Pipeline stage, Workflows, Find work email and LinkedIn" width="334" />
+</Frame>
+
+From the card:
+
+- **Find** looks for a missing work email with the table's finders, and the address lands in the person's row. It
+  shows on the empty work email row when their table has a Find work email column: see
+  [find emails and enrich](/kb/tables/find-emails-and-enrich).
+- **Link to playtable** or **Add to Playtables** ties the thread to a person in a table, when nobody matched it
+  ([`link_conversation_person`](/api-reference/unibox/conversations/link-conversation-person)).
+- **Hand over to a teammate**, on a one-to-one LinkedIn thread, opens a LinkedIn group with the person and your
+  teammate and closes the one-to-one thread
+  ([`hand_over_conversation`](/api-reference/unibox/conversations/hand-a-conversation-over-to-a-teammate)). The AI
+  SDR stops on that person. An email thread cannot be handed over yet.
+- The card's menu, the three dots at its top, holds, where they apply, **Open in Playtables**, **Move to another
+  table**, **Unlink person** (the thread keeps its messages, and orchestration switches off until a person is
+  linked again) and **Add to stoplist**.
+
+## How do teammates share Unibox?
+
+Teammates share one Unibox per workspace: each sees the threads of every sender profile in it, as far as their
+permissions allow ([team members and roles](/kb/workspace/team-members-and-roles)). **Messages** with **View** opens
+the inbox, and **Act** is needed to change anything there: reply, close, snooze, mark read, merge, hand over, work
+tasks. A teammate answers in a thread as the thread's sender profile, and a message sent from GetSales says who on
+the team sent it.
+
+A sender profile can have an **Assignee**. When the AI SDR hands one of its threads to a person, the task waits in
+**Needs you**, and by default an email with a link to the thread goes to that assignee, or to the workspace owner
+when nobody is assigned. See [AI SDR](/kb/inbox/ai-sdr).
+
+## How fast does a reply reach Unibox?
+
+A reply reaches Unibox when its account's sync brings it in, and each channel syncs on its own clock:
+
+| Channel | When a reply comes in |
+|---|---|
+| LinkedIn | On the account's **Messages** sync: every 180 minutes by default, and only inside the account's sync hours, Monday to Friday, 08:00 to 20:00 in the workspace's time zone, until someone changes them |
+| LinkedIn at 15 minutes | **Messages** at 15 minutes is the real-time setting: the account's browser stays awake through the sync hours and replies come in as they arrive |
+| Sales Navigator, Recruiter | On their own syncs, every 120 minutes by default, inside the same sync hours, for an account with those licences |
+| Email | Once a mailbox is connected: on the mailbox's sync, every 15 minutes at any hour, or sooner when the mail provider announces new mail. A mailbox connects once the plan has an email package: see [Connect a mailbox](/kb/sender-profiles/connect-a-mailbox) |
+
+With the default hours, a LinkedIn reply written on a Saturday usually comes in on Monday after 08:00. A newly
+connected account's first sync runs straight through, whatever the hours. The hours and intervals are set on the
+sender profile's **LinkedIn** tab, **Sync**, in **Sync settings**: see
+[cloud browser and proxies](/kb/sender-profiles/cloud-browser-and-proxies).
+
+## Why is a reply not in Unibox yet?
+
+A reply you can see on LinkedIn or in the mailbox is missing from Unibox when the mailbox is not connected, the
+sender profile's sync has not brought it in yet, the import keeps it out, or a view hides it. Unibox keeps its own
+copy of each sender profile's conversations. Check in order:
+
+1. **The mailbox is not connected.** Unibox gets email only from a mailbox connected to a sender profile, and a
+   mailbox connects only once the plan has an email package and its email server is set up. On the trial, or a plan
+   with no email package, **Add mailbox** reads **No email in your plan yet**. See
+   [Connect a mailbox](/kb/sender-profiles/connect-a-mailbox).
+2. **The next sync has not run.** LinkedIn syncs every 180 minutes by default and only inside the sync hours
+   (Monday to Friday, 08:00 to 20:00 by default), a connected mailbox every 15 minutes: see
+   [how fast a reply reaches Unibox](#how-fast-does-a-reply-reach-unibox).
+3. **The first sync is still running.** A newly connected account imports its history first, and Unibox says
+   **Syncing history for** the sender profile, with the threads so far.
+4. **The import leaves it out.** The sender profile's **LinkedIn import** and each mailbox's **Mailbox import** set
+   how far back (**New messages only**, **Last month**, **Last year**, **All history** or a **Custom date**) and
+   whose conversations come in. With **Only with people in my playtables**, a reply from someone in none of your
+   tables stays out, live replies included, until you add them to a table.
+5. **The account needs attention.** A signed-out LinkedIn account, a stopped browser or a mailbox that needs
+   reconnecting syncs nothing until it is fixed: see [when a sender profile needs attention](/kb/sender-profiles/troubleshooting).
+6. **A view or a filter hides it.** A thread you wrote to and nobody answered is under **Sent**, not in **All
+   replies**, and filter chips or **Only unread** narrow the list.
+
+## Which Unibox threads does the AI SDR work on?
+
+The AI SDR works on a Unibox thread when the thread's workflow hands its replies to it, or, outside any workflow,
+when its settings answer them: see [AI SDR](/kb/inbox/ai-sdr). Threads brought in by the history import start with
+the AI SDR off, so it spends nothing on old conversations. Turn it on for a thread from its mode pill. A LinkedIn
+group thread is never worked by the AI SDR.
+
+## What does Unibox spend?
+
+Unibox has no price of its own, and sending a message spends no credits. AI work and the card's **Find** do, from
+the workspace's credits:
+
+| Work | Credits |
+|---|---|
+| A message you send, a reply or a **New message**, LinkedIn or email | None |
+| The AI SDR's labels, drafts and answers | The model's rate, capped per thread: see [AI SDR](/kb/inbox/ai-sdr) |
+| A lead's voice message turned into text, made when it arrives (an imported one's when you press **Play**), whether or not the AI SDR works the thread | The model's rate |
+| Dictation into the composer | The model's rate |
+| A work email found from the card, on a table with a Find work email column | 1 credit per address delivered. If the column has a verifier, each check it runs costs the verifier's rate too (0.1 or 1 credit), even for an address it rejects. A miss costs nothing |
+
+## What does Unibox not do?
+
+- Unibox does not delete a thread: a closed thread keeps every message, and a new reply opens it again.
+- It does not merge a LinkedIn thread and an email thread with the same person by itself: a person merges them, and
+  a merge cannot be undone.
+- It does not share a saved filter with the team yet: each person's saved filters stay in their browser.
+- It does not filter on job title, industry or company size yet.
+- It does not read LinkedIn's read marker: reading a reply on LinkedIn leaves it unread in Unibox.
+- It does not send a failed message again on its own: **Send again** checks first, and you decide.
+- It does not send files yet: a message you send carries words only. Files a lead sends do show in the thread.
+- It does not hand an email thread over to a teammate yet: a hand-over opens a LinkedIn group.
+- It does not mix workspaces: each workspace has its own Unibox.
+
+## Related
+
+- [AI SDR](/kb/inbox/ai-sdr)
+- [Build an outreach workflow](/kb/workflows/build-a-workflow)
+- [When a workflow does not send](/kb/workflows/troubleshooting)
+- [Sender profiles](/kb/sender-profiles/sender-profiles)
+- [Cloud browser and proxies](/kb/sender-profiles/cloud-browser-and-proxies): sync hours and intervals
+- [Team members and roles](/kb/workspace/team-members-and-roles)

@@ -38,7 +38,76 @@
             "group": "Guides",
             "pages": [
               "guides/receive-webhooks",
+              "guides/webhook-events",
+              "guides/connect-mailboxes",
               "guides/hubspot"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Knowledge Base",
+        "groups": [
+          {
+            "group": "Start here",
+            "pages": [
+              "kb/index",
+              "kb/start/get-started",
+              "kb/ai/connect-your-ai-assistant"
+            ]
+          },
+          {
+            "group": "Sender profiles",
+            "pages": [
+              "kb/sender-profiles/sender-profiles",
+              "kb/sender-profiles/connect-linkedin",
+              "kb/sender-profiles/connect-a-mailbox",
+              "kb/sender-profiles/smart-limits-and-warmup",
+              "kb/sender-profiles/cloud-browser-and-proxies",
+              "kb/sender-profiles/troubleshooting"
+            ]
+          },
+          {
+            "group": "Tables and data",
+            "pages": [
+              "kb/tables/tables",
+              "kb/tables/add-people-and-companies",
+              "kb/tables/find-people-at-companies",
+              "kb/tables/find-emails-and-enrich",
+              "kb/tables/ai-columns"
+            ]
+          },
+          {
+            "group": "Outreach",
+            "pages": [
+              "kb/workflows/build-a-workflow",
+              "kb/workflows/troubleshooting"
+            ]
+          },
+          {
+            "group": "Inbox and AI SDR",
+            "pages": [
+              "kb/inbox/unibox",
+              "kb/inbox/ai-sdr"
+            ]
+          },
+          {
+            "group": "Signals",
+            "pages": [
+              "kb/signals/signals"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "kb/integrations/connect-your-crm"
+            ]
+          },
+          {
+            "group": "Workspace and billing",
+            "pages": [
+              "kb/workspace/team-members-and-roles",
+              "kb/workspace/plans-credits-and-billing"
             ]
           }
         ]
@@ -123,7 +192,7 @@
       },
       {
         "label": "Help centre",
-        "href": "https://help.getsales.io/"
+        "href": "https://docs.getsales.io/kb"
       }
     ],
     "primary": {
@@ -164,7 +233,7 @@
           },
           {
             "label": "Help centre",
-            "href": "https://help.getsales.io/"
+            "href": "https://docs.getsales.io/kb"
           }
         ]
       }

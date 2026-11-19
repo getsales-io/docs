@@ -1,0 +1,309 @@
+---
+title: "Find emails and enrich"
+description: "Find work email (action_waterfall) asks one finder after another (Hunter, Findymail and Anymailfinder by default), stops at the first address accepted and costs 1 credit an address delivered plus each check at the verifier's rate (EmailListVerify 0.1, Findymail 1). A miss is free. Enrich lead costs 1 credit a row at Basic and 3 at Advanced, Enrich company 1 and 2 (plus a 0.1 web lookup when only the domain is known), Latest posts 2 (3 when the profile has to be read first to find its LinkedIn id), and each data point becomes its own column. There is no phone finder."
+---
+
+Two kinds of columns fill in what a row is missing. **Find work email** looks for each person's work
+address, finder after finder, and checks it when you pick a verifier. **Enrich lead** and **Enrich
+company** read a person's LinkedIn profile or a company's LinkedIn page and put the data points you
+pick into columns of their own.
+
+## How does Find work email find an address?
+
+A Find work email column (`action_waterfall`) runs a chain of steps on each person and stops at the
+first address it accepts. The first step, **Use existing email if available**, takes the address the
+row already holds, at no cost. The finders follow in the order you set: Hunter, Findymail and
+Anymailfinder in a new column. A finder skips a row that lacks what it searches by: Hunter and
+Anymailfinder search by the person's name at a company domain or name, Findymail by a LinkedIn
+profile or a full name with a company domain. Over the API, a finder step that leaves an input out
+reads the row's own field, and `null` switches the input off.
+
+Without a verifier, the first address found is accepted. With a **Verification provider**
+(EmailListVerify or Findymail), every address found is checked, and so is the row's own unless its
+status is already **Verified**: a valid one is accepted and ends the chain, an invalid one sends the
+chain to the next finder. **Accept emails that can't be fully verified** decides an address on a
+catch-all domain, or on a mail server that cannot be checked. With the switch on, such an address is
+accepted. With it off, the next finder runs. An address found by the verifier's own provider is not
+checked a second time.
+
+## Which email status does a person get?
+
+A Find work email column writes the accepted address into the person's **Work email**, and its status
+into `email_status`: `ok`, `catch_all` or `unverified`, or `no_data` when the finders found nothing for
+a row with no address. `bounced` and `need_search` are set only over the API
+([`update_person`](/api-reference/playtables/people/update-person)):
+
+| The Work email cell's panel shows | `email_status` | Meaning |
+|---|---|---|
+| **Verified** | `ok` | The verifier confirmed the address |
+| **Catch-all** | `catch_all` | The domain takes every address, so it could not be fully verified |
+| **Not verified** | `unverified` | Found without a verifier, or a verifier could not confirm it |
+| **Bounced** | `bounced` | Set over the API only. A send that bounces is recorded in the person's activity as **Email bounced** and leaves this status as it was |
+| **No data** | `no_data` | A lookup found nothing and the row has no address. A row with no address and no status yet shows **No data** too |
+| **Lookup pending** | `need_search` | Set over the API only. A person no lookup has reached has no status and shows **No data** |
+
+On the grid, hovering the envelope before the address says **Deliverable**, **Catch-all domain**,
+**Undeliverable** or **Not verified**, and a row with no address shows **No email**.
+
+## When does a found address replace the work email a person already has?
+
+A found address fills an empty **Work email**. It replaces an address the row already holds only when
+it stands higher, in the order **Verified**, **Catch-all**, **Not verified**, with **Bounced** lowest:
+a Verified find replaces a Catch-all, Not verified or Bounced address, a Catch-all find replaces a Not
+verified or Bounced one, and a Not verified find replaces only a Bounced one. Nothing replaces a
+Verified address, and the same address found again takes the better status. When the verifier turns
+down the address the row already holds and no finder brings a better one, the address stays, marked
+**Not verified** (or **Catch-all**, for a catch-all the column refuses).
+
+## How do I add a Find work email column?
+
+<Steps>
+  <Step title="Add the column">
+    Find work email exists on the **People** tab only: click **+ Column** and under **Actions** pick
+    **Find work email**.
+  </Step>
+  <Step title="Order the finders">
+    Under **Waterfall sequence**, **Use existing email if available** comes first, then the finders
+    in the order shown: drag a step to reorder it, **Remove** one or **Add** one back.
+  </Step>
+  <Step title="Check the inputs">
+    **Inputs mapping** sets what the finders search by: **Full name**, **LinkedIn**, **Company name**
+    and **Company domain**, each the row's own field where the table offers one. An input left empty
+    is switched off.
+  </Step>
+  <Step title="Pick a verifier (optional)">
+    A new column has none. Pick a **Verification provider** to check every address found, and
+    **Accept emails that can't be fully verified** appears, switched on.
+  </Step>
+  <Step title="Save">
+    **Auto-update** (on) runs the column on every new person a data source adds, and **Only run if**
+    keeps it to the rows that pass a rule. Save with **Save and don't run**, **Save and run first 5
+    rows** or **Save and run rows that haven't run or have errors**.
+  </Step>
+</Steps>
+
+API and MCP: [`create_playtable_field`](/api-reference/playtables/playtable_fields/create-playtable-field)
+with `type: action_waterfall`.
+
+<Frame caption="The Find work email drawer. Waterfall sequence: Use existing email if available at 0 / row, then Hunter, Findymail and Anymailfinder at 1 / row. Inputs mapping: the four inputs set to the row's fields. Verification provider: EmailListVerify at 0.1 / check, with Accept emails that can't be fully verified on. Run settings: Auto-update on.">
+  <img src="/images/kb/tables/find-email-drawer.png" alt="Find work email drawer. Column name: Find work email (2). Waterfall sequence, with the line Locate work emails through a multi-provider waterfall sequence. Fills only the rows whose work email is empty: Use existing email if available at 0 / row, then Hunter, Findymail and Anymailfinder at 1 / row each, and an Add button. Inputs mapping: Full name set to Data source.Full name, LinkedIn to LinkedIn.LinkedIn nickname, Company name to Company.Name, Company domain to Company.Domain. Verification provider, marked optional, with the line Each found email is checked. One that fails is skipped and the next provider runs: EmailListVerify picked at 0.1 / check, and Accept emails that can't be fully verified switched on. Run settings: Auto-update switched on" width="400" />
+</Frame>
+
+## How do I find work emails for a few selected people?
+
+Selected people get their work emails from **Actions**, **Find work email** on the People tab, without
+running the whole column: it runs the table's Find work email column on the selected rows only. A table
+with no such column opens **New column** first, since the finders and their order are set there.
+
+## What does Find work email cost?
+
+Find work email charges for what it delivers and for the checks it runs. A miss costs nothing.
+
+| Outcome | Credits |
+|---|---|
+| An address found and accepted | 1 |
+| Each check by the verifier | The verifier's rate, shown beside it in the drawer: 0.1 for EmailListVerify, 1 for Findymail. An EmailListVerify check that comes back **Couldn't check**, or finds the address malformed, costs nothing, and so does a check that fails |
+| A finder that finds nothing, or skips the row | 0 |
+| An address found and then rejected by the verifier | Its check only |
+| The row's own address | 0, plus a check at the verifier's rate unless its status is already **Verified** |
+
+A lookup the platform already answered, by the same provider for the same inputs, is answered again at
+no cost: an address found within the last 90 days, a check within the last 30. Every finder and
+verifier runs on GetSales' own key with the provider: you connect no key of your own.
+
+## What can Enrich lead and Enrich company add to a row?
+
+Enrich lead (on **People**) reads a person's LinkedIn profile, and Enrich company (on **Companies**)
+a company's LinkedIn page. You pick a level and the data points you need, and each data point becomes a
+column of its own, filled from the column's read. The record's identifiers (**LinkedIn identifiers**
+for a person, **Company identifiers** for a company) are always written to it, whatever you pick.
+
+| Column | Level | Credits a row | On by default | Also offered |
+|---|---|---|---|---|
+| Enrich lead | **Basic** | 1 | Full name, Headline | First name, Last name, Location, Country, Premium, Verified, Creator, Open to work, Hiring, Top Voice |
+| Enrich lead | **Advanced** | 3 | Full name, Position, Company name, Location, About, Experience | Headline, Company LinkedIn ID, Avatar URL, Skills, Education, Work email, Work phone, Website, X (Twitter), Country, and the Basic marks |
+| Enrich company | **Basic** | 1 | Company name | Employee count, Company size (min) and (max), Headquarters city, region and country, Website, About, Tagline, Phone, Founded, Company type, Specialities, Verified page, Logo URL |
+| Enrich company | **Advanced** | 2 | Company name, Industry, Company size, Headquarters, Website, About | Followers, Founded, Specialities, Logo URL |
+
+## Where does an Enrich read come from, and what does it cost?
+
+An Enrich read runs on our managed infrastructure, so there is nothing to connect for it, and it costs
+its level's rate per row: 1 or 3 credits for a person, 1 or 2 for a company. A company known only by
+its domain can also take one web lookup of 0.1 credit to find its LinkedIn page, charged whether or not
+the page is found. A read that fails costs nothing beyond that lookup. A read the workspace repeats
+comes back free: a Basic read of a person within 24 hours, a company read at the same level within 7
+days. An Advanced read of a person is charged every time.
+
+Work email and Work phone at the Advanced level come back empty for most people: LinkedIn shows them
+only to a profile's own connections, so use Find work email for addresses. For a person's posts, the
+**Latest posts** column reads their 10 newest posts, live, at 2 credits a row, plus 1 credit when the
+row knows the person by their LinkedIn nickname alone and the profile has to be read once to find
+their `ln_id`.
+
+API and MCP: [`create_playtable_field`](/api-reference/playtables/playtable_fields/create-playtable-field)
+as a tool column (its `type` is in the API reference) with `payload.tool_sid` `get_lite_profile` or
+`get_full_profile` for a person, `get_company_lite_profile` or `get_company_profile` for a company, and
+`get_person_posts` for Latest posts.
+
+## How do I add Enrich lead or Enrich company?
+
+Enrich lead is added on the People tab and Enrich company on the Companies tab, from **New column**:
+
+<Steps>
+  <Step title="Add the column">
+    On the **People** tab, click **+ Column** and pick **Enrich lead** under **Actions**. On the
+    **Companies** tab, pick **Enrich company**.
+  </Step>
+  <Step title="Pick the level">
+    Under **Enrichment type**, pick **Basic** or **Advanced**. Each shows its price per row.
+    **Auto-update** (on) and **Only run if** sit under **Run settings** on the same screen. Click
+    **Next**.
+  </Step>
+  <Step title="Pick the data points">
+    Switch on the data you need. Each one becomes a column, named after the data point.
+  </Step>
+  <Step title="Save">
+    Save with **Save and don't run**, **Save and run first 5 rows** or **Save and run rows that
+    haven't run or have errors**.
+  </Step>
+</Steps>
+
+Enrich lead needs a LinkedIn identifier on the row. Enrich company needs the company's LinkedIn page
+or its domain. A domain alone can take one web lookup of 0.1 credit to find the page.
+
+<Frame caption="The second screen of Enrich lead at Advanced: LinkedIn identifiers always on, Full name, Position, Company name, Location, About and Experience switched on (6 selected), and Company LinkedIn ID, Headline, Avatar URL, Skills and Education off.">
+  <img src="/images/kb/tables/enrich-lead-data-points.png" alt="Enrich lead drawer, second screen, headed Advanced enrichment with a back arrow. Select the lead data to add as columns, 6 selected, and the line All data will be available after the run. Choose the data points to add as columns, then run the enrichment to view the results. LinkedIn identifiers (ln_id, sn_id, member id, nickname) is on and locked. Switched on: Full name, Position, Company name, Location, About and Experience. Switched off: Company LinkedIn ID, Headline, Avatar URL, Skills and Education. Each row shows a sample value: John Smith, CEO, Acme Inc, 1441, Redmond, Washington, United States, Building revenue engines, Bio summary, Image, Title, Company, List, Degree, School" width="400" />
+</Frame>
+
+## How do I run Find work email and Enrich columns without paying twice?
+
+To pay once, use **Run all N rows that haven't run** or **Run all N rows with errors**: both leave
+finished cells untouched, while **Run first 5 rows**, **Choose number of rows to run** and **Actions**,
+**Run rows** run finished cells again. A column with **Auto-update** on runs by itself on every new row a
+data source adds to its tab. For rows that are already in the table, open the column's header menu, then
+**Run column**:
+
+| Choice | What runs | Finished cells |
+|---|---|---|
+| **Run all N rows that haven't run** | Only the cells that never ran | Untouched |
+| **Run all N rows with errors** | Only the cells that failed | Untouched |
+| **Run first 5 rows** | The first 5 rows of the view | Run again |
+| **Choose number of rows to run** | The **Run column** window: **Rows to run** and an optional **Starting from row** | Run again |
+
+The first three choices show their estimate in credits in the menu. **Choose number of rows to run**
+shows it in the **Run column** window before you press **Run enrichment**. **Actions**, **Run rows** in
+the toolbar runs every action column of the tab at once, finished cells included. Changing a column's
+settings never re-runs its finished cells: the new settings apply to the next runs.
+
+## Is a finished Find work email or Enrich cell charged again when it runs again?
+
+A cell that already holds a value runs again only when you run it on purpose: **Run first 5 rows**,
+**Choose number of rows to run**, **Actions**, **Run rows**, or a run of the cells or rows you pick.
+What that costs:
+
+- Find work email takes the address it already wrote at no cost while **Use existing email if
+  available** leads the chain. A verifier checks that address again unless it is **Verified**, and a
+  check of the same address within the last 30 days comes back free.
+- Enrich lead at **Basic** and Enrich company are charged again, except a read the workspace repeats
+  within 24 hours (a person) or 7 days (a company), which comes back at no cost.
+- Enrich lead at **Advanced** and **Latest posts** are charged every time.
+
+## What happens when a Find work email or Enrich run hits its budget or runs out of credits?
+
+A run started in the app stops at the top of its estimate, and any run stops when the workspace runs out
+of credits:
+
+<Warning>
+A run you start in the app stops at the top of its estimate: the cells running at that moment end with
+**Run stopped at its budget** (`budget_exhausted`), and the rows it did not reach go back to how they
+were before the run. **Run all N rows that haven't run** finishes the rows that never ran, and **Run all
+N rows with errors** finishes the stopped cells. When the workspace runs out of credits, the cell shows
+**Out of credits** (`allowance_exhausted`) and the run stops the same way. A daily credit limit for Find
+work email and Enrich columns is set over the API (`config.daily_credit_limit`): a cell past it waits
+for 00:00 UTC when **Auto-update** is on, and otherwise ends with **Daily limit reached**
+(`daily_credit_limit_reached`).
+</Warning>
+
+API and MCP: [`estimate_credits`](/api-reference/playtables/playtable_fields/estimate-credits), then
+[`create_playtable_run`](/api-reference/playtables/playtable_runs/run-a-table-job:-enrich-export-import-bulk-edit)
+with `type: enrich` and `max_budget` set to the estimate's maximum.
+
+## Why is a Find work email cell empty?
+
+A finder that finds nothing costs nothing, and the cell says why. A finished cell's **Log** shows what
+it read from the row, each step's answer and verdict, and the credits spent.
+
+| The cell shows | Token | What it means | What to do |
+|---|---|---|---|
+| **Nothing found** | `not_found` | The finders looked and found no address | Add a finder, or give the row a LinkedIn profile or a company domain |
+| **Nothing to search by** | `finder_input_missing` | The row has none of the inputs the finder searches by | Add a LinkedIn profile, or a name with a company domain |
+| **No LinkedIn search** | `linkedin_not_supported` | The finder does not search by LinkedIn, and the row has no company domain or name | Add the company domain or name |
+| **Not verified** | `email_unverified` | The addresses found failed the check, so none was written | Try another finder, or turn verification off |
+| **No email to verify** | `no_work_email` | The column only verifies, and the row has no address | Add a finder, or fill the address in |
+| **Provider temporarily unavailable** | `provider_unavailable` | A finder or the verifier is not taking requests right now | Run the cell again later |
+
+API and MCP: [`get_playtable_field_value`](/api-reference/playtables/playtable_field_values/get-playtable-field-value)
+reads one cell with its error and every step it took.
+
+<Frame caption="The Log of a Find work email cell that ended Done: what it read from the row (domain, full_name and company_name, with linkedin_nickname empty), the row's own address skipped with No email to verify, Hunter's find at 1 credit, EmailListVerify's verdict Valid (accepted, the chain stops) at 0.1 credits, and 1.1 credits for the whole run.">
+  <img src="/images/kb/tables/cell-log.png" alt="Cell panel on its Log tab, beside Result. Done elena.varga@harborline.example, read 10 Nov, 17:02. Run started: Run column · the whole view · by Maya Chen, with the run id pt_rn_1v2mPahEwVN3. Read from the row: domain harborline.example, full_name Elena Varga, company_name Harborline Freight, linkedin_nickname empty. The row's own address: Skipped: No email to verify, no_work_email. Find email: Hunter: Found elena.varga@harborline.example, 1.83s · 1 credit. Under it, Verify email: EmailListVerify: Valid: accepted, the chain stops, 0.94s · 0.1 credits. Run ended: Done: elena.varga@harborline.example, 1.1 credits" width="400" />
+</Frame>
+
+## Why is an Enrich cell empty?
+
+A read that fails costs nothing, apart from the 0.1-credit web lookup a company known only by its
+domain can take, and the cell says why. Open a finished cell to see its **Log**: what it read from the
+row, each step with its answer, and the credits it spent.
+
+| The cell shows | Token | What it means | What to do |
+|---|---|---|---|
+| **No LinkedIn profile** | `no_linkedin_identifier` | Enrich lead has no LinkedIn identifier on the row | Add the person's LinkedIn profile |
+| **No company page** | `no_company_identifier` | Enrich company has no LinkedIn page or website on the row | Add the company's page or website |
+| **Company not found** | `company_not_resolvable` | No LinkedIn page could be found from the row's data | Put the page in the row's LinkedIn column, then run the cell again |
+| **LinkedIn page unavailable** | `linkedin_page_unavailable` | The page did not load twice: it may be deleted or renamed | Check the link, fix it, run the cell again |
+| **Service unavailable** | `infrastructure_unavailable` | Our managed infrastructure could not serve the read, and the cell stopped waiting after 6 hours | Run the cell again later |
+
+API and MCP: [`get_playtable_field_value`](/api-reference/playtables/playtable_field_values/get-playtable-field-value)
+reads one cell with its error and every step it took.
+
+## How do teams use Find work email and Enrich columns?
+
+Teams pair Find work email and Enrich with other columns so credits go only where they pay off:
+
+| Goal | How | Result |
+|---|---|---|
+| Emails only for the people worth writing to | A [Use AI](/kb/tables/ai-columns) fit check, then Find work email with **Only run if** on its verdict | Credits go to the people who pass, and the rest end **Condition not met**, free |
+| Addresses least likely to bounce | Find work email with a verifier, **Accept emails that can't be fully verified** off | Only verified addresses land, and a catch-all or unchecked one sends the chain to the next finder |
+| Check the addresses rows already hold | Find work email with **Use existing email if available** alone in the sequence: it takes the cheapest verifier by itself | Each address is checked at the verifier's rate and its status updated, except a **Verified** one, which is not checked again |
+| Industry and size for scoring | Enrich company at **Advanced** on the Companies tab, then a Use AI score that reads those columns | One read per company, shared by all of its people |
+
+## What do Find work email and Enrich not do?
+
+Find work email finds addresses and Enrich reads profiles, with these limits:
+
+- There is no phone finder. Work phone at the Advanced level is rarely filled.
+- Find work email and Enrich have no one-row preview: **Save and run first 5 rows** tries them on 5
+  rows. The one-row preview is on Use AI columns.
+- No finder or verifier takes a key of your own.
+- A **Not verified** address never replaces an address the row already holds, unless that address is
+  **Bounced**.
+- A verifier promises no delivery: an address it accepts as **Catch-all**, or whose mail server it
+  could not check, may bounce.
+- Enrich lead does not read posts: the **Latest posts** column does.
+
+<Tip>
+Copy this to your AI assistant, connected to GetSales over MCP:
+
+"Using the GetSales MCP server at `https://mcp2.getsales.io/mcp/public`, add a Find work email column
+to the People tab of my table TABLE NAME, with the default finder order and the cheapest verification
+provider. Estimate what running it costs on the rows that have not run, tell me the range and wait
+for my yes. Then run it with the estimate's maximum as its budget, and when it ends tell me how many
+addresses were found, how many were verified and how many credits it spent."
+</Tip>
+
+## Related
+
+- [AI columns and formulas](/kb/tables/ai-columns): **Only run if**, and columns that write from the row
+- [Tables](/kb/tables/tables): which columns spend credits
+- [Build an outreach workflow](/kb/workflows/build-a-workflow): send to the addresses you found
+- [Plans, credits and billing](/kb/workspace/plans-credits-and-billing)

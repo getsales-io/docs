@@ -1,0 +1,246 @@
+---
+title: "Find people at companies"
+description: "The Find people column (action_find_people) of a Companies tab turns your words into one search filter and searches each company for 1 to 25 people (1 by default), ranked by relevance, one company at a time. With Run on new rows on it searches each new company a companies source adds, never the companies a people source links, and a run you start covers the others. It costs 1 credit a company where somebody is found, plus 1 credit once to look up a company's LinkedIn id when the row holds only its page or website, and puts the people on the table's People tab linked to their company. A search tries each company once: running a cell again answers from that try, free."
+---
+
+The Find people column searches each company of a table for the people you describe and adds them to
+the table's **People** tab, linked to their company. Set it once: with **Run on new rows** on it
+searches each new company a companies source brings, as it arrives, and a run you start covers the
+companies already there.
+
+## What does the Find people column do?
+
+A Find people column (`action_find_people`) is an action column of a table's **Companies** tab. It
+owns one search of the `find_people` kind, listed on the **Data sources** tab under the column's
+name. When you save the column, AI turns your words into one search filter, once. The search then
+goes through the column's companies one at a time, about 2 seconds apart, and takes the top people of
+each company's first page of results, ranked by relevance.
+
+The people it finds land on the same table's **People** tab, linked to their company. A person who is
+already in a table of the workspace is not added again and stays where they are. The search runs on
+our managed infrastructure, for credits: no sender profile and no account of yours takes part.
+
+API and MCP: [`create_playtable_field`](/api-reference/playtables/playtable_fields/create-playtable-field)
+with `type: action_find_people`, `payload.prompt` and `payload.per_company_limit` (1 to 25, 1 by
+default). Unlike the drawer, the API starts the column with **Run on new rows** off and no condition:
+pass `config.auto_run: true` and `config.run_condition: {"field": "company.people_count", "op": {"eq": 0}}`.
+
+## How do I add a Find people column?
+
+A Find people column is added from **New column** on a table's Companies tab and set up in its drawer:
+
+<Steps>
+  <Step title="Open the Companies tab">
+    Open the table from **Playtables** in the sidebar and click **Companies**: the column exists there
+    only.
+  </Step>
+  <Step title="Add the column">
+    Click **+ Column** and pick **Find people** under **Actions**. **Find people…** in the **People**
+    column's header menu, or the **Find people** button of an empty People cell, opens the same drawer.
+  </Step>
+  <Step title="Say who to find">
+    Under **Who to find**, keep **Describe who to find** and write the roles and seniority in your own
+    words, up to 2,000 characters, for example "CFO, VP Finance, Head of Revenue Operations". Leave it
+    empty to take the top people of each company. To reuse a search this table already has, pick
+    **Use a search I have**.
+  </Step>
+  <Step title="Set how many people per company">
+    **People per company** takes 1 to 25 and starts at 1: the top of one search page at each company,
+    by relevance.
+  </Step>
+  <Step title="Check the run settings, then save">
+    **Run on new rows** is on, so a new company a companies source adds later is searched by itself.
+    **Only run if** starts as **Companies with no people yet**. A **Daily credit limit** is optional.
+    Save with **Save and run first 5 rows**, **Save and run rows that haven't run or have errors** to
+    cover the companies already in the table, or **Save and don't run**.
+  </Step>
+</Steps>
+
+<Frame caption="The Find people drawer of a saved column: the roles to find in your words, 3 people per company, the column's search with its filter and progress, and Run settings with Run on new rows on and Only run if set to Companies with no people yet.">
+  <img src="/images/kb/tables/find-people-drawer.png" alt="Find people drawer. Name: Find people. Who to find: Describe who to find, with the words CFO, VP Finance, Head of Revenue Operations and under them the line 1 credit per company searched, a miss is free. Check on save switched off. People per company: 3, with the hint 1 to 25: the top of one search page, by relevance. The search: the column's own Find people search with an Open in Data sources link, the filter chips CFO, VP Finance and Head of Revenue Operations, a full progress bar and the line 20 of 20 companies searched, 11 people found, new companies join as they land. Run settings: Run on new rows switched on, Only run if reading Companies with no people yet, and an empty Daily credit limit marked optional." />
+</Frame>
+
+## Can Find people check each person before saving them?
+
+Yes: **Check on save** in the Find people drawer, offered with **Describe who to find**, has AI judge
+each new person the search finds against a rule you write under its switch, before the person is
+saved. It is off on a new column, and Save stays disabled while it is on with no rule, saying **Check
+on save has no rule: write one or switch it off**.
+
+- The check sees only what the search brings: the name, the current role, the company and the
+  location. A person it cannot judge is saved, and a person already in the workspace is not checked.
+- A person who fails is not added: the record ends `disqualified` with the AI's reason, and this table
+  turns the same person away again without another check.
+- It costs one AI call per 20 people, shown under the switch as **About N credits per 20 records**.
+- With **Use a search I have** the drawer has no Check on save: the picked search keeps its own.
+
+More in [Add people and companies](/kb/tables/add-people-and-companies#what-does-check-on-save-do).
+API and MCP: `payload.qualify` of `create_playtable_field`, `{on, criterion}`. An `on` with no
+criterion is refused with `422`.
+
+## Which companies does Find people search, and when?
+
+A Find people column with **Run on new rows** on searches every new company that a companies source
+adds to the Companies tab, such as an AI search for companies or a CSV of companies. A sweep picks new
+companies up every minute.
+
+Other companies wait for a run you start: the companies a people source links to the Companies tab,
+companies added by hand or over the API, companies that already existed in the workspace, and the ones
+already in the table when you save the column. Run them with **Save and run rows that haven't run or
+have errors**, or the column's header menu, **Run column**, **Run all N rows that haven't run**.
+
+Before a company is searched, the column checks it for free:
+
+- **Only run if** is **Companies with no people yet** by default (`company.people_count == 0`), and
+  the count covers the company's people in any table of the workspace. A company that fails it ends
+  **Condition not met**.
+- A company on the **Disqualified** pipeline stage is skipped (`company_disqualified`).
+- A company needs a LinkedIn company id, its LinkedIn page or a website to be searched. Without any, it ends **No LinkedIn page** (`no_company_anchor`).
+
+## What does a Find people cell show?
+
+A Find people cell shows **Queued…**, then **Searching…** while its company is in the search, then
+**N found** with up to 3 faces, or **None found**. Click the cell for **Found people** (up to 50
+listed), **Open People tab**, and the **Log**, with the **Company identifier lookup** and **Search**
+steps and the credits each spent. The column's drawer shows, under **The search**, the filter AI built
+from your words and the progress of the whole search: **N of M companies searched · N people found ·
+new companies join as they land**.
+
+The count is what the search returned before Check on save. A person found who was already in the
+workspace counts and shows a face, but stays in their own table.
+
+## How do I find people at a few companies I select?
+
+**Actions**, then **Find people**, on a Companies tab searches only the companies you selected, with
+no column. The **Find people at companies** dialog asks for the table to **Add people to**, a **New
+search** with your words or an **Existing source**, and **People per company** (up to 25). It takes up
+to 500 companies at a time. A **New search** searches the selected companies afresh, even ones a
+column's search already tried, while an **Existing source** skips the companies already in its
+queue. The search is listed on the **Data sources** tab, and its costs are the column's.
+
+API and MCP: [`create_data_source`](/api-reference/playtables/data_sources/create-data-source) with
+`type: find_people` and `payload.company_sids`.
+
+## How do I stop Find people, and run it again?
+
+Stop a Find people column from its header menu, **Stop**, or stop everything on the table with **Stop
+all** in the toolbar. The dialog says what happens before you confirm:
+
+- Queued cells, and every company still waiting in the column's search, go back to not run and cost
+  nothing.
+- The company being searched right now finishes, and is charged if somebody is found.
+- **Run on new rows** turns off. Switch it back on in the column's settings.
+
+Turning **Run on new rows** off yourself sends back only the companies still queued in the column, not
+the ones already handed to the search. **Pause import** on the search's row on the **Data sources**
+tab holds its companies at **Searching…** until **Resume import**.
+
+To run it again, open the column's header menu, **Run column**, and pick **Run all N rows that haven't
+run** (the stopped companies included), **Run all N rows with errors**, **Run first 5 rows** or
+**Choose number of rows to run**. Each choice shows its estimate first.
+
+API and MCP: [`cancel_playtable_runs`](/api-reference/playtables/playtable_runs/stop-playtable-runs)
+with `field_sid`, and [`create_playtable_run`](/api-reference/playtables/playtable_runs/run-a-table-job:-enrich-export-import-bulk-edit)
+with `type: enrich`.
+
+## What does Find people cost?
+
+Find people costs 1 credit for each company where somebody is found and nothing where nobody is, plus
+1 credit, once, to look up a company's LinkedIn id when the row has only its page or website, charged
+even if nobody is then found:
+
+| What | Credits |
+|---|---|
+| A company where somebody is found | 1 |
+| A company where nobody is found | 0 |
+| Looking up a company's LinkedIn id when the row has only its page or website | 1, once per company, even if nobody is then found |
+| A cell run again for a company the column's search already tried | 0 |
+| Building the search filter from your words | One AI call, plus 1 for each term it looks up |
+| Check on save, when on | One AI call per 20 people |
+
+The drawer's line **1 credit per company searched, a miss is free.** and the run estimate count the
+searches, not the lookups. **Settings**, **Usage** lists the spend as **Find people**, **Identifier
+lookups** and **Source check**.
+
+## What happens when Find people reaches its daily limit or the credits run out?
+
+A **Daily credit limit** counts the column's credits per UTC day. With **Run on new rows** on, a
+company past the limit waits, **Daily limit reached. Continues after** a time, and goes on after
+00:00 UTC by itself. With it off, the cell ends **Daily limit reached** and runs again only when you
+run it.
+
+When the workspace runs out of credits, a cell that starts shows **Out of credits** and the run stops.
+A search already going pauses, its waiting companies stay at **Searching…**, and **Resume import** on
+the **Data sources** tab restarts it after a top-up.
+
+## Why did a company find nobody?
+
+A Find people cell that found nobody says why:
+
+| The cell shows | Token | What it means | What to do |
+|---|---|---|---|
+| **None found** | | The search returned nobody for your words at this company | Widen the words in the column's settings, which builds a new search, then run the cell again, or accept it: a miss is free |
+| **No LinkedIn page** | `no_company_anchor` | The row has no LinkedIn id, page or website, or the 1-credit lookup found no LinkedIn page for the page or website it holds | Put the right page in the row's LinkedIn column or enrich the company, then run the cell again |
+| **Disqualified** | `company_disqualified` | The company is on the Disqualified stage | Move the company to another stage, then run the cell again |
+| **Condition not met** | `run_condition_not_met` | The company failed **Only run if**, usually because it already has people | Change the condition, or leave it |
+
+Running a cell again searches its company only when the column's search has not tried it yet. A
+company the search already tried, such as one whose lookup found no page, answers **None found**, free.
+Search it again with **Actions**, **Find people** and a **New search**: the people land on the People
+tab, and the column's cell keeps its answer.
+
+## Why did a Find people search stop?
+
+A Find people cell whose search could not run says why:
+
+| The cell shows | Token | What it means | What to do |
+|---|---|---|---|
+| **Search not completed** | `search_refused` | The search could not reach this company's people after several tries and moved on | Running the cell again does not search it again: it answers **None found**, free. Search it later with **Actions**, **Find people** and a **New search** |
+| **Search interrupted** | `collect_interrupted` | The search kept getting interrupted, for hours, and stopped | **Resume import** on the **Data sources** tab, then run the cell again |
+| **Search stopped** | `collect_failed` | The search stopped on an error | Open it on the **Data sources** tab, fix what it names, then run the cell again |
+| **Filter not built** | `plan_failed` | AI could not turn the column's words into a search filter | Edit the words in the column's settings, then run the rows with errors |
+| **Search missing** or **Search deleted** | `search_missing`, `search_deleted` | The column's search is gone | Open the column's settings and pick or describe a search, then run the rows with errors |
+| **Out of credits** | `allowance_exhausted` | The workspace balance is empty | Top up, then run the rows with errors |
+
+API and MCP: [`get_playtable_field_value`](/api-reference/playtables/playtable_field_values/get-playtable-field-value)
+reads one cell in full, with its error and every step it took.
+
+## How do teams use Find people?
+
+Teams use Find people to turn a list of companies into a list of people, without waiting for the list:
+
+| Goal | How | Result |
+|---|---|---|
+| Finance leaders at SaaS companies of 50 to 500 people | An AI search for those companies on the Companies tab, and a Find people column for "CFO, VP Finance, Head of Revenue Operations" with 3 people per company | People arrive on the People tab as each page of companies lands, while the search is still reading |
+| One decision maker per account, never more | People per company at 1, the default condition **Companies with no people yet** | Each company is searched once and skipped once it has people |
+| A plan that does not wait for the list | Ask Creator: it adds the Find people column together with the companies search, plus one run over the companies already there | Every row of the plan is built at once, and the column keeps working after Creator has finished |
+
+## What does Find people not do?
+
+Find people adds the people it finds at each company, and stops there:
+
+- Find people does not search by itself the companies a people source links to the Companies tab, or
+  the ones you add by hand or over the API: run the column for them.
+- Find people does not search a company twice with one search: a cell run again for a company the
+  column's search already tried answers from that try, free.
+- Find people does not move a person who is already in another table of the workspace.
+- Find people does not search a company with no LinkedIn id, page or website.
+- Find people takes the first page of results at each company only: at most 25 people a company.
+- Find people adds people but does not find their emails. Add a
+  [Find work email](/kb/tables/find-emails-and-enrich) column on the People tab for that.
+
+<Tip>
+Copy this to your AI assistant, connected to GetSales over MCP:
+
+"Using the GetSales MCP server at `https://mcp2.getsales.io/mcp/public`, add a Find people column to
+the Companies tab of my table TABLE NAME that finds ROLES at each company, 3 people per company, with
+auto-run on and the condition that the company has no people yet. Estimate what running it over the
+companies already in the table costs, tell me the range and wait for my yes. Then run it, and report
+how many companies were searched and how many people were found."
+</Tip>
+
+## Related
+
+- [Add people and companies](/kb/tables/add-people-and-companies): bring the companies in first
+- [Find emails and enrich](/kb/tables/find-emails-and-enrich): work emails for the people found
+- [Tables](/kb/tables/tables): one person once per workspace, and what spends credits

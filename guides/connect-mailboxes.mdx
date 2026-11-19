@@ -1,0 +1,145 @@
+---
+title: "Connect mailboxes from a script"
+description: "Connect IMAP and SMTP mailboxes to sender profiles with one call per mailbox, read why a mailbox was refused, and know which providers take a password."
+---
+
+One call connects one mailbox. `POST https://api2.getsales.io/unibox/v1/api/sender-profiles/{sid}/mailboxes/connect-imap` takes the mailbox's IMAP and SMTP settings and both passwords, signs in to both servers, and attaches the mailbox to the sender profile. A script that reads a CSV and makes the call once per row connects any number of mailboxes, and every row that fails comes back with its cause.
+
+<Note>
+  Google Workspace takes an app password over IMAP, and most other mail hosts take the mailbox's own password. Microsoft 365 takes no password over IMAP at all, so a Microsoft 365 mailbox is connected in the app, through Microsoft's consent page.
+</Note>
+
+## Before you start
+
+- An [API key](/authentication) with the `can_manage_sender_profiles` permission.
+- An email package on the workspace's plan. Each package is one dedicated email server, set up a few minutes after the purchase, and each connected mailbox takes one of its inboxes. The trial carries no email. A call can name the server with `email_server_sid`. Without it, the mailbox lands on the oldest active server with an inbox free.
+- The sender profile each mailbox goes to. Create one with `POST https://api2.getsales.io/unibox/v1/api/sender-profiles`, or reuse one: a sender profile holds several mailboxes, and an email step rotates across its active ones.
+
+## Connect one mailbox
+
+```bash
+curl -X POST "https://api2.getsales.io/unibox/v1/api/sender-profiles/ub_sp_Hx7kQ3mN2pL4/mailboxes/connect-imap" \
+  -H "Authorization: Bearer $GETSALES_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "address": "anna@example.com",
+    "display_name": "Anna Berg",
+    "connection": {
+      "imap_host": "imap.gmail.com", "imap_port": 993, "imap_encryption": "ssl", "imap_username": "anna@example.com",
+      "smtp_host": "smtp.gmail.com", "smtp_port": 465, "smtp_encryption": "ssl", "smtp_username": "anna@example.com"
+    },
+    "imap_password": "abcdefghijklmnop",
+    "smtp_password": "abcdefghijklmnop"
+  }'
+```
+
+A `200` answers the sender profile as `item` and its mailboxes in `result.mailboxes`. `history_since` and `history_scope` choose how much of the mailbox's existing mail reaches the inbox; the [endpoint reference](/api-reference/unibox/sender_profiles/connect-an-imap-mailbox-to-a-sender-profile) has every field.
+
+## When a mailbox is refused
+
+Before the mailbox is created, both servers are signed in to with what you sent, IMAP first, then SMTP. A refusal is a `422` with the code `validation_failed`, keyed in `error.field_errors` under the field to change, with the mail server's cause as its `rule`:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "validation_failed",
+    "message": "The IMAP server wants an app password, not the account password. Create one in the mailbox's security settings and send it as imap_password.",
+    "recoverable": true,
+    "field_errors": {
+      "imap_password": [
+        {
+          "rule": "imap_app_password_required",
+          "message": "The IMAP server wants an app password, not the account password. Create one in the mailbox's security settings and send it as imap_password."
+        }
+      ]
+    }
+  },
+  "meta": { "trace_id": "019a8c3e-52d1-7b40-8f2a-6d1e0c9b4a77" }
+}
+```
+
+| `rule` | Field | What to do |
+|---|---|---|
+| `imap_auth_failed` | `imap_password` | The IMAP server refused the username and password. Check both, and use an app password where the provider asks for one. |
+| `imap_app_password_required` | `imap_password` | The provider wants an app password instead of the account password. |
+| `smtp_auth_failed` | `smtp_password` | The SMTP server refused the username and password. |
+| `imap_disabled` | `connection.imap_host` | IMAP is turned off for this mailbox. Turn it on in the mailbox's settings, or ask its administrator. |
+| `imap_mailbox_unavailable` | `connection.imap_username` | The sign-in worked but INBOX did not open. Check that the username names this mailbox. |
+| `imap_connection_failed` | `connection.imap_host` | No IMAP server answered at this host and port. |
+| `smtp_connection_failed` | `connection.smtp_host` | No SMTP server answered at this host and port, or it closed the session before the sign-in. |
+| `imap_tls_failed` | `connection.imap_encryption` | The encryption does not match the port: `ssl` is usually 993, `starttls` 143. |
+| `smtp_tls_failed` | `connection.smtp_encryption` | The encryption does not match the port: `ssl` is usually 465, `starttls` 587. |
+| `smtp_encryption_required` | `connection.smtp_encryption` | A password is never sent over unencrypted SMTP. Use `ssl` or `starttls`. |
+| `mail_host_unresolvable` | `connection.imap_host` or `connection.smtp_host` | The host name does not resolve. Check its spelling. |
+| `mail_host_not_allowed` | `connection.imap_host` or `connection.smtp_host` | The host is, or resolves to, a private or reserved address. Use the server's public host name. |
+| `imap_timeout` | `connection.imap_host` | The IMAP server did not answer in time. Retry shortly. |
+| `smtp_timeout` | `connection.smtp_host` | The SMTP server did not answer in time. Retry shortly. |
+| `imap_connection_limit` | `connection.imap_host` | The server refuses another session for this mailbox right now. Retry in a few minutes. |
+
+These refusals are about the workspace and its email server, not the mailbox, and carry their reason in `error.context.reason` (one in a field error):
+
+- `402` `email_inboxes_full`: every inbox of the plan is in use, or the plan has none. Detach a mailbox you no longer need, or add inboxes in Settings, Billing.
+- `409` `email_server_missing`: the workspace has no email server. Add an email package in Settings, Billing.
+- `409` `email_server_not_ready`: the email server is still being set up or is changing its plan, and `status`, `step` and `steps` say how far it is. Retry in a few minutes.
+- `402` `email_server_full`: every inbox of that email server is in use (`inbox_capacity`, `inboxes_used`).
+- `409` `email_server_suspended`: billing holds the server (`suspended_reason`: `payment_failed` or `unpaid`).
+- `409` `email_server_failed`: the server's setup failed. Pick another server, or contact support.
+- `422` `email_server_unknown`, on `email_server_sid`: the workspace holds no email server with that sid.
+
+Retry `imap_timeout`, `smtp_timeout`, `imap_connection_limit` and `email_server_not_ready` after a pause. Every other cause needs a change to the row or to the plan first.
+
+## Provider settings
+
+| Provider | IMAP | SMTP | Password |
+|---|---|---|---|
+| Google Workspace and Gmail | `imap.gmail.com`, 993, `ssl` | `smtp.gmail.com`, 465, `ssl` | An app password, which needs 2-Step Verification on the account. The username is the full address. |
+| Microsoft 365 | no password sign-in | no password sign-in | Connect the mailbox in the app instead. |
+| Other hosts | from the host's documentation | from the host's documentation | The mailbox password, or the app password the host issues. |
+
+## A script over a CSV
+
+Each row of `mailboxes.csv` names the sender profile, the mailbox and its servers:
+
+```csv mailboxes.csv
+sender_profile_sid,address,name,password,imap_host,imap_port,imap_encryption,smtp_host,smtp_port,smtp_encryption
+ub_sp_Hx7kQ3mN2pL4,anna@example.com,Anna Berg,abcdefghijklmnop,imap.gmail.com,993,ssl,smtp.gmail.com,465,ssl
+```
+
+The script prints one line per row, with the cause when a row fails:
+
+```python
+import csv
+import os
+
+import requests
+
+API = "https://api2.getsales.io/unibox/v1/api"
+HEADERS = {"Authorization": f"Bearer {os.environ['GETSALES_API_KEY']}"}
+
+with open("mailboxes.csv", newline="") as csv_file:
+    for row in csv.DictReader(csv_file):
+        body = {
+            "address": row["address"],
+            "display_name": row["name"] or None,
+            "connection": {
+                "imap_host": row["imap_host"], "imap_port": int(row["imap_port"]),
+                "imap_encryption": row["imap_encryption"], "imap_username": row["address"],
+                "smtp_host": row["smtp_host"], "smtp_port": int(row["smtp_port"]),
+                "smtp_encryption": row["smtp_encryption"], "smtp_username": row["address"],
+            },
+            "imap_password": row["password"],
+            "smtp_password": row["password"],
+        }
+        url = f"{API}/sender-profiles/{row['sender_profile_sid']}/mailboxes/connect-imap"
+        response = requests.post(url, json=body, headers=HEADERS, timeout=60)
+        if response.ok:
+            print(row["address"], "connected")
+            continue
+        error = response.json().get("error", {})
+        causes = [f"{field}: {entries[0]['rule']}" for field, entries in (error.get("field_errors") or {}).items()]
+        reason = (error.get("context") or {}).get("reason")
+        print(row["address"], response.status_code, error.get("code"), "; ".join(causes) or reason)
+```
+
+Keep the lines the script prints, and run it again over the rows that failed only, once each one is fixed.

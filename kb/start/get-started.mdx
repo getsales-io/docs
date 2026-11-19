@@ -1,0 +1,247 @@
+---
+title: "Get started"
+description: "Sign up at https://app.getsales.io/signup with an emailed 6-digit code or Google, no password, no card: a new account's first workspace gets a 7-day trial with 10 LinkedIn sender profiles and 500 credits, and no email (a mailbox connects once the plan has an email package, each package one dedicated email server for the workspace, so a first campaign on the trial sends on LinkedIn). On Getting started, Creator fills your profile row and the cards Your company, Who buys and Your offer from your LinkedIn profile, your company's LinkedIn page and your site. Each card's head says who filled it last, and you change any value in place. The first campaign plan takes two yeses: Run plan (Set up) builds the rows in one pass, leaves the LinkedIn and mailbox connects to you and the launch to the second yes, and sends nothing. Approve and go live (Launch) publishes and starts the workflow once the workflow and the channel connects are done. Replies land in Messages."
+---
+
+Sign up, let Creator learn your company and your offer, approve its first plan and go live: the path from a new
+GetSales account to the first replies.
+
+<Tip>
+**Give this to your AI assistant** once your workspace is set up (with the
+[GetSales connector](/kb/ai/connect-your-ai-assistant)):
+
+"Using the GetSales connector, check my workspace: which sender profiles have a LinkedIn account or a mailbox
+connected, which workflows are live and how many people each holds, how many credits are left, and which replies wait
+in the inbox. Read only: do not create, change or send anything."
+</Tip>
+
+## How do I sign up for GetSales?
+
+You sign up at https://app.getsales.io/signup with a code sent to your email or with a Google account: no password,
+and no card.
+
+1. Enter your **Work email** and click **Continue with email**, or click **Continue with Google**. A short human
+   check runs before a code is sent.
+2. For email, **Check your email**: type the 6-digit code. The form sends itself on the sixth digit.
+3. The app opens your new workspace on its **Getting started** page.
+
+The code works for 10 minutes. **Resend the code** opens after 60 seconds, an address gets at most 5 codes an hour,
+and 5 wrong tries end a code. Signing in later works the same way, at https://app.getsales.io/login.
+
+Any address that receives email works, a personal one too: Creator then asks for your website. Your first workspace
+is named after you ("Maya Workspace" for maya@acme.example) and starts a 7-day trial with 10 LinkedIn sender
+profiles and 500 credits, and no email inboxes. A workspace you create later is suspended until it gets a plan
+([the trial](/kb/workspace/plans-credits-and-billing#how-does-the-trial-work)). A mailbox connects once the plan has
+an email package, which is one dedicated email server for the workspace, so a first campaign on the trial sends on
+LinkedIn ([Where does a new mailbox land?](/kb/sender-profiles/connect-a-mailbox#where-does-a-new-mailbox-land)).
+
+## What happens on the Getting started page?
+
+**Getting started** (https://app.getsales.io/getting-started) is where Creator learns your business. The workspace's
+owner lands on it after sign-up and keeps it until the cards are confirmed or skipped. An invited teammate never sees
+it. Creator's chat sits on the left. The page on the right opens with the line "Creator fills these from your site
+and your LinkedIn; change anything, or tell him." and **Skip for now** at the top right, then your profile and three
+cards.
+
+Your profile is the row on top: your photo (or initials), your name, and one line with your role at your company
+and where you are, read from your LinkedIn profile, with your company's name at the right. Until the read lands it
+shows your sign-up name and "Your profile fills from LinkedIn once you paste it in the chat." The row is not edited on
+the page: tell Creator what to change.
+
+The three cards hold the workspace profile:
+
+| Card | What it holds |
+|---|---|
+| **Your company** | Name, What it does, Industry, People, Founded, Based in, Website |
+| **Who buys** | Roles, Industries, Company size, Regions, Like these clients |
+| **Your offer** | What you sell, Proof, Price |
+
+<Frame caption="Getting started filled for Acme Analytics: your profile on top, then Your company, Who buys and Your offer, each card's head saying who filled it last (from your site, by Creator), and Skip for now at the top right.">
+  <img src="/images/kb/start/getting-started-cards.png" alt="Getting started page for Maya Chen, Head of Growth at Acme Analytics in Amsterdam, under the line that Creator fills these from your site and your LinkedIn, with Skip for now at the top right. Below her profile row and its Acme Analytics chip are three cards. Your company, from your site: Name, What it does, Industry, People, Founded, Based in and Website, all filled. Who buys, by Creator: chips with a remove cross and Add under Roles, Industries, Regions and Like these clients, and Company size 50-500. Your offer, from your site: What you sell, Proof and Price." />
+</Frame>
+
+1. Creator asks for your LinkedIn profile: paste the link or the part after `linkedin.com/in/` and click **Read
+   it**, or click **No LinkedIn profile? Tell me about you instead.** With a personal address the card holds two
+   questions instead, your LinkedIn profile and your website. Each has a line to type into and an option to say you
+   have none, and **Send answers** sends what you answered in one message. That card has no **Read it** and no
+   **No LinkedIn profile?** link.
+2. Creator reads your profile, your company's LinkedIn page and your site, and fills each card as each read lands. A
+   card's head says who filled it last: "from your site", "from the company page", "from your LinkedIn profile",
+   "by Creator" (a value Creator worked out itself, such as a company size or regions your site does not state) or
+   "by you". Before anything is in a card, its head reads "reading" while Creator works, else "waiting for your
+   site".
+3. Click a value to change it (an empty one reads **Add**): Enter or a click away saves it, Escape leaves it as it
+   was, and in What you sell, Proof and Price, Shift+Enter starts a new line. The card's head reads "saving" until
+   the change is stored. Roles, Industries, Regions and Like these clients are lists of chips, and a chip does not
+   open on a click. **Add** opens a field for a new one ("Type, then Enter"), where Enter or a click away adds it and
+   Escape drops it, and the cross on a chip removes it, so changing a chip means removing it and adding its
+   replacement. Or tell Creator. A value you set is kept when a later read finds something else.
+4. Creator sums up and asks "Did I get it right?". Answer yes (the chip "Looks right") and the cards are confirmed
+   as the workspace profile ([`get_workspace_profile`](/api-reference/id/workspace_profiles/get-workspace-profile),
+   [`update_workspace_profile`](/api-reference/id/workspace_profiles/update-workspace-profile)): Getting started is
+   done, and Creator offers to build the first campaign.
+
+**Skip for now** leaves for the Dashboard, and pointing at it says "You can finish this later in the chat with
+Creator." Until the cards are confirmed or skipped, the sidebar shows no sections and every other page of the app
+opens Getting started again.
+
+## What does the Getting started chat cost?
+
+Getting started spends little. Reading your site costs nothing, and so does a LinkedIn read answered from a copy
+GetSales already holds (at most 30 days old). Otherwise a workspace's first three profile reads and first three
+company page reads are free, and later ones cost 3 credits a profile and 2 a company page. Creator's own turns in the
+Getting started chat, including the ones that build the first campaign's rows, are free until the chat has used 2 US
+dollars of AI, then bill at the usual rate. What those rows start (the AI search, the Find people column, the paid
+columns) costs credits as usual. This chat shows no price under its answers.
+
+## What is Creator?
+
+Creator is GetSales' AI assistant inside the app: it builds the list and the outreach from one sentence, launches
+them, and works through the replies and tasks with you. Open it with **Creator** near the top of the sidebar, or ⌘J
+(Ctrl+J on Windows and Linux).
+
+- Type, or press the microphone and speak (a recording stops itself at 10 minutes).
+- Attach up to 5 files a message: an image up to 5 MB, a PDF up to 10 MB, a text, CSV, Markdown or JSON file up to
+  256 KB.
+- Pick how it thinks: **Smarter** (2x credits), **Balanced** (1x, the default) or **Faster** (0.05x).
+- Outside a plan it asks before each change: "Creator asks before it writes.", with **Allow**, **Deny** and **Don't
+  ask again this session**. A send or a delete asks every time, and writes to the Getting started cards never ask.
+  An ask nobody answers expires after 5 minutes, and nothing runs.
+
+Every answer costs credits: the AI model's price plus 20%, at 25 credits per US dollar, shown under it ("12 cr"),
+except in the Getting started chat, which starts free. A turn takes up to 40 steps and 10 minutes. A workspace runs 2
+turns at once and keeps up to 10 open chats (an eleventh archives the oldest idle one). A chat idle for an hour is
+archived, and a message reopens it.
+
+## How does Creator's first plan work?
+
+Ask Creator for something that takes more than one step, such as "agency founders in Berlin, 10 to 50 people, book me
+demos", and it answers with a plan: nothing is created and nothing runs until you approve it. After Getting started,
+Creator offers "Build the first campaign" and first asks where a good conversation should end (a booked call, a
+reply, a sign-up or a trial, a webinar) and which channels to use (your LinkedIn account, a mailbox, or both).
+
+The plan is a card with one row per thing Creator makes, at most 12. A first campaign usually holds:
+
+1. The company brief: the AI SDR's Brief, the goal and when it hands a thread to you.
+2. The table, with its columns: a fit check (a [Use AI](/kb/tables/ai-columns) column),
+   [Find work email](/kb/tables/find-emails-and-enrich) and an opener (another Use AI column).
+3. Find the companies: an
+   [AI search](/kb/tables/add-people-and-companies#how-do-i-find-people-or-companies-with-an-ai-search) for the
+   companies you described.
+4. The people at each: a [Find people column](/kb/tables/find-people-at-companies) that searches each company as it
+   lands.
+5. Your sender profile, and the rows that connect its LinkedIn account or a mailbox, when they are missing.
+6. The [pipeline stages](/kb/tables/tables#which-pipeline-stages-are-there-and-how-do-i-change-them), on the first
+   campaign.
+7. The workflow.
+8. Go live: the launch, after your OK.
+
+Each row shows its price at the right ("1 cr per email", "3 cr a page"). Open a row to read what it will do, what
+Creator assumed and what it costs. **Skip this step** inside it leaves the row out. **Change**, or a reply in the
+chat, re-plans. The foot shows the expected spend and a cap ("~120 credits · cap 150 credits"): click it to edit the
+cap before the run.
+
+## What does Run plan approve?
+
+**Run plan** (**Set up** in the Getting started chat) is the first yes: Creator builds the rows one after another,
+every row but Go live, without asking anything, and starts nothing that sends.
+
+- The table and its columns are created. The paid columns run on each new row under a daily credit limit, and only
+  people who pass the fit check get an email search and an opener.
+- The AI search starts collecting companies (3 credits a page that returns somebody, up to 100 pages), and the Find
+  people column searches each company as it lands (1 credit for each company where somebody is found).
+- The sender profile and the AI SDR's Brief are saved, and the pipeline gets its default stages.
+- A row that connects a channel waits for you with **Connect**, and the run moves on.
+- The workflow is saved as a draft, its audience the table's people who pass the fit check. Nothing is published.
+
+Nothing waits for the searches: the columns and the workflow's audience keep working on new rows after the run. The
+card's head counts the rows built ("3 of 8", leaving out Go live and any row you skipped). **Stop** cuts the row in
+progress short and builds no more (what it made stays, and the head reads "Stopped · 3 of 8"), and **Run again**
+builds the rest. The run goes on with the chat closed and ends with "Built 7 rows of the plan" and what still needs
+you.
+
+<Note>
+The plan's cap guides how Creator sizes each paid run. It is not a hard stop. The spend is bounded by the AI search's
+100 pages, the daily credit limit of each column that has one, and the credit balance: watch it under **Credits** in
+the sidebar or in **Settings**, **Usage**.
+</Note>
+
+## What does Approve and go live do?
+
+**Approve and go live** is the second yes, and the only one that sends: Creator publishes the workflow it built and
+starts it ([`publish_workflow`](/api-reference/playtables/workflows/publish-workflow), then
+[`resume_workflow`](/api-reference/playtables/workflows/resume-workflow)). In the Getting started chat the button
+reads **Launch**.
+
+- It opens once the plan is built and every row it depends on is done: the workflow, and the rows that connect a
+  LinkedIn account or a mailbox. Until then the button in the Go live row is greyed, and pointing at it says "The
+  launch opens once the rows above are done". After a **Stop**, press **Run again** first.
+- Beside it: "Nothing goes out before your OK". One press publishes and starts the workflow, with no further dialog,
+  and the card's head reads **Live**.
+- The first messages go out once the first people land in the table and pass the fit check, within the sender
+  profile's daily limits and the workflow's sending window.
+
+Read the workflow row before you press: it shows the steps, the texts and who sends them. You can also go live from
+the workflow itself: in **Playtables**, open the table, its **Workflows** tab and the workflow, click **Publish**, then
+**Start** ([Build an outreach workflow](/kb/workflows/build-a-workflow)).
+
+## What do I connect before the first message goes out?
+
+A message goes out from a sender profile, so the sender profile needs its channel first. The plan's connect rows
+wait for you, with **Connect** at the right:
+
+- **LinkedIn**: click **Connect** on the row. The sender profile opens in **Sender profiles** with its **Connect
+  LinkedIn account** dialog: pick the proxy country, open the cloud browser and sign in to LinkedIn once
+  ([Connect a LinkedIn account](/kb/sender-profiles/connect-linkedin)). The account sends nothing until its
+  [first sync](/kb/sender-profiles/connect-linkedin#what-does-the-first-sync-of-a-linkedin-account-do) ends, and a
+  workflow step that comes due before then fails: with a large account, go live once the first sync is through.
+- **Email**: the mailbox row opens **Add mailbox** on the sender profile's **Email** tab. A mailbox connects once
+  the plan has an email package: each package is one dedicated email server for the workspace, usually ready within
+  minutes of the purchase, and the dialog's **Email server** field then shows the server the mailbox lands on
+  ([the Email server field](/kb/sender-profiles/connect-a-mailbox#what-does-the-email-server-field-of-add-mailbox-show)).
+  On the trial, or a plan with no email package, the dialog reads **No email in your plan yet**, with **Buy email**
+  in place of the sign-in button, and on the trial the purchase replaces the trial with a paid plan
+  ([Buy email](/kb/sender-profiles/connect-a-mailbox#how-do-you-buy-email-from-add-mailbox)). Without email, answer
+  your LinkedIn account alone when Creator asks for the channels. If the plan already has a mailbox row, Go live
+  waits for that row until the mailbox is connected, and **Skip this step** on it leaves **Approve and go live**
+  greyed too. So either buy email and connect the mailbox (the row then turns done by itself), or ask Creator to
+  change the plan to LinkedIn only and press **Run plan** (**Set up** in the Getting started chat) again.
+
+Once the channel is active, its row turns done by itself while the chat is open (or press **Check now** on it), and
+**Approve and go live** opens when every row it needs is done. A text that differs per sender, such as a booking
+link, is a sender variable filled on the sender profile's **Variables** tab.
+
+## Where do replies land?
+
+Replies land in **Messages** (https://app.getsales.io/messages), the workspace's one inbox, Unibox, with a badge on
+**Messages** in the sidebar counting unread replies. Its views are **All replies**, **Sent**, **Snoozed** and
+**Tasks** ([Unibox](/kb/inbox/unibox)).
+
+- The plan's first row writes the AI SDR's Brief. The AI SDR starts as a draft: it labels each reply on its threads
+  (**Interested**, **Not now**, **Out of office** and the rest) and drafts and sends nothing. It answers once it is
+  live, which needs every section of its Brief answered. Then the thread's mode decides whether it sends on its own:
+  on a **Co-pilot** thread, which is where every thread a workflow hands over starts, every message it writes waits
+  for your OK (a scenario on **Copilot** puts its whole plan up for it first), and on a thread you switch to
+  **Auto-pilot** from its mode pill in Unibox it sends on its own. Ask Creator to set it live, or see
+  [AI SDR](/kb/inbox/ai-sdr).
+- **Signals** in the sidebar shows what the people you write to do: an accept, a reply, a visit to your site
+  ([Signals](/kb/signals/signals)), with a badge counting the new ones of the types you asked to be told about, and
+  an optional toast while you work elsewhere.
+
+## What does Creator not do?
+
+- In a plan it sends nothing before **Approve and go live** (**Launch**): Run plan never publishes a workflow or sends
+  a message. Outside a plan, a message it sends for you waits for your **Allow**.
+- It does not stop a run at the plan's cap: the AI search's 100 pages, the column limits and the credit balance do.
+- It never connects your own LinkedIn account or a mailbox: you sign in yourself, and GetSales never stores your
+  LinkedIn password. For someone else's account it can mail them a
+  [sign-in link](/kb/sender-profiles/connect-linkedin#how-does-someone-else-sign-in-to-a-linkedin-account).
+- It does not set the AI SDR live by itself.
+
+**Related pages**
+
+- [Sender profiles](/kb/sender-profiles/sender-profiles): who sends, and what each one holds
+- [Tables](/kb/tables/tables): the table a plan builds
+- [Build an outreach workflow](/kb/workflows/build-a-workflow): the workflow a plan builds, and editing it
+- [Plans, credits and billing](/kb/workspace/plans-credits-and-billing): the trial, and what credits pay for
+- [Connect your AI assistant](/kb/ai/connect-your-ai-assistant): work in GetSales from Claude, ChatGPT or Cursor

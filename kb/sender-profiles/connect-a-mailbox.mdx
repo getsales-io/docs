@@ -1,0 +1,222 @@
+---
+title: "Connect a mailbox"
+description: "A Google Workspace or Microsoft 365 mailbox connects to a sender profile in the app by signing in with Google or Microsoft (Google Workspace needs a one-time admin trust, and the sign-in lasts 15 minutes), and any other mailbox connects over IMAP and SMTP through the API (connect_sender_profile_imap_mailbox). Every mailbox lands on a dedicated email server of the workspace: one email package of a paid plan (100, 500, 2,000 or 10,000 inboxes) is one server, usually ready within minutes of the purchase, and no mailbox connects on the trial or the Free plan. The Add mailbox dialog's Email server field picks the oldest server with an inbox free and says what stands in the way: No email in your plan yet (Buy email), a server still setting up (step by step), full (Add inboxes), paused or failed. Over the API a connect is refused with 402 email_inboxes_full or email_server_full, 409 email_server_missing, email_server_not_ready, email_server_suspended or email_server_failed, or 422 email_server_unknown. The Import line's default, People in playtables only, also keeps new mail from anyone outside your tables out of Unibox. Each mailbox takes one of the plan's email inboxes and has its own daily send limit (1 to 2,000), shortest interval (10 to 3,600 seconds, 20% either way), warmup ramp (off by default), From name, BCC, tracking domain and signature. An email step sends each new email from the sender profile's least recently used active mailbox, and fails with sender_profile_has_no_mailbox when none is active."
+---
+
+A sender profile sends email from its mailboxes, and an email step sends from the ones that are active, in turn. A Google Workspace or Microsoft 365 mailbox connects in the app by signing in with Google or Microsoft. Any other mailbox connects over IMAP and SMTP through the API. Every mailbox lands on a dedicated email server of your workspace, which comes with an email package of a paid plan.
+
+<Tip>
+**Give this to Creator**, the assistant inside the app, after the mailbox is connected. An assistant connected at the public address ([Connect your AI assistant](/kb/ai/connect-your-ai-assistant)) cannot change a mailbox's settings: it leaves them to the app.
+
+"In GetSales, find the sender profile of Maya Chen and read its mailboxes. For the mailbox maya@acme.example, set the daily send limit to 30, the interval between emails to 180 seconds, warmup on, the From name to Maya Chen, and make it the primary mailbox. Then read the mailbox back and show me its settings."
+</Tip>
+
+## Where does a new mailbox land?
+
+Every mailbox a GetSales workspace connects lands on a dedicated email server for that workspace. One email package of the plan is one server of the package's size: 100, 500, 2,000 or 10,000 inboxes. GetSales sets the server up after the purchase, usually within minutes, and a mailbox connects only to a server that is ready and has an inbox free.
+
+- **The trial** carries no email, so it has no server: **Add mailbox** reads **No email in your plan yet**. A trial started before 09:37 UTC on 18 November 2026 still holds the 10 email inboxes it started with, but no server stands behind them either, and its **Add mailbox** reads the same.
+- **The Free plan** holds no inboxes, so no mailbox connects on it. A workspace that never had email reads **No email in your plan yet**, and a server left from an ended plan reads as paused.
+- **A paid plan** has one server for each of its email packages. A package is bought with **Buy email** in **Add mailbox** or in **Settings**, **Subscription**: [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
+- **Over the API**, `POST https://api2.getsales.io/unibox/v1/api/sender-profiles/{sid}/mailboxes/servers` (`list_sender_profile_mailbox_servers`, REST only and not yet in the API reference, with the sender profile's sid in the path) lists the servers a new mailbox of that sender profile can land on, oldest first: each with its `sid` (`em_bx_...`), `name`, `plan` (`starter` for 100 inboxes, `growth` 500, `agency` 2,000, `dedicated` 10,000), `status` (`provisioning`, `resizing`, `active`, `suspended`, `failed`), `suspended_reason` (`payment_failed`, `unpaid`), `inbox_capacity`, `inboxes_used`, and `setup` (`step` of `steps`) while it is being set up or changing its plan. A mailbox lands only on an `active` server with an inbox free, and an empty `servers` list is a workspace with no email server.
+
+## What do you need before connecting a mailbox?
+
+Connecting a mailbox to a sender profile needs:
+
+- **A sender profile.** Create one on [https://app.getsales.io/sender-profiles](https://app.getsales.io/sender-profiles) with **New profile**: [Sender profiles](/kb/sender-profiles/sender-profiles).
+- **An email server with an inbox free.** It comes with an email package of a paid plan: [Where does a new mailbox land?](#where-does-a-new-mailbox-land).
+- **A free inbox in the plan.** The plan's email inboxes are shared by all the workspace's sender profiles, and each connected mailbox takes one. When every inbox is in use, a new mailbox is refused with `402` `email_inboxes_full`: **Every inbox your plan holds is in use. Add inboxes, or detach a mailbox you no longer need.** in **Add mailbox**, and "All 100 inboxes of this workspace's plan are in use. Disconnect a mailbox you no longer need, or add inboxes in Settings, Billing." over the API (your plan's number in place of 100). Over the API, a plan with no inboxes answers "This workspace's plan has no inboxes. Pick a plan in Settings, Billing." Add inboxes in **Settings**, **Subscription**: [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
+- **For Google Workspace, the admin's one-time trust**, below.
+
+## What must a Google Workspace admin do before a mailbox connects?
+
+A Google Workspace admin trusts the GetSales app once for the whole domain. Until it is done, Google blocks the sign-in.
+
+1. Open the [Google Workspace Admin console](https://admin.google.com/ac/owl/list?tab=configuredApps) at the list of configured apps.
+2. Click **Configure new app**.
+3. Search for the app by its Client ID, which the **Google** tab of the **Add mailbox** dialog shows with a **Copy** button once the workspace has an email server:
+   `73809045414-4br5ovdbf9aqece81vgnmtpedcjg2jlc.apps.googleusercontent.com`
+4. Select it, give all users **Trusted** access and click **Finish**. Any other access level blocks the connection.
+
+## What does a Microsoft 365 mailbox need before it connects?
+
+A Microsoft 365 mailbox connects through Microsoft's own consent page, so it needs the mailbox's user to be allowed to approve outside apps. When the organisation lets only admins approve them, Microsoft asks for an admin's approval: a Microsoft 365 admin approves the app, and the user signs in again.
+
+The **Microsoft** tab of the **Add mailbox** dialog (shown once the workspace has an email server) also lists steps for a Microsoft 365 admin: in the [Microsoft 365 admin center](https://admin.microsoft.com/#/homepage), under [Active users](https://admin.microsoft.com/#/users), select the user, open the **Mail** tab, then **Manage email apps**, check both **Authenticated SMTP** and **IMAP**, save, and wait one hour before connecting. GetSales reads and sends a Microsoft 365 mailbox through Microsoft's own mail API on the consent, never over SMTP or IMAP, so these steps are not needed to connect it.
+
+## How do you connect a Google or Microsoft mailbox?
+
+A Google Workspace or Microsoft 365 mailbox connects from the sender profile's **Email** tab: click **Add mailbox**, check the **Email server** it lands on, pick **Google** or **Microsoft**, click **Sign in with Google** or **Sign in with Microsoft**, and allow access in the provider's tab within 15 minutes. It connects in the app only. No MCP tool starts a Google or Microsoft sign-in, Creator's included, and the API reference has no call that does: over the API, only an IMAP and SMTP mailbox connects ([`connect_sender_profile_imap_mailbox`](/api-reference/unibox/sender_profiles/connect-an-imap-mailbox-to-a-sender-profile)).
+
+<Steps>
+<Step title="Open Add mailbox">
+
+Open the sender profile on [https://app.getsales.io/sender-profiles](https://app.getsales.io/sender-profiles), switch to its **Email** tab and click **Add mailbox**.
+
+</Step>
+<Step title="Check the email server">
+
+**Email server**, the dialog's first field, has picked the server the mailbox lands on: the oldest one that can take a mailbox. To use another, pick it from the list. When the dialog reads **No email in your plan yet** instead, the workspace has no email server: [buy email](#how-do-you-buy-email-from-add-mailbox) first. When the picked server reads **Setting up**, wait: the dialog updates by itself. [What each state means](#what-does-the-email-server-field-of-add-mailbox-show).
+
+</Step>
+<Step title="Pick the provider">
+
+Pick the **Google** or the **Microsoft** tab. Under it, the dialog shows the admin's steps, with a tutorial video.
+
+</Step>
+<Step title="Choose what the inbox imports">
+
+The **Import** line sets which conversations come into Unibox: [What a mailbox's Import line imports](#what-does-a-mailbox%E2%80%99s-import-line-import). The defaults suit most mailboxes. With the default **People in playtables only**, mail from anyone outside your tables stays out of Unibox, and **All conversations** lets it in.
+
+</Step>
+<Step title="Sign in">
+
+Click **Sign in with Google** or **Sign in with Microsoft**. The provider's consent page opens in a new tab ("Finish connecting the mailbox in the opened tab. It lands on this profile automatically."): sign in with the mailbox's account and allow access. The tab ends on a **Mailbox connected** page: close it. When the picked server cannot take the mailbox, the click opens nothing and a line under **Email server** says why: [Why does a mailbox not connect?](#why-does-a-mailbox-not-connect).
+
+</Step>
+<Step title="Wait for the mailbox to land">
+
+Back in GetSales, the dialog reads **Waiting for the mailbox** and checks every few seconds for up to 15 minutes. Meanwhile its button does nothing and only **Cancel** works. Once the consent comes through it says **Mailbox attached** and closes, and the mailbox appears on the **Email** tab. The sign-in in the new tab lasts the same 15 minutes: a consent finished later ends on a **Mailbox not connected** page ("This connection request took too long.") and lands nothing, so sign in again.
+
+</Step>
+</Steps>
+
+## What does the Email server field of Add mailbox show?
+
+**Add mailbox** reads the workspace's email servers when it opens (**Reading the email servers**). Once there is a server, **Email server** is the first field, above the **Google** and **Microsoft** tabs, and it picks a server by itself: the oldest that can take a mailbox, else the oldest. Each option shows the server's name and fill, such as **Server 1 · 12 of 100 inboxes**, and a server that cannot take a mailbox now adds why: **setting up**, **full**, **paused** or **setup failed**. With no server, the dialog shows only the explanation, with no tabs and no **Import** line.
+
+| The dialog shows | What it means | What to do |
+|---|---|---|
+| **No email in your plan yet**, with "Email runs on a dedicated server with its own queue and IP. A package of 100 inboxes is one server, usually ready within minutes of the purchase." under it, and **Buy email** in place of the sign-in button | The workspace has no email server, as on the trial or a plan with no email package | Click **Buy email**: [How do you buy email from Add mailbox?](#how-do-you-buy-email-from-add-mailbox) |
+| **Payment received. Your email server is being ordered; this window updates by itself.** | An email package was just bought from the dialog | Keep the dialog open: it reads the servers every 5 seconds, for up to 15 minutes |
+| **Setting up, step 4 of 10. Usually a few minutes; this window updates by itself.** (**Setting up. Usually a few minutes; this window updates by itself.** when the step is not known) | The server is being set up, or is changing its plan | Wait: the dialog reads the servers every 5 seconds, and the line goes once the server is ready |
+| **All 100 inboxes are in use.**, with **Add inboxes** | Every inbox of the server holds a mailbox (the server's own number in place of 100) | Pick a server with room, or click **Add inboxes**: one more package of 100 inboxes, which is one more server |
+| **Paused until the plan's payment goes through.**, with **Open billing** | The workspace's plan is on hold (its payment failed, or it is paused) or has ended | **Open billing** opens **Settings**, **Subscription**: fix the payment, resume the plan or buy one |
+| **Paused: its package is no longer in the plan.**, with **Buy email** | The server's package left a plan that runs on | Click **Buy email**, or pick another server |
+| **Setting this server up failed. Write to support and we will fix it.** | The server's setup failed | Pick another server, or write to support@getsales.io |
+| **Could not read the email servers.**, with **Try again** | The read of the servers failed | Click **Try again** |
+
+## How do you buy email from Add mailbox?
+
+**Buy email** (and **Add inboxes** beside a full server) opens the purchase window the plan already uses, with one email package of 100 inboxes in it, the smallest. Change the size in the window.
+
+- **On the trial, the Free plan or with no plan:** **Buy resources** opens with the package and as many LinkedIn sender profiles as the workspace has LinkedIn accounts connected, since the purchase replaces the trial with what it holds.
+- **On a paid plan:** **Change plan** opens with one package of 100 inboxes added to the plan.
+- **Without the Billing Manage permission, on a plan another member pays for, on a plan with a change already scheduled, or on a plan that is not active** (a failed payment, a pause): the dialog closes and **Settings**, **Subscription** opens, which says who can buy.
+
+Once the payment or the change goes through, a workspace with no server reads **Payment received. Your email server is being ordered; this window updates by itself.**, and the dialog shows the new server, step by step, as soon as it is listed. In a workspace that already has a server, the new one joins the **Email server** list, reading **setting up** until it is ready. Once it is ready, the dialog picks it by itself when no older server has room, unless you picked a server yourself. A declined card or a refused change leaves the dialog as it was.
+
+## What does a mailbox's Import line import?
+
+The **Import** line of a mailbox connect sets which of the mailbox's conversations come into Unibox and onto people's activity, from its past and from now on:
+
+- **How far back:** **All history** (the default), **Last year**, **Last month**, **New messages only** or **Custom date**. A mailbox's first sync reads its last 90 days, so no choice reaches further back than that, **All history** included. An IMAP mailbox connected through the API can ask for up to 3,650 days with `backfill_days`.
+- **Whose:** **People in playtables only** (the default) or **All conversations** (in the menu, **Only with people in my playtables** and **All conversations**). With the first, conversations with people already in your tables come in, a new conversation with anyone else stays out of Unibox (a thread already in Unibox keeps syncing), and someone you add to a table later brings theirs in.
+
+Both change later from the **Import** row of the mailbox's card, in a sheet of its own with **Save**.
+
+## How do you connect an IMAP and SMTP mailbox?
+
+A mailbox on any other host connects over IMAP and SMTP through the API only: the app has no form for it. [`connect_sender_profile_imap_mailbox`](/api-reference/unibox/sender_profiles/connect-an-imap-mailbox-to-a-sender-profile) takes the mailbox's IMAP and SMTP settings and both passwords, signs in to the mailbox's IMAP and SMTP servers before anything is created, and attaches the mailbox to the sender profile, one call per mailbox. The mailbox lands on the email server whose `sid` the call passes as `email_server_sid` (one the servers read lists), or, without it, on the oldest active server with an inbox free. When no server can take it, the call is refused before anything is created: [the refusals](#which-refusals-does-a-mailbox-connect-answer-over-the-api). A script over a CSV file connects a whole list: [Connect mailboxes from a script](/guides/connect-mailboxes) has the call and the IMAP and SMTP refusals, and the plan and email server refusals are [below](#which-refusals-does-a-mailbox-connect-answer-over-the-api).
+
+Google Workspace takes an app password over IMAP, and most other hosts the mailbox's own password. Microsoft 365 takes no password over IMAP, so a Microsoft 365 mailbox connects in the app. An AI assistant cannot connect an IMAP mailbox: the passwords never pass through the model, so the call is REST only.
+
+## What settings does a mailbox have?
+
+A mailbox's settings are on its card of the **Email** tab: click the mailbox to open them. Each saves on its own: a typed field when you leave it, the **Warmup** switch when you click it, the tracking domain when you pick it, and **Import** from its own sheet with **Save**.
+
+| Setting | In the API | What it does | Range |
+|---|---|---|---|
+| **Daily send limit** | `sending_limits.daily_limit` | Emails a day from this mailbox. The head shows how many went today | 1 to 2,000 emails |
+| **Interval between emails** | `sending_limits.min_interval_seconds` | The shortest gap between two emails from this mailbox, **Randomised by 20 percent** either way: at 180 seconds, the next email goes no sooner than 144 to 216 seconds after the last | 10 to 3,600 seconds |
+| **Warmup** | `warmup_config` | On: **Ramps to the daily limit**, starting low and sending more each day. Off (the default for a new mailbox): **Sends at the daily limit right away** | On or off |
+| **From name** | `display_name` | **What the recipient sees in the inbox** | |
+| **BCC** | `bcc` | **A copy of every sent email goes there** | Up to 5 addresses, separated by commas |
+| **Custom tracking domain** | `email_tracking_domain_sid` | **Links and open tracking run through it**. Only a verified domain can be picked | |
+| **Signature** | `signature_html` | **Appended to every email from this mailbox** | |
+| **Import** | `history_since`, `history_scope` | How far back, and whose conversations, Unibox imports | |
+| Sending hours (API only) | `sending_limits.sending_window` | When this mailbox may send, apart from any workflow's sending window: `time_zone`, `days` (`1` for Monday to `7` for Sunday), `start` and `end` (`HH:MM`). The card has no field for it | Any days and hours, or `null` to send at any hour |
+
+The card's head wears **Primary** on the sender profile's primary mailbox and **Warmup** while the ramp is on, names the provider and the interval in minutes (**Google Workspace · 3 min gap**), counts today's emails against the daily limit (**0 of 30 sent**) and shows the status. Through the API, [`update_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/update-a-sender-profile-mailbox) changes the same settings. How the limit, the interval and the warmup pace a mailbox: [Smart limits and warmup](/kb/sender-profiles/smart-limits-and-warmup#how-do-a-mailbox%E2%80%99s-daily-limit-interval-and-warmup-work).
+
+<Frame caption="The primary mailbox maya@acme.example, Active, with warmup on, a daily send limit of 30 and an interval of 180 seconds between emails.">
+  <img src="/images/kb/sender-profiles/mailbox-card-settings.png" alt="Open mailbox card for maya@acme.example with the Primary and Warmup badges, Google Workspace · 3 min gap under the address, 0 of 30 sent and the status Active. Rows: Daily send limit 30 emails (0 sent today), Interval between emails 180 seconds (Randomised by 20 percent), Warmup switched on (Ramps to the daily limit), From name Maya Chen, BCC empty, Custom tracking domain Not set, Signature with Maya Chen and Head of Growth, Acme Analytics, and Import reading All history · People in playtables only with a pencil to edit it. Below: Pause sending, Signature, Synced 7 hours ago and Detach" />
+</Frame>
+
+## How do you pause, make primary or detach a mailbox?
+
+A mailbox's verbs sit under its settings on the **Email** tab:
+
+- **Make primary** makes it the sender profile's primary mailbox (`is_primary`). The first mailbox connected is the primary until then.
+- **Pause sending** stops its sending while it keeps syncing and receiving replies, and **Resume sending** brings it back ([`pause_sender_profile_mailbox_sending`](/api-reference/unibox/sender_profiles/pause-sending-from-a-sender-profile-mailbox), [`resume_sender_profile_mailbox_sending`](/api-reference/unibox/sender_profiles/resume-sending-from-a-sender-profile-mailbox)). A pause GetSales made on its own asks **Why is it safe to send again?** before it resumes. Pausing the sender profile's last active mailbox also stops workflows from giving the sender profile new people, on LinkedIn too, and its email steps fail with `sender_profile_has_no_mailbox` until a mailbox is active again.
+- **Detach** takes it off the sender profile ([`detach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/detach-a-mailbox-from-a-sender-profile)). A mailbox that is the sender profile's last channel cannot be detached: delete the sender profile instead.
+
+Beside them, **Signature** jumps to the signature field, and a line such as **Synced 7 hours ago** says when the mailbox last synced.
+
+## How should a new mailbox start sending?
+
+A new mailbox, or a mailbox on a new domain, should start slow: turn **Warmup** on for a mailbox that has not sent cold email before, and raise its daily send limit over weeks rather than days. Mail providers judge a mailbox by its bounces and spam complaints, and when a provider blocks a mailbox's emails, GetSales pauses its sending: [Why a mailbox stopped sending](/kb/sender-profiles/troubleshooting#why-did-a-mailbox-stop-sending).
+
+## How does a sender profile send from several mailboxes?
+
+A sender profile with several mailboxes sends each new email from its active mailbox least recently used, each within its own daily limit and interval, so several mailboxes send more in a day than one. A mailbox that is paused or needs reconnecting is skipped for new emails until it is back, and when no mailbox of the sender profile is active, an email step fails with `sender_profile_has_no_mailbox` ("The sender has no mailbox connected.") instead of waiting. A follow-up in a thread goes from the mailbox that started the thread: it waits while that mailbox is at its daily limit or outside its own sending hours (`sending_limits.sending_window`, set over the API), and fails with `sender_profile_has_no_mailbox` while that mailbox is paused or needs reconnecting. A sender profile can hold as many mailboxes as the plan has inboxes free.
+
+## How do you check that a mailbox is connected?
+
+- The mailbox card reads **Active**, and its head counts today's emails against the daily limit, such as **0 of 30 sent** before the first one goes.
+- The sender profile's **Activity** tab lists the mailbox as attached, such as **Mailbox maya@acme.example attached over Google Workspace**, then **History synced** with the threads and messages the import brought in.
+- Through the API, [`search_sender_profiles`](/api-reference/unibox/sender_profiles/search-sender-profiles) lists the mailbox in `mailboxes` with `status` `active`.
+
+## Why does a mailbox not connect?
+
+A mailbox does not connect when the workspace has no email server or its server cannot take one (setting up, full, paused, failed or gone), when every inbox of the plan is in use, when a Google Workspace admin has not trusted the app or a Microsoft 365 organisation wants an admin's approval, or when the consent tab was closed before it finished or the consent took longer than 15 minutes.
+
+When the server cannot take the mailbox, a click on **Sign in with Google** or **Sign in with Microsoft** opens nothing and a line under **Email server** says why. A refusal from GetSales after the click puts its line there too, and the dialog reads the servers again.
+
+| What happens | What to do |
+|---|---|
+| **No email in your plan yet**, or **This workspace has no email server yet. Buy email to get one.** | The workspace has no email server, as on the trial or a plan with no email package: click **Buy email** |
+| **No email in your plan yet** right after you bought email | The new server is not listed yet. Do not buy again: open **Add mailbox** again in a few minutes, and write to support@getsales.io if it still reads so 15 minutes after the payment |
+| **The email server is not ready yet. Try again in a few minutes.** | The server is being set up or is changing its plan: wait, the dialog updates by itself |
+| **This server is full. Pick another one, or add inboxes.** | Pick a server with room, or click **Add inboxes** |
+| **This server is paused. Open billing to see why.** | Click **Open billing** (the plan is on hold or has ended) or **Buy email** (its package left the plan) beside the server |
+| **Setting this server up failed. Pick another server, or write to support.** | Pick another server, or write to support@getsales.io |
+| **This server is no longer in the workspace. Pick another one.** | The server left the workspace after the dialog read it: pick another one |
+| **Every inbox your plan holds is in use. Add inboxes, or detach a mailbox you no longer need.** | Add an email package: **Add inboxes**, or **Change plan** in **Settings**, **Subscription** |
+| Google says the app is blocked or not allowed | The Workspace admin has not trusted the app, or gave a level other than **Trusted**: [the Google setup](#what-must-a-google-workspace-admin-do-before-a-mailbox-connects) |
+| Microsoft refuses the sign-in or asks for an admin's approval | The organisation lets only admins approve outside apps: a Microsoft 365 admin approves it, then click **Cancel** and sign in again from **Add mailbox** |
+| The consent tab was closed before it finished | While the dialog reads **Waiting for the mailbox**, its button does nothing: click **Cancel**, then **Add mailbox**, and sign in again |
+| The dialog stopped waiting after 15 minutes, or the tab ends on **Mailbox not connected** with "This connection request took too long." | The sign-in lasts 15 minutes, so a consent finished later lands nothing: click **Sign in with Google** or **Sign in with Microsoft** again |
+
+A mailbox that was connected and stops working: [Why a mailbox says Reconnect needed](/kb/sender-profiles/troubleshooting#why-does-a-mailbox-say-reconnect-needed-or-disconnected).
+
+## Which refusals does a mailbox connect answer over the API?
+
+A mailbox connect, over the API ([`connect_sender_profile_imap_mailbox`](/api-reference/unibox/sender_profiles/connect-an-imap-mailbox-to-a-sender-profile)) or from **Sign in with Google** or **Sign in with Microsoft** in the app, checks the plan's inboxes first, then the email server, and a refusal creates nothing: no mailbox and no sign-in link. With no `email_server_sid`, the connect takes the oldest active server with an inbox free. When none can take the mailbox, the refusal is the closest server's: one being set up or changing its plan first, then a full one, a suspended one, a failed one.
+
+| Refusal | Sentence | When |
+|---|---|---|
+| `402` `email_inboxes_full` (`error.context.reason`, with `limit` and `used`) | "All 100 inboxes of this workspace's plan are in use. Disconnect a mailbox you no longer need, or add inboxes in Settings, Billing." (the plan's number). With none: "This workspace's plan has no inboxes. Pick a plan in Settings, Billing." | Every inbox of the plan holds a mailbox, or the plan has none, as on the trial |
+| `409` `email_server_missing` (`error.context.reason`) | "This workspace has no email server. Add an email package in Settings, Billing." | The workspace has no email server |
+| `422` `email_server_unknown` (`error.field_errors.email_server_sid[0].rule`) | "This workspace has no email server with this sid. Pick one that mailboxes/servers lists." | `email_server_sid` names a server the workspace does not hold |
+| `409` `email_server_not_ready` (`error.context.reason`, with `status`, `step` and `steps`) | "This email server is still being set up (step 4 of 10). Try again in a few minutes.", or "is changing its plan". With its state unknown: "This email server is not ready for a new mailbox yet. Try again in a few minutes." | The server is being set up or resized: retry the same call in a few minutes |
+| `409` `email_server_suspended` (`error.context.reason`, with `suspended_reason`: `payment_failed` or `unpaid`) | "This email server is suspended until its billing is settled in Settings, Billing." | Billing holds the server |
+| `409` `email_server_failed` (`error.context.reason`) | "This email server could not be set up. Pick another server, or contact support." | The server's setup failed |
+| `402` `email_server_full` (`error.context.reason`, with `inbox_capacity` and `inboxes_used`) | "All 100 inboxes of this email server are in use. Detach a mailbox you no longer need, or move to a bigger email package in Settings, Billing." (the server's number) | Every inbox of the server holds a mailbox |
+
+## What does a mailbox connect not do?
+
+- **No IMAP form in the app:** an IMAP and SMTP mailbox connects through the API.
+- **No Google or Microsoft connect in the API reference or the MCP tools:** their sign-in starts only from **Add mailbox** in the app.
+- **No email on the trial or the Free plan:** no mailbox connects on either until the workspace has a paid plan with an email package.
+- **No move between servers:** a connected mailbox stays on the email server it landed on, and GetSales has no step that moves it to another one.
+- **No warm-up emails:** a mailbox's **Warmup** is a sending ramp on its own daily sends. It exchanges no emails with other inboxes.
+- **No tracking domain setup:** a mailbox picks one of the workspace's verified tracking domains, and GetSales has no screen to add one.
+- **No cap per sender profile:** only the plan's inboxes, and the free inboxes of the workspace's email servers, limit how many mailboxes connect.
+
+## Related
+
+- [Smart limits and warmup](/kb/sender-profiles/smart-limits-and-warmup): how a mailbox's limit and warmup pace its sending.
+- [Connect mailboxes from a script](/guides/connect-mailboxes): IMAP and SMTP mailboxes through the API.
+- [Connect a LinkedIn account](/kb/sender-profiles/connect-linkedin): the other channel of the same sender profile.

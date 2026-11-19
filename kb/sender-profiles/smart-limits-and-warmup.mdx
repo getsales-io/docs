@@ -1,0 +1,173 @@
+---
+title: "Smart limits and warmup"
+description: "Each LinkedIn action of a sender profile has a daily limit and a delay (defaults: 25 connection requests a day 30 s apart, 50 messages 10 s apart, 30 InMails 22 s apart, 50 profile visits 10 s apart). Smart limits, on by default, bound them by a warmup score (0 to 100, checked about every 22 hours inside the account's sync hours), can raise one to one and a half times its default at full health, and can cut one after LinkedIn refuses it. A refused action is blocked for 1, 3 or 24 hours whether Smart limits are on or off, and the daily limits are split between workflows by priority (high 3, medium 2, low 1). A mailbox has its own daily limit (1 to 2,000, 100 by default), interval (10 to 3,600 seconds, 60 by default) and a sending ramp (8 a day, plus 4 a day by default)."
+---
+
+Every LinkedIn action a sender profile takes has a daily limit and a shortest delay between two of them, and every mailbox has its own daily limit and interval. Smart limits manage the LinkedIn numbers for you: an account starts where its history allows, gets more room as it proves itself, and backs off when LinkedIn pushes back.
+
+## Where are a sender profile's LinkedIn limits?
+
+A sender profile's LinkedIn limits are on its **LinkedIn** tab, on [https://app.getsales.io/sender-profiles](https://app.getsales.io/sender-profiles), in the card **Auto tasks and daily limits**:
+
+| Column | What it is |
+|---|---|
+| **LinkedIn task** | The action, under its group (**Networking**, **Messaging**, **Engagement**), each group with what it did of its limits today |
+| **Done today** | How many went out today |
+| **Daily limit** | The most a day. With Smart limits on, they set it |
+| **Target** | Shown while Smart limits are on: a ceiling of your own (0 to 1,000). The daily limit never goes above it, nor below 1 a day |
+| **Delay** | The shortest gap between two actions of that kind |
+
+A held action's row reads **Held until** a time under its **Done today** count, or **Blocked by LinkedIn until** a time. A day runs from midnight in the workspace's time zone. Through the API, [`read_sender_profile_limits`](/api-reference/unibox/sender_profiles/read-sender-profile-caps) returns the same rows (`daily_limit`, `target_limit`, `smart_limit`, `delay_in_seconds`, `done_today_count`, `status`, `hold_till`, `linkedin_quota_hit_till`), and [`update_sender_profile_linkedin_limit`](/api-reference/unibox/sender_profiles/update-a-sender-profile-linkedin-cap) changes one.
+
+<Frame caption="Auto tasks and daily limits with Smart limits on: each LinkedIn task's Done today, Daily limit, Target and Delay under Networking, Messaging and Engagement. Send connection request has done 15 of its 15 and reads Held until Tomorrow, 01:00.">
+  <img src="/images/kb/sender-profiles/limits-card.png" alt="The Auto tasks and daily limits card with the Auto-warmup mark and the Smart limits switch on, the Daily limit and Delay fields locked and the Target fields open. Rows sit under Networking (15 of 55 today), Messaging (7 of 155 today) and Engagement (11 of 125 today). Send connection request reads 15 of 15 and Held until Tomorrow, 01:00, with a daily limit of 15, a Target of 30 and a 30 s delay. Send message reads 7 of 25 with a Target of 40, and Visit profile 11 of 35 with a Target of 60. Six rows read No data under their count, and Connections limit vs market reads No data." />
+</Frame>
+
+## When do a new LinkedIn account's limits appear?
+
+A new LinkedIn account's limit rows appear as soon as it is connected, at the default numbers (25 connection requests, 50 messages, 30 InMails and 50 profile visits a day). They are starting numbers only: nothing is sent from the account until its [first sync](/kb/sender-profiles/connect-linkedin#what-does-the-first-sync-of-a-linkedin-account-do) ends, and a workflow step that comes due before then fails instead of waiting. Start a workflow on a new account once its **Warmup** card shows a score in place of **Not scored yet**: the check at the end of the first sync scores the account and sets its limits from that [warmup score](#how-does-the-warmup-score-set-a-linkedin-account%E2%80%99s-limits). The card says **No limit rows yet. They appear after the account's first sync.** only for the moment before the rows are made.
+
+## What are the default daily limits of each LinkedIn action?
+
+A LinkedIn account at full health works up to these numbers by default, and an action that keeps using all of its daily limit can [climb to one and a half times its default](#can-the-daily-limit-of-a-linkedin-action-go-above-its-default):
+
+| LinkedIn task | Daily limit | Delay |
+|---|---|---|
+| **Send connection request** | 25 | 30 s |
+| **Follow, withdraw, accept invite** | 40 | 3 s |
+| **Send message** | 50 | 10 s |
+| **Send InMail** | 30 | 22 s |
+| **Open thread, mark as read, react** | 100 | 3 s |
+| **Visit profile** | 50 | 10 s |
+| **React to post** | 30 | 7 s |
+| **Comment on post** | 30 | 30 s |
+| **Endorse skills** | 30 | 7 s |
+
+Each delay varies by up to 20% from one action to the next, and actions of one kind leave one at a time, never in a burst. An action that reaches its daily limit waits for the next day and then goes out on its own: nothing is lost, and nothing needs to be queued again.
+
+## How do Smart limits set the daily limit?
+
+Smart limits are one switch per LinkedIn account, **Smart limits** at the top of **Auto tasks and daily limits** (beside the **Auto-warmup** mark), on for every account from the start. Through the API, [`update_sender_profile_linkedin_limit`](/api-reference/unibox/sender_profiles/update-a-sender-profile-linkedin-cap) with `smart_limits_enabled` flips it for every action of the account. While Smart limits are on:
+
+- **The daily limit follows the account's [warmup score](#how-does-the-warmup-score-set-a-linkedin-account%E2%80%99s-limits)**: it rises while the account works without trouble, and drops at once when the score or LinkedIn says so.
+- **The delay stays at its default.** Both the daily limit and the delay are locked on the card, and a daily limit or a delay sent through the API is refused with `409` `smart_limits_governed`.
+- **The Target is the lever you keep:** the daily limit never goes above it, and never below 1 a day, even at a Target of 0. A Target above the warmup's ceiling raises nothing. Lower it to slow an action down.
+
+## What happens when Smart limits are turned off?
+
+With Smart limits off, every daily limit and delay stays as you set it: a daily limit of 1 to 1,000, and a delay picked from 1 second to 30 minutes (1 to 3,600 seconds through the API). Nothing raises or lowers them for you, and the **Target** column goes away.
+
+<Warning>
+**Turning Smart limits off resets every action to the defaults at once**, whatever the account's history: a brand-new account would go straight to 25 connection requests a day, and nothing lowers a limit any more when LinkedIn pushes back. Keep them on and lower a **Target** when you want less. Either flip of the switch also sets every **Target** to the action's default daily limit, and turning Smart limits back on bounds the rows by the latest warmup score at once.
+</Warning>
+
+## How does the warmup score set a LinkedIn account's limits?
+
+The warmup score rates a LinkedIn account from 0 to 100, from a check that runs about every 22 hours inside the account's [sync hours](/kb/sender-profiles/cloud-browser-and-proxies#what-are-a-linkedin-account%E2%80%99s-sync-hours) (by default Monday to Friday, 08:00 to 20:00 in the workspace's time zone, so no check runs at the weekend), and sets each action's ceiling while Smart limits are on: at a score of 50, half the default. The **Warmup** card on the LinkedIn tab shows it:
+
+| Score | The card reads |
+|---|---|
+| 90 to 100 | **Established** |
+| 50 to 89 | **Warming up** |
+| Under 50 | **New** |
+
+The score weighs how old the account is (4 months old or more loses nothing for age), how many invitations and messages it sent over the last 30 days (80 or more lose nothing), how often LinkedIn refused its actions or people blocked it in that time, how many LinkedIn sessions it has open, and how complete its profile is. LinkedIn Premium or Sales Navigator does not change it.
+
+## How fast does a LinkedIn account warm up?
+
+A LinkedIn account warms up by working:
+
+- **The first check, at the end of the first sync, sets the account straight at its ceiling.** An account 4 months old or more that sent 80 or more invitations and messages in the last 30 days, with a complete profile and no trouble, starts at or near the defaults. An old account that sent nothing in that time starts at about 3 connection requests and 5 messages a day. A brand-new account starts at about 1 action a day.
+- **Each check after that raises the daily limit a fifth of the way to the ceiling**, at least one action (about one check a working day with the default sync hours). The ceiling rises as the account sends, so an account that works every day climbs, and one left idle does not.
+- **When the ceiling falls below the daily limit, the limit drops to it at once**, and while LinkedIn blocks an action, that action's limit does not rise.
+
+<Note>
+The fastest way to warm an account up is to use it, every working day, within its limits. A limit that looks low on a fresh connect is the warmup reading a quiet month, not a fault.
+</Note>
+
+## Can the daily limit of a LinkedIn action go above its default?
+
+Yes, up to one and a half times the default (38 connection requests a day), while Smart limits are on and the account is at full health. An action whose daily limit sits at its ceiling (a warmup score of 100, no lower **Target**) and is used up on 3 days gets a ceiling 10% higher, then again at most every 7 days after 3 more such days. A LinkedIn refusal cuts the ceiling back. Either flip of the Smart limits switch sets every **Target** to the action's default daily limit, which holds the daily limit there until the **Target** is raised or cleared.
+
+## What happens when LinkedIn refuses an action?
+
+When LinkedIn itself refuses an action, that action is blocked, whether Smart limits are on or off, and its row reads **Blocked by LinkedIn until** a time:
+
+| Action LinkedIn refused | Blocked for |
+|---|---|
+| Connection requests | 1 hour |
+| Messages and InMails | 3 hours |
+| Any other action | 24 hours |
+
+Nothing clears such a block early: the action resumes on its own when it ends. While Smart limits are on, the refusal can also lower that action's ceiling at once, to 80% of its best day over the last 10 days, which the warmup score then scales. A refusal that would put the ceiling below a tenth of the default leaves the ceiling as it was: the action is still blocked, and the refusal still counts among the refusals the warmup score weighs. The LinkedIn tab's **Daily activity vs limits** chart, for connection requests or for InMails as picked above it, marks in red the days LinkedIn refused that action. A day at the limit is the pacing doing its job, not a refusal.
+
+<Warning>
+When LinkedIn keeps refusing connection requests, the account has hit a limit of LinkedIn's own, whatever its daily limit says: lower the **Target** for connection requests and give it time.
+</Warning>
+
+## When does a limit cut by a LinkedIn refusal come back?
+
+A LinkedIn action's ceiling cut by a refusal holds while a refusal of that action is among the last 10 days. At the first warmup check once 10 days have passed with no refusal of that action, the cut lapses, and the daily limit climbs back toward the warmup's ceiling by a fifth of the gap at each check. Before that, the cut ceiling can [climb the way one at full health does](#can-the-daily-limit-of-a-linkedin-action-go-above-its-default): by 10% after 3 days on which the action used up a daily limit standing at the cut ceiling, though not before 7 days have passed since the cut (longer when another refusal cuts it again in that time). A ceiling raised this way no longer lapses: from then on it moves only by those steps, up to one and a half times the default, or down at another refusal. Through the API, the row's `learned_ceiling` holds that ceiling, and is null when no refusal or climb has set one.
+
+## Why is a LinkedIn action on hold, and when does it resume?
+
+A LinkedIn action on hold waits and resumes by itself, and other actions keep going. In the list, the card of the sender profile's LinkedIn chip then reads **On hold**, with a line for each held kind among connection requests, messages and profile visits, such as **Connection requests: daily limit reached, resumes tomorrow at 03:00.** (the time in your own time zone). Held InMails show on the **Sales Navigator** chip when the account has Sales Navigator. On a Premium account without it, the list shows no InMail hold, and the **Send InMail** row on the LinkedIn tab does. The LinkedIn tab's account card keeps **Active**, and the row under **Auto tasks and daily limits** reads **Held until** or **Blocked by LinkedIn until** a time.
+
+| Reason on the line | What it means | When it resumes |
+|---|---|---|
+| **daily limit reached** | The action used its daily limit | At midnight in the workspace's time zone |
+| **LinkedIn limited this action** | LinkedIn refused it: a block of 1, 3 or 24 hours | At the time shown |
+| **account limit reached** | Any other hold on the action | At the time shown |
+
+## How do you lift a hold on a LinkedIn action?
+
+A hold GetSales set on a LinkedIn action is lifted from **Manage** on the sender profile's LinkedIn tab, which offers **Lift hold:** followed by the action's name (such as **Lift hold: Send connection request**) for each held or blocked action. Lifting resumes the action the same day once its daily limit has been raised above what it has done: an action whose daily limit is still used up is held again at once. It never ends a LinkedIn block, which lasts its 1, 3 or 24 hours. Through the API, [`update_sender_profile_linkedin_limit`](/api-reference/unibox/sender_profiles/update-a-sender-profile-linkedin-cap) with `reset_hold` `true` does the same.
+
+## How are a sender profile's limits shared between workflows?
+
+When several workflows send as one sender profile, each action's daily limit is split between the workflows that have something to send that day, by the priority set in each workflow's settings:
+
+| Priority | Weight |
+|---|---|
+| **High** | 3 |
+| **Medium** (the default) | 2 |
+| **Low** | 1 |
+
+A high-priority workflow gets three actions for every one a low-priority workflow gets, and a share one workflow leaves unused passes to the others. It is never a queue: a big workflow does not hold a small one up. A message sent by hand counts against the same limits. The **Overview** tab's **Who shares this sender profile** card shows each workflow's priority and today's share, and [`get_sender_profile_performance`](/api-reference/playtables/sender_profiles/sender-profile-performance) returns the shares. A workflow sends inside its own sending window, or at any hour when it has none, and the account's sync hours never hold a send back.
+
+## Why do a sender profile's sends leave minutes apart?
+
+A sender profile's sends leave one at a time per channel, so they spread out even when a workflow sets no delay of its own. GetSales hands each sender profile at most one LinkedIn action and one email at a time, checks for the next one every minute, and keeps each action's own delay between two of its kind (30 seconds or more for connection requests, varied by 20%). A mailbox keeps its **Interval between emails** the same way. The day's share of each workflow then decides which workflow's person goes next. A workflow's delay between steps comes on top of this: it is the least a person waits, not the exact time.
+
+## How do InMail credits and the InMail limit work?
+
+InMail needs LinkedIn Premium on the account (Sales Navigator includes it): a plain account cannot send it. Each InMail spends one of the account's InMail credits, the Sales Navigator licence's when it has one, otherwise Premium's, on top of the **Send InMail** daily limit (30 by default). The licence chips on the LinkedIn tab show the credits left, and when they were last read, about every 6 hours inside the account's sync hours. With no credit left, InMails cannot go out until the licence renews its credits on its monthly cycle.
+
+## How do a mailbox's daily limit, interval and warmup work?
+
+A mailbox paces itself with its own **Daily send limit** (1 to 2,000 emails, 100 by default) and **Interval between emails** (10 to 3,600 seconds, 60 by default, varied by 20% from one email to the next), set on its card of the **Email** tab ([Connect a mailbox](/kb/sender-profiles/connect-a-mailbox#what-settings-does-a-mailbox-have)).
+
+A mailbox's **Warmup** (off by default) is a sending ramp: the mailbox starts low, 8 emails a day by default, and may send 4 more each day until it reaches its daily limit, so a limit of 100 takes 24 days. Every calendar day moves the ramp, whether the mailbox sent or not. Off, the mailbox sends up to its daily limit from the first day. Through the API alone, a ramp stops at its own `target_daily`. A sender profile with several mailboxes sends each new email from the mailbox least recently used, and a reply from the mailbox that started its thread.
+
+## What do smart limits and warmup never do?
+
+- **Smart limits never send past a limit**: an action at its limit waits, it is not sent anyway.
+- **No person can clear a LinkedIn block early**, and turning Smart limits off does not end one: it ends at the time shown.
+- **Smart limits never take a daily limit past one and a half times its default**, the top of a [climb at full health](#can-the-daily-limit-of-a-linkedin-action-go-above-its-default).
+- **There is no weekly limit of our own.**
+- **The limits card's No data lines are not a fault**: the line under a row's **Done today** count and **Connections limit vs market** under the rows read **No data** on every account.
+- **A licence does not warm an account faster**: Premium or Sales Navigator does not change the warmup score.
+- **Smart limits do not tune the delay**: it stays at its default while they are on.
+- **A mailbox's warmup sends no warm-up emails**: it only sets how many emails the mailbox may send that day.
+
+## How do teams use smart limits and warmup?
+
+- **Ease in an account that has been quiet for months.** Keep Smart limits on and send every working day: the first check reads the quiet month and starts low, and each check moves the limits a fifth closer to a ceiling that rises as the account sends.
+- **Give one campaign most of an account's day.** Set that workflow's priority to **High** and the others to **Low**: it gets three actions for each one of theirs, and nobody waits in a queue.
+- **Slow one action down without touching the rest.** Lower that action's **Target**: its daily limit stops there while the other actions keep their own.
+
+## Related
+
+- [Cloud browser and proxies](/kb/sender-profiles/cloud-browser-and-proxies)
+- [When a sender profile needs attention](/kb/sender-profiles/troubleshooting)
+- [Build an outreach workflow](/kb/workflows/build-a-workflow)

@@ -1,0 +1,402 @@
+---
+title: "Add people and companies"
+description: "Data sources fill a table in bulk: an AI search (3 credits a page of 25 results that returns somebody, up to 100 pages, plus an AI call and term lookups to build its filter from words), a sender search of a LinkedIn, Sales Navigator or Recruiter link on your own sender profile (free), post engagement (free when one of your sender profiles reads the posts), a CSV up to 50 MB (a fraction of a credit to match its columns), a webhook (100 records a call, 1 MB each) or a HubSpot segment (set up in the app only). Each record ends Imported, Duplicate, Moved here, Stoplisted, Disqualified or Failed. A row added by hand, moved from another table or created with create_person has no data source."
+---
+
+A data source (`data_source`) brings people or companies into a table in bulk. It sits on the table's
+**Data sources** tab and gives every record it brings a status: imported, or the reason it was not. A
+row can also come in without a data source, and then has no such status: added by hand (**Add** N **more
+rows at the bottom** under the grid's last row, or **Add people**, **Add a person** on a company's card), moved from
+another table, or created with [`create_person`](/api-reference/playtables/people/create-person) or
+[`create_company`](/api-reference/playtables/companies/create-company).
+
+<Tip>
+**Give this to your AI assistant** (with the [GetSales connector](/kb/ai/connect-your-ai-assistant)):
+
+"Using the GetSales connector, fill my table TABLE NAME with WHO YOU SELL TO. Plan the AI search filter
+first and show it to me with what each page of results costs, and wait for my yes before you create the
+source. If I give you a LinkedIn search link instead, create a sender search on my sender profile
+SENDER NAME. Once it runs, tell me its status, the page it has reached, and how many records were
+imported, duplicate or stoplisted."
+</Tip>
+
+## Which data source should I use?
+
+A table is filled in bulk by data sources, and the kind of source follows from what you start with:
+words, a search link, posts, a file, another tool or a HubSpot segment. Open the table, click **Data
+sources**, then one of **AI search**, **Sender search**, **Post engagement**, **CSV**, **Webhook** or
+**HubSpot segment**. The data source `type` decides who runs it and what it costs.
+
+| What you have | Source (`type`) | Credits |
+|---|---|---|
+| Words for who you sell to, or a Sales Navigator search link | **AI search** (`ai_search`) | 3 a page that returns somebody, plus building the filter from words |
+| A LinkedIn or Sales Navigator search, a saved search, a list, a Recruiter search | **Sender search** (`sender_search`) on your sender profile | Free |
+| A sender profile's connections, conversations or incoming invitations | **Sender search**: **My network**, **My conversations**, **My invitations** | Free |
+| A post, a person's posts, a company page's posts, or a keyword | **Post engagement** (`post_engagement`) | Free when one of your sender profiles reads it, credits otherwise. **Only relevant posts** costs credits |
+| A spreadsheet of people or companies | **CSV** (`csv`) | A fraction of a credit a file to match its columns, and the rows are free |
+| A tool that can send a webhook | **Webhook** (`webhook`) | Free |
+| A HubSpot segment | **HubSpot segment** (`crm_list`) | Free |
+
+[Check on save](#what-does-check-on-save-do), when you switch it on, adds one AI call per 20 records to
+any of them but a HubSpot segment. The seventh kind, `find_people`, finds people at companies: see
+[Find people at companies](/kb/tables/find-people-at-companies).
+
+The tab lists every source with its **Status**, what it **Imported** (the people or companies it added,
+which open the table's grid, then its errors, duplicates, stoplisted and disqualified records, each count
+opening them in **Import results**), the
+**Sender profile** that runs it (**Credits** for an AI search and Find people, and for a post
+engagement once our managed infrastructure has read posts for it) and the day it was **Created**.
+
+<Frame caption="The Data sources tab: a button for each of the six kinds, and three completed sources with what each imported, a Find people source and an AI search marked Credits, and a CSV import with no sender profile.">
+  <img src="/images/kb/tables/add-data-sources-tab.png" alt="Data sources tab with the buttons AI search, Sender search, Post engagement, CSV, Webhook and HubSpot segment and the box Search sources, over the columns Data source, Status, Imported, Sender profile and Created. Find people, from the column Find people: Completed, 11 people, 10 duplicates, Credits, 13 Nov 2026. Webinar sign-ups October.csv, a CSV import of People, create: Completed, 8 people, 1 error, 2 duplicates, 1 stoplisted, no sender profile, 12 Nov 2026. The AI search Finance leaders at EU and US SaaS companies, 50 to 500 people: Completed, 11 people, 2 duplicates, Credits, 9 Nov 2026." />
+</Frame>
+
+API and MCP: [`create_data_source`](/api-reference/playtables/data_sources/create-data-source),
+[`search_data_sources`](/api-reference/playtables/data_sources/search-data-sources).
+
+## How do I find people or companies with an AI search?
+
+An AI search turns your words into one search filter and reads its results page by page into the
+table, with no sender profile and no account of yours to connect.
+
+<Steps>
+  <Step title="Describe who to find">
+    Click **AI search**. In **Describe who to find, or paste a link**, write who you want in your own
+    words, up to 2,000 characters, for example "Finance leaders at EU and US SaaS companies, 50 to
+    500 people". Or paste a Sales Navigator people or company search link: a link runs as it is.
+  </Step>
+  <Step title="Say what to find">
+    Under **What to find**, pick **People** or **Companies**. A pasted link sets it for you.
+  </Step>
+  <Step title="Create the source">
+    Add a name and tags if you like, switch on [Check on save](#what-does-check-on-save-do) if only
+    some records should get in, then click **Create source**.
+  </Step>
+</Steps>
+
+<Frame caption="The AI search dialog with a description of finance leaders at EU and US SaaS companies, What to find on People, and Check on save switched on, its cost shown before Create source: About 0.24 credits per 20 records.">
+  <img src="/images/kb/tables/add-ai-search-dialog.png" alt="AI search dialog. Describe who to find, or paste a link holds Finance leaders at EU and US SaaS companies, 50 to 500 people, over the hint AI builds the search filter from your description. A link runs as is. What to find is set to People, not Companies. Data source name and Tags (optional) are empty. Check on save is switched on with the criterion A finance decision maker at a software company, not an accountant at a firm, the note The check sees only what the source brings: name, headline, company, location. A record it cannot judge is saved, and the cost line About 0.24 credits per 20 records. Below are Show advanced settings, Cancel and Create source." />
+</Frame>
+
+The source reads **Building the search filter** while AI turns the words into a filter, then
+**Searching: page 3** as results land a page at a time (**Searching: page 3, retrying** while a page is
+tried again): 25 people or companies a page, up to 100 pages, 2,500 at most. It keeps going with the app
+closed and ends **Completed**. An AI search runs once: for new results later, create a new one. The
+words cannot change once the filter is built, since a different description is a new source.
+
+## Which links does an AI search take, and what does it cost?
+
+An AI search takes your words, or a Sales Navigator people or company search link, and costs 3 credits
+for each page of results that returns somebody.
+
+A LinkedIn search link, a saved search, a list, a Recruiter search and the network and inbox pages run
+as a sender search on your sender profile instead, and the dialog says so: **Save as sender search**
+opens a sender search with the link filled in. A post link gets **Open in Post engagement**.
+
+<Note>
+A search link can be up to 2,048 characters. The AI search box takes no more than that, so a longer
+link is cut there and can become a different search, and a sender search refuses it. For a long Sales
+Navigator search, save it in Sales Navigator on the LinkedIn account of the sender profile that will run
+it and paste the saved search's link into a sender search. Or remove some filters, or describe the
+people in your words instead.
+</Note>
+
+An AI search costs 3 credits for each page that returns somebody and nothing for a page that returns
+nobody. Building the filter is one AI call, plus 1 credit for each term it has to look up, such as a
+place or an industry (a term already looked up in the past week, or one that matches nothing, costs
+nothing).
+
+API and MCP: [`plan_data_source_filters`](/api-reference/playtables/data_sources/plan-data-source-filters)
+builds and shows the filter before anything is created, and is paid like a source's own filter (the AI
+call and the term lookups). `create_data_source` with `type: ai_search` and `payload.prompt` starts the
+search.
+
+## How do I collect a LinkedIn, Sales Navigator or Recruiter search on my sender profile?
+
+A sender search reads a link or a list through one of your sender profiles, on your own LinkedIn
+account, and costs no credits.
+
+<Steps>
+  <Step title="Pick the sender profile">
+    Click **Sender search** and choose a **Sender profile**. Only sender profiles with a LinkedIn
+    account are listed, and **SN** and **Recruiter** mark the licences they hold.
+  </Step>
+  <Step title="Say what to collect">
+    Under **What to collect**, pick **Paste a link** and paste a LinkedIn search, a Sales Navigator
+    search, a saved search, a list or a Recruiter search: what it is gets read off the link. Or pick
+    **My network** (the sender's 1st-degree connections), **My conversations** or **My invitations**,
+    with no link.
+  </Step>
+  <Step title="Set the interval">
+    **Interval** is **Once** by default. **Every hour**, **Every day**, **Every week** or **Every
+    month** runs it again: see [how a source runs on a schedule](#how-does-a-data-source-run-again-on-a-schedule).
+  </Step>
+</Steps>
+
+## How long does a sender search take, and what does it need?
+
+A sender search reads its pages within a daily search allowance of the sender profile's LinkedIn account,
+which is not one of the rows under **Auto tasks and daily limits**, so a long search takes days: when the
+day's allowance is spent it waits and goes on from the page it stopped at. Each run reads up to 100 pages
+of a search, and a Recruiter search up to 40 pages of 25 people: split a bigger search into narrower
+ones.
+
+A Sales Navigator link needs a sender profile with Sales Navigator (`sales_nav_required` otherwise),
+and a Recruiter link one with a Recruiter licence (`recruiter_required`) and a live Recruiter session
+(`recruiter_signed_out`: sign in to Recruiter again in the sender's browser). A Recruiter link must
+carry its search ID: run the search in Recruiter, then copy the address again, with `searchHistoryId`
+in it. A Recruiter search that loses the licence or the session while it runs pauses with
+`recruiter_required` or `recruiter_reauth_required`: fix it, then click **Resume import**.
+
+API and MCP: `create_data_source` with `type: sender_search`, `sender_profile_sid` and `url`, or
+`payload.surface` set to `my_network`, `messenger` or `my_invitations`, and `payload.repeat` sets the
+interval.
+
+## How do I collect the people who engaged with posts?
+
+A post engagement source collects the people who reacted to, commented on or reposted posts, each
+with what they did.
+
+<Steps>
+  <Step title="Say what to watch">
+    Click **Post engagement**. Under **What to watch**, pick **A post**, **A person** or **A company**
+    and paste the link of the post, the profile or the company page. Or pick **A keyword** and type 2
+    to 200 characters: quotes keep a phrase together, and AND, OR and NOT combine words.
+  </Step>
+  <Step title="Pick the window and what to collect">
+    **Posts from** takes 7, 30 or 90 days or **Since a date** for a person or a company, and 24 hours,
+    7 or 30 days for a keyword, and a single post has none. **Collect** has **Reactions** and
+    **Comments** on and **Reposts** off. **Only relevant posts** has AI read each post first and
+    skip the ones your words rule out.
+  </Step>
+  <Step title="Set the interval">
+    A post runs **Once** by default. A person, a company or a keyword runs **Every day**, reading the
+    new posts of the window and the new people on posts already read.
+  </Step>
+</Steps>
+
+## What does a post engagement bring, and what does it cost?
+
+A post engagement brings its people with the columns **Engagement**, **Comment**, **Post**, **Post
+author** and **Post text**. A run reads up to 100 posts and everyone who engaged with each. The read is
+free when one of your sender profiles can read posts. When none can, our managed infrastructure reads
+them for credits: 3 for each page of 50 people, and 1 to 3 for each read that finds the posts, and the
+dialog shows that cost before you create the source. **Only relevant posts** costs credits either way:
+one AI call for each 20 posts it judges.
+
+API and MCP: [`preview_post_engagement`](/api-reference/playtables/data_sources/preview-post-engagement)
+reads a link or a keyword back for free over the API and in Creator. An assistant at the public MCP
+address lacks it, because the tool reads LinkedIn itself. `create_data_source` with
+`type: post_engagement` creates the source at every address, the public one included.
+
+## How do I import a CSV file?
+
+A CSV import adds or updates people or companies from a `.csv` file of up to 50 MB.
+
+<Steps>
+  <Step title="Drop the file">
+    Click **CSV** and drop the file. A file over 50 MB is refused: split it and import the parts.
+  </Step>
+  <Step title="Say what it is and what to do">
+    Under **What to import**, pick people or companies. Under **Action**, **Create new** makes every
+    row a new record, and rows that already exist follow the duplicate setting. **Update existing**
+    updates the record each row's match key finds: pick **Match by** (email or LinkedIn nickname for people, and domain, LinkedIn nickname or name for companies) and the **Match column**.
+  </Step>
+  <Step title="Check the identifiers and the mapping">
+    **Found identifiers** lists the columns that say who each row is: a LinkedIn profile, an email, a
+    domain, a LinkedIn page. Without a LinkedIn identifier, LinkedIn steps cannot reach the file's
+    people. **Map columns** matches each column for you: check it before you import. An unmapped
+    column is still imported and can become a column later from a row's **Data source** cell.
+  </Step>
+  <Step title="Import">
+    Click **Import**. Rows land in batches while you keep working.
+  </Step>
+</Steps>
+
+## What are the limits of a CSV import?
+
+A CSV import takes a `.csv` file of up to 50 MB (a bigger file is refused: split it and import the
+parts) and has no row limit, but a single row larger than 1 MB fails. With **Update existing**, a row
+whose key matches nothing fails and never creates a record. Matching the columns costs a fraction of a
+credit for the whole file, and the rows are free.
+
+API and MCP: [`create_data_source_upload_url`](/api-reference/playtables/data_sources/create-data-source-upload-url),
+then [`import_data_source`](/api-reference/playtables/data_sources/import-data-source) with the
+mapping and `mode`.
+
+## How do I send rows from another tool by webhook?
+
+A webhook source turns every JSON object posted to its own address into a person in the table.
+
+Click **Webhook**, and when the records sit inside the body, open **Show advanced settings** and fill
+**Records path** (for example `data.contacts`). Left empty, a body that is one JSON object is one record
+and a body that is a JSON array is one record per object. Then click **Create source**. Copy the
+**Endpoint URL** and send a `POST` with JSON to it from any tool. Name and email are detected, and the
+whole payload stays on the row. Copy the address again any time with **Copy webhook URL** in the
+source's menu.
+
+<Warning>
+One call takes up to 100 records, each up to 1 MB. A call over either limit is refused whole and
+nothing from it is saved. A paused source refuses calls too. **Rotate webhook URL** retires the old
+address at once, so update every tool that posts to it.
+</Warning>
+
+API and MCP: `create_data_source` with `type: webhook` answers the `ingest_url`, and [`rotate_data_source_ingest_key`](/api-reference/playtables/data_sources/rotate-data-source-ingest-key)
+mints a new one.
+
+## How do I sync a HubSpot segment into a table?
+
+A HubSpot segment source keeps a table's people in step with the contacts of one HubSpot segment.
+
+Click **HubSpot segment**, pick the **HubSpot portal** and the **Segment**, and optionally up to 25
+**Columns from HubSpot**. **Sync** reads the segment every hour by default, or every day or week, and
+**Sync now** in the source's menu reads it at once. A contact added to the segment is added to the
+table, and one removed from it leaves the table's workflows and stays in the table. Connect HubSpot
+first: [Connect your CRM](/kb/integrations/connect-your-crm). The source is set up in the app only: the
+API's `create_data_source` has no type for it.
+
+## How does a data source run again on a schedule?
+
+A sender search, a post engagement and a HubSpot segment run again on their interval. An AI search and
+a CSV run once, and a webhook listens all the time.
+
+**Interval**, on a sender search and a post engagement, offers **Once**, **Every hour**, **Every day**,
+**Every week** and **Every month** (`repeat`: `hourly`, `daily`, `weekly`, `monthly`, and none for
+**Once**), and **View details** changes it later. A HubSpot segment's **Sync** offers **Every hour** (the
+default), **Every day** and **Every week**. A repeating source's row shows its interval between two runs,
+and hovering it shows **Next run on** with the date (**View details** shows **Next run**). A repeating
+LinkedIn or Sales Navigator search, saved search or list keeps its own schedule: its row shows neither,
+and **View details** shows its **Interval** with no **Next run**.
+
+A run never adds the same person twice: a repeating source stages only what its earlier runs did not
+bring (a Recruiter search reads everyone again), and every record goes through the workspace's duplicate
+check, so a person already in the workspace ends `duplicate` and only new people become rows.
+
+## What does Check on save do?
+
+Check on save has AI judge every new record against your own words before it is saved, so only the
+records that pass become rows. Switch it on in the source's dialog and say who passes, for example "a
+decision maker at a marketing agency, not a freelancer".
+
+- The check sees only what the source brings, such as the name, headline, company and location. A
+  record it cannot judge is saved.
+- A record that fails ends `disqualified` (**Disqualified**) with the AI's reason, and this table
+  refuses the same identity again without another check. People already in the workspace are not
+  checked.
+- The cost shows under the switch before you save: one AI call per 20 records, **About N credits per
+  N records**.
+- Check on save is off on a new source and can be changed later in the source's **View details**.
+  AI search, sender search, post engagement, CSV and webhook sources have it, and HubSpot segments do not.
+
+API and MCP: the `qualify` field of `create_data_source`, `{on, criterion}`.
+
+## What happens to each record a data source brings?
+
+Every record a data source brings ends with a status, listed in **Import results**: click a count on the
+source's row, such as **2 duplicates** or **1 error**, then **All** for every record. **View imported** in
+the source's menu opens the table's **People** or **Companies** tab instead.
+
+| Status | Item `status` | What it means |
+|---|---|---|
+| **Imported** | `promoted` | A new row of this table |
+| **Duplicate** | `duplicate` | Already in a table of this workspace, which **Import results** names. It stays there |
+| **Moved here** | `duplicate`, with `duplicate_action: moved` | Was in another table and moved here, by **Move here if already saved** or later by **Move here** or **Move all N into this table** |
+| **Stoplisted** | `stoplisted` | Matches your stoplist: the row is created, marked, and never contacted |
+| **Disqualified** | `disqualified` | Failed Check on save |
+| **Failed** | `failed` | Could not be imported, and the result says why |
+| **Pending** | `pending` | Waiting its turn: the source's row counts it as **Indexing** N |
+
+**Move here if already saved**, under **Show advanced settings**, is off on a new source
+(`on_duplicate: skip`, and `move` when it is on). A person moved here leaves the other table: their
+values in its columns are cleared and their unfinished journeys in its workflows end, while their
+pipeline stage, owner and history come with them. To move duplicates later, click the source's
+duplicates count to open **Import results**: a duplicate left where it is has **Move here** on its row,
+and a banner above the list counts the people already in other tables, by table, with **Move all N into
+this table**. Companies never move: an existing company joins this table as well. A person's company
+joins this table's **Companies** tab. The source's tags go on every new row, and **Add tags to
+duplicates** puts them on records that already existed too.
+
+<Frame caption="Import results of the CSV import Webinar sign-ups October.csv, opened from a count on its row: the chips count All 12, Imported 8, Duplicates 2, Stoplisted 1 and Failed 1, a banner names the table one person is already in with Move all 1 into this table, and each row shows its status.">
+  <img src="/images/kb/tables/add-import-results.png" alt="Import results of Webinar sign-ups October.csv with the chips All 12, Imported 8, Duplicates 2, Stoplisted 1 and Failed 1. A banner reads 1 person is already in another table: 1 in Fintech CFOs, Q4. They stay there until you move them, with the button Move all 1 into this table. Rows under the columns #, Data, Result, Status and Updated: Felix Baumann of Riverstone Insurance, Imported. Priya Nair of Quarry Health, Duplicate, marked Skipped with a Move here link. Clara Jensen of Saltmarsh Studio, Imported. Daniel Reyes, Stoplisted, the result reading stoplist. Noah Feldman of Larchwood Data, Imported. Showing 12 of 12." />
+</Frame>
+
+API and MCP: [`search_data_source_items`](/api-reference/playtables/data_source_items/search-data-source-items),
+[`get_data_sources_metrics`](/api-reference/playtables/data_sources/data-sources-metrics), and
+[`move_data_source_duplicates`](/api-reference/playtables/data_source_items/move-data-source-duplicates)
+for the move after the fact.
+
+## Why did a data source stop, and how do I resume it?
+
+A data source shows **Draft**, **Running**, **Listening** (a webhook waiting for calls), **Paused**,
+**Completed** or **Failed** (`status`: `draft`, `active`, `paused`, `completed`, `failed`). A paused or
+failed source says why in **View details**, under **Why it stopped**, in a sentence, and the API's
+`status_reason` holds the reason's token:
+
+| Reason | What happened | What to do |
+|---|---|---|
+| `allowance_exhausted` | The workspace ran out of credits | Top up, then **Resume import**: the same page runs again |
+| `collect_interrupted` | The search kept getting interrupted, for hours | **Resume import** goes on from where it left off |
+| `collect_failed` | This filter could not be run | Resume once, or create a new source with a different description |
+| `filter_unresolved` | Some words matched no search filter, so the search did not start | Resume to search without them, or use other words in a new source |
+| `plan_failed` | The words could not be turned into a filter | Edit the description and resume |
+| `sales_nav_required` | An AI search paused: the search is not available right now | Resume later |
+| `executor_account_missing` | The sender profile has no LinkedIn account connected | Connect one, then resume |
+| `recruiter_required`, `recruiter_reauth_required` | A Recruiter search paused: the sender profile's account has no Recruiter licence, or its Recruiter session ended. **View details** shows the token itself | Get the licence, or sign in to Recruiter again in the sender's browser, then resume |
+| A sentence about the sender's LinkedIn account | The account was not available, could not start or run the search, or the search failed several times in a row | Check the sender profile ([When a sender profile needs attention](/kb/sender-profiles/troubleshooting)), then **Resume import** |
+| `post_unavailable` | The post could not be read: deleted or private | Check the link, or create a source with another post |
+| `target_not_found` | LinkedIn has no page at that profile or company page address any more | Create a source with another link |
+| `file_unreadable`, `parse_failed` | The uploaded file could not be read, or stopped loading part way through | Upload the file again |
+| `crm_list_scope_missing` | The HubSpot portal cannot read segments yet | Connect it again in **Settings**, **Integrations**, **HubSpot**, then resume |
+| `crm_list_unreadable` | HubSpot refused the segment: it was deleted or is not a contact segment | Pick it again in a new source |
+| `playtable_archived` | The table was archived | Resume once the table is back in use |
+
+Nothing resumes by itself after a top-up: press **Resume import** in the source's menu. The one
+exception is a Find people search, which starts again as soon as its Find people column (once there are
+credits) or a find people play hands it a new company. The source's menu also has **View details**,
+**View imported** (the table's **People** or **Companies** tab), **Pause import**, **Sync now** for
+HubSpot, **Copy webhook URL** and **Rotate webhook URL** for a webhook, and **Delete source**. Deleting
+a source keeps the people and companies it imported.
+
+API and MCP: [`update_data_source`](/api-reference/playtables/data_sources/update-data-source) with
+`status: active` or `paused`, and [`delete_data_source`](/api-reference/playtables/data_sources/delete-data-source).
+
+## Why are rows not coming into my table?
+
+Rows usually stay out because the data source paused or failed, because the records came in with
+another status, or because a sender search is waiting on its sender profile. Check these in order:
+
+1. **The source is paused or failed.** Open **View details** and read **Why it stopped**: the common reasons and their fixes are in [Why did a data source stop](#why-did-a-data-source-stop-and-how-do-i-resume-it).
+2. **The records came in with another status.** Click the source's duplicates, stoplisted or
+   disqualified count: **Import results** shows the duplicates, which stay in their own table, and the
+   stoplisted and disqualified records with what matched.
+3. **A sender search is waiting.** It reads within the daily search allowance of its sender profile's
+   LinkedIn account, and waits while that account is not available. **My network**,
+   **My conversations** and **My invitations** also wait, still **Running**, until the account's first
+   sync of that list has finished. See [When a sender profile needs attention](/kb/sender-profiles/troubleshooting).
+4. **The link belongs to another kind.** A LinkedIn search, a saved search, a list and a Recruiter
+   search run as a sender search, and a post runs as post engagement.
+5. **The table is archived.** Its sources pause until it is back in use.
+
+API and MCP: [`search_data_source_items`](/api-reference/playtables/data_source_items/search-data-source-items)
+with a `status` filter lists a source's records of one status.
+
+## What does adding people not do?
+
+A data source does not do these things:
+
+- Adding people to a table does not by itself put them into a workflow: a workflow's sources do. A
+  running workflow of this table with a **From a view** or **By filter** source and **Auto-add** on
+  checks every 10 minutes and takes in the new people who match, and they start its steps. See
+  [Build an outreach workflow](/kb/workflows/build-a-workflow#how-do-auto-add-and-a-workflow-source%E2%80%99s-limits-work).
+- An AI search does not run again by itself, and a source paused for credits does not resume by itself,
+  except a Find people search, which starts again when its Find people column (once there are credits)
+  or a find people play hands it a new company.
+- A CSV in **Update existing** never creates a record, and a webhook source adds people only.
+- Check on save never judges people who are already in the workspace.
+- No data source puts a person in two tables of the workspace.
+
+## Related
+
+- [Tables](/kb/tables/tables): one person once per workspace, and what spends credits
+- [Find people at companies](/kb/tables/find-people-at-companies): the people you need at each company
+- [Find emails and enrich](/kb/tables/find-emails-and-enrich): the next step for the people you added

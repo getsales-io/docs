@@ -1,0 +1,313 @@
+---
+title: "Connect your CRM"
+description: "Under Settings, Integrations, HubSpot, Salesforce, Pipedrive and GoHighLevel connect by an OAuth sign-in, Attio and folk by an API key. Today HubSpot, Attio and folk connect, while Salesforce, Pipedrive and GoHighLevel answer oauth_app_not_configured. A Send to CRM column creates or updates people and companies, matched by email or domain (HubSpot also by its contact id and the LinkedIn profile, folk also by the LinkedIn profile and a company's name, and a Pipedrive organization by its exact name instead of its domain), for 0 credits. HubSpot logs outreach on the contact, moves a status and fills tables from segments. Salesforce logs messages and hand-offs as Tasks, and the other four have no timeline switch in the app."
+---
+
+Connect your CRM to GetSales, and the people you find and reach go into it as contacts and companies, with what
+happened in the conversation where your CRM supports it.
+
+<Tip>
+**Give this to your AI assistant** (with the [GetSales connector](/kb/ai/connect-your-ai-assistant)) once the CRM is
+connected in the app:
+
+"Using the GetSales connector: list my CRM connections and their status. For the table 'SaaS finance leaders', read
+the fields of my HubSpot connection and propose a Send to CRM column that maps first name, job title and company name
+to the matching HubSpot properties. Show me the column before you create it, and do not run it."
+</Tip>
+
+## What does a CRM connection do in GetSales?
+
+A CRM connection lets GetSales write to one account of your CRM (a HubSpot portal, a Salesforce org, a Pipedrive
+company, an Attio workspace, a GoHighLevel location or a folk member's key). GetSales uses it three ways:
+
+1. **Send to CRM**, a column of a table, creates or updates one CRM record per row: a person row becomes a person in
+   the CRM, a company row a company. The cell keeps the CRM's record id, and the person or company in GetSales
+   remembers it.
+2. **The timeline**: on HubSpot and Salesforce, outreach lands on the person's record as it happens, once a switch
+   on the CRM's card is on.
+3. **A HubSpot segment** fills a table with its contacts and keeps them in sync.
+
+Every CRM call runs on your own CRM account and costs 0 credits. GetSales reads from the CRM only what these need:
+its fields for the mapping, the record it is about to write, and on HubSpot the segments and their contacts. It
+never imports your CRM's contacts, deals or notes by itself. Today HubSpot, Attio and folk connect. Salesforce,
+Pipedrive and GoHighLevel do not yet.
+
+## Which CRMs does GetSales connect, and what does each do?
+
+Settings, Integrations has a card for six CRMs, and three of them connect today: HubSpot (a sign-in), Attio and folk
+(an API key). Salesforce, Pipedrive and GoHighLevel keep their cards and Connect buttons, but GetSales's own app for
+each is not set up yet: Connect answers `oauth_app_not_configured` and no account connects. What each does once
+connected:
+
+| | HubSpot | Salesforce | Pipedrive | Attio | GoHighLevel | folk |
+|---|---|---|---|---|---|---|
+| How you connect | Sign in (OAuth), one portal | Sign in (OAuth), one org, production or sandbox: not open yet | Sign in (OAuth), one company: not open yet | A workspace API key | Sign in (OAuth), one location: not open yet | A member's API key |
+| People | Contacts, found by their HubSpot id, LinkedIn profile or email | A Contact or an open Lead by email, else a new Lead | Persons by email | People by email | Contacts by email, tags added | Persons by email, then LinkedIn profile, into a group |
+| Companies | Companies by domain | Accounts by website domain | Organizations by exact name | Companies by domain | None (the company stays on the contact) | Companies by domain, then name, into a group |
+| Outreach on the record | LinkedIn messages, InMails, replies, connection requests and accepts, emails, [AI SDR hand-offs](/kb/inbox/ai-sdr#when-does-the-ai-sdr-hand-a-thread-to-a-person) | LinkedIn messages and InMails, emails, connection notes, AI SDR hand-offs, for people the column sent | No switch in the app | No switch in the app | No switch in the app | No switch in the app |
+| Status or stage | A property you pick moves forward with the conversation, and the AI SDR's reply class goes onto another | No | No | No | An opportunity in a pipeline stage | No |
+| Fills a table | From a segment | No | No | No | No | No |
+
+The Attio and folk cards say they log outreach on the record, but in the app they have no switch for it: from the app
+they send records only. Over the API or MCP,
+[`update_provider_connection`](/api-reference/integrations/provider_connections/update-provider-connection) with
+`settings.activity.messages` or `handoff` turns that logging on: messages and AI SDR hand-offs land as a note on the
+person (folk: an interaction), only for people the Send to CRM column sent there
+([the timeline](#how-does-outreach-land-on-my-crm%E2%80%99s-timeline)).
+
+## How do I connect a CRM?
+
+A CRM is connected in **Settings**, then **Integrations** (https://app.getsales.io/settings/integrations), under
+**CRM**. Connecting needs the Integrations Manage permission. Today HubSpot, Attio and folk connect. On Salesforce,
+Pipedrive and GoHighLevel, Connect answers `oauth_app_not_configured` until GetSales sets up its app for them.
+
+<Tabs>
+  <Tab title="HubSpot">
+    1. Pick **HubSpot** and click **Connect portal** (**Connect another portal** once one is connected).
+    2. In HubSpot, choose the account and click **Choose Account**, review the access asked for, and click
+       **Connect app**. If HubSpot asks you to confirm that you trust the app, follow its prompt.
+    3. Back in GetSales the portal shows under **Portals**, **On**.
+
+    Segments and emails on the timeline need two optional HubSpot permissions that the portal's admin allows first.
+    The full setup, every switch and the troubleshooting are in [Set up the HubSpot integration](/guides/hubspot).
+  </Tab>
+  <Tab title="Salesforce">
+    **Not open yet:** Connect answers `oauth_app_not_configured` today. Once GetSales's Salesforce app is set up:
+
+    1. Pick **Salesforce** and click **Connect org**, or **Connect sandbox** for a sandbox org.
+    2. Sign in to Salesforce and allow GetSales access (it asks for `api` and `refresh_token`).
+    3. The org shows under **Orgs**, **On**.
+
+    Your Salesforce edition must include API access, and your user needs it. Some orgs let an admin approve an app
+    before users can connect it.
+  </Tab>
+  <Tab title="Pipedrive">
+    **Not open yet:** Connect answers `oauth_app_not_configured` today. Once GetSales's Pipedrive app is set up:
+
+    1. Pick **Pipedrive** and click **Connect Pipedrive**.
+    2. Sign in to Pipedrive and allow the app.
+    3. The company shows under **Companies**, **On**.
+  </Tab>
+  <Tab title="Attio">
+    1. In Attio, open settings, then **Developers**, and create a workspace API key with the record and object scopes
+       ticked (`record_permission:read-write`, `object_configuration:read`).
+    2. In GetSales pick **Attio**, click **Connect workspace**, paste the key under **Workspace API key**, and click
+       **Connect**.
+
+    GetSales checks the key with Attio before it saves it. A key without the record or object scope is refused, the
+    missing scopes named. A key without the list or note scopes connects with a warning that names them.
+  </Tab>
+  <Tab title="GoHighLevel">
+    **Not open yet:** Connect answers `oauth_app_not_configured` today. Once GetSales's HighLevel app is set up:
+
+    1. Pick **GoHighLevel** and click **Connect location**.
+    2. On HighLevel's screen, choose one sub-account (location) and allow the app.
+    3. The location shows under **Locations**, **On**.
+
+    A connection is one location. An install on the whole agency is refused (`oauth_agency_install_not_supported`):
+    install the app on one sub-account, then connect again.
+  </Tab>
+  <Tab title="folk">
+    1. In folk, open **Settings**, then **API**, and click **New API key**. API access comes with folk's Premium and
+       Enterprise plans.
+    2. In GetSales pick **folk**, click **Connect API key**, paste it under **API key**, and click **Connect**.
+
+    The key acts as the folk member who made it: GetSales sees the groups that member sees. Another member's key is
+    a connection of its own.
+  </Tab>
+</Tabs>
+
+The CRM's sign-in must be finished within 15 minutes of the click on Connect: a later one is refused
+(`oauth_state_expired`), and you start again from the card. Connecting the same CRM account again from the same
+workspace renews its connection instead of adding a second one (an Attio or folk key replaces the old key). A
+workspace can connect several accounts of one CRM: the button then reads **Connect another ...**.
+
+Over the API or MCP: [`start_provider_connection_oauth`](/api-reference/integrations/provider_connections/start-provider-oauth-connect)
+returns the CRM's sign-in link, which a person opens while signed in to the same GetSales workspace (the app
+finishes the connection), and
+[`create_provider_connection`](/api-reference/integrations/provider_connections/create-provider-connection) stores an
+Attio or folk key.
+
+## How do I send people and companies to my CRM?
+
+The **Send to CRM** column of a table sends each row to the CRM account you pick. Adding it needs the Playtables
+Manage permission, and Integrations Manage to read the CRM's fields for the mapping.
+
+1. On the **People** or **Companies** tab, click **+ Column**, then under **Actions** pick **Send to CRM**.
+2. Under **Send to**, pick the CRM account. For folk, also pick the **folk group**. For GoHighLevel, choose
+   **Lands as**: **Contact** (with **Tags**, added to the contact's own) or **Opportunity** (with a **Pipeline**, a
+   **Stage** and an **Opportunity name**).
+3. Read **Matching**: it says how this CRM finds the record ([the rules](#how-does-getsales-find-the-right-record-in-my-crm)).
+4. Under **Field mapping**, click **Add a field** for each CRM field you want written, and give each a value from
+   the row, such as `{{people.first_name}}`, `{{people.role}}` (the job title) or `{{company.name}}`. A person has no
+   last name variable, only `{{people.first_name}}` and `{{people.full_name}}`. Only the fields you map are written,
+   beside the identity: the email or domain the record is matched by or created with, the person's LinkedIn profile
+   link on a new HubSpot contact (in HubSpot's own LinkedIn property, when the portal has it and you did not map it),
+   and on folk the row's email and LinkedIn profile link, added to every person created or updated. A new folk or
+   Pipedrive person whose name you did not map is named by its email (folk: else its LinkedIn profile), and a new
+   folk company by its domain.
+5. Under **Run settings**, keep **Send new rows** on to send every row that lands in the table as it arrives, or
+   switch it off to send by hand.
+6. Click **Save** and pick **Save and run first 5 rows** to try it, or **Save and don't run**.
+
+<Frame caption="A Send to CRM column on the People tab, sending to a HubSpot portal: Matching says the order a contact is found in, Field mapping writes HubSpot's First name, Job title and Company name from the row, and Send new rows is on.">
+  <img src="/images/kb/integrations/send-to-crm-column.png" alt="Send to CRM column form. Column name: Send to CRM. Send to: HubSpot: Acme Analytics (24681357), the portal's name and id, with the hint The CRM account this column writes to, connected in Settings. Matching: A person is found by the HubSpot contact id they already hold, then by their LinkedIn profile, then by their work email, or the personal one, followed by the template people.work_email || people.personal_email in double braces. When none of these finds a contact, a new one is created from the row's name or email. Field mapping: First name gets people.first_name, Job title gets people.role and Company name gets company.name, each in double braces and each row with a trash button to remove it, then Add a field and the hint Each mapped CRM field gets its template's value, rendered per row. Only the fields you map are written. Run settings, open: Send new rows switched on, with Every row that lands in this table is sent as it arrives." />
+</Frame>
+
+The cell then holds the CRM's record id. A cell that failed shows a short title such as "Invalid input", and its
+log names the call that failed. For a person row, the person's card says why in words, in its **CRM** section.
+A send waits for another column of the same row that is still filling the person's name or email in the same run,
+such as an enrichment. A variable the row does not have, such as `{{people.email}}`, is refused at save, but a token
+the app cannot read at all, such as `{{companies.domain}}`, saves and reaches the CRM as typed: use the row's own
+variables (`{{people.*}}`, `{{company.*}}`).
+
+Sending costs 0 credits a row on every CRM.
+
+Over the API or MCP, the column is
+[`create_playtable_field`](/api-reference/playtables/playtable_fields/create-playtable-field) as the app's API tool
+call column (its `type` is in the API reference), whose `payload.tool_sid` is
+`in:{provider}.crm.contact_upsert` (`company_upsert` on Companies) and whose `payload.params` hold `connection_sid`,
+the identity (`email: "{{people.work_email || people.personal_email}}"` or `domain: "{{company.domain}}"`) and
+`properties`, CRM field to value. On folk the app also sends `group`, the folk group's id, and on People
+`linkedin_nickname: "{{people.ln_nickname}}"`: without them the record lands in no group, a person is never matched
+by its LinkedIn profile, and a mapped `customFieldValues.*` field fails.
+[`read_provider_connection_crm_metadata`](/api-reference/integrations/provider_connections/read-crm-fields-pipelines-or-lists)
+lists the CRM's writable fields.
+
+## How does GetSales find the right record in my CRM?
+
+GetSales matches each row to a record before it writes, so a person already in your CRM is updated rather than
+duplicated. The rules differ by CRM:
+
+| CRM | A person is found by | A company is found by | When nothing matches |
+|---|---|---|---|
+| HubSpot | The HubSpot contact id the person already holds, then the LinkedIn profile (in HubSpot's own LinkedIn property, when the portal has it), then the work email, else the personal email | Its domain | A new contact is created, with the LinkedIn link in HubSpot's own property when the portal has it. HubSpot needs an email, a first name or a last name for it, and only mapped fields are sent: map First name to `{{people.first_name}}`, or a row with no email fails (`name_or_email_required_to_create`) |
+| Salesforce | A Contact by email, then an open (unconverted) Lead by email | An Account by its website domain | A new Lead is created. Your org's required Lead fields apply |
+| Pipedrive | Its email | An organization by its exact name: map the name field | A new person or organization is created |
+| Attio | Its email | Its domain | A new record is created |
+| GoHighLevel | Its email (your location's own duplicate rule applies) | No companies | A new contact is created |
+| folk | Its email, then the LinkedIn profile folk stores | Its domain, then its name | A new person or company is created in the group |
+
+A row with nothing to match by fails, with the reason in the cell's log and, for a person, on the person's card: a
+person row with neither a work nor a personal email (on HubSpot, nor a HubSpot id or a LinkedIn profile, and on
+folk, nor a LinkedIn profile), a company row with no domain (Pipedrive: no mapped name).
+
+## How does outreach land on my CRM's timeline?
+
+In the app, outreach lands on the person's CRM record on HubSpot and Salesforce, as it happens, once you switch it on
+under **Activity sync** on the CRM's card in Settings. Every switch is off when a CRM connects, and nothing from
+before a switch was turned on is written.
+
+- **HubSpot**: **Log messages to the timeline** (LinkedIn messages and InMails, sent and received), **Log emails to
+  the timeline** (needs HubSpot's email access), **Log connection requests** (a request with its note, and its
+  accept) and **Log AI SDR hand-offs** (a note, on a lead whose HubSpot contact GetSales already holds). Each
+  LinkedIn record names the sender profile and the lead, such as "LinkedIn message from Maya Chen to Elena Varga".
+  A lead is found the way Send to CRM finds a person, with the LinkedIn profile read from the property named under
+  **LinkedIn link** in Status and dates (else HubSpot's own). A lead found by no rule is not created for the
+  timeline: the miss shows under **Recent failures**.
+- **Salesforce** (no org connects yet: `oauth_app_not_configured`): **Log messages to the timeline** (LinkedIn
+  messages and InMails, emails, a connection note) and **Log AI SDR hand-offs**, each as a completed Task. Only
+  people the Send to CRM column sent to that org get them, and accepts and requests without a note are not logged.
+
+Pipedrive, Attio, GoHighLevel and folk have no switch in the app. Over the API,
+[`update_provider_connection`](/api-reference/integrations/provider_connections/update-provider-connection) with
+`settings.activity.messages` or `handoff` turns on the same logging as Salesforce's for them too: messages and
+hand-offs as a note on the person (folk: an interaction), for people the column sent there. Over the MCP today that
+tool carries only `messages` and `handoff`, and the settings it sends replace the connection's whole policy: set
+HubSpot's other switches and Status and dates in the app.
+
+## How does a HubSpot status move with the conversation?
+
+**Status and dates**, on the HubSpot card in Settings (**Set up**, or **Edit** once set), moves a contact property
+of yours forward as a request is sent, accepted, a message goes out and the lead replies, writes each event's date to
+a date property, and can write the AI SDR's class of a reply (interested, meeting request, not now and the rest)
+onto another property. It works with the timeline switches off for LinkedIn requests, accepts, messages and
+replies, and for the reply class. An email sent or answered moves the status and stamps its date only while
+**Log emails to the timeline** is on. The status only moves forward, in the order of the events. An empty status
+takes the event's value, and so does a value listed under **Also replace** (such as New). A mapped value moves on to
+a later event's value, never back. Any other value stays, whoever set it. No other CRM has a status write. The
+details are in [the HubSpot guide](/guides/hubspot#status-and-dates).
+
+## Can a CRM list fill a table?
+
+Only a HubSpot segment fills a table. In the table, open **Data sources** and choose **HubSpot segment**, pick the
+portal and the segment, add up to 25 HubSpot properties as columns, and pick **Every hour**, **Every day** or **Every
+week**. Contacts added to the segment are added to the table, each holding its HubSpot id, so every LinkedIn step
+lands on the right contact even without an email. Contacts removed from the segment leave the table's workflows and
+stay in the table. **Sync now** reads the segment at once. The source is set up in the app: the MCP has no tool for
+it yet. More in [the HubSpot guide](/guides/hubspot#read-a-hubspot-segment-into-a-table).
+
+Salesforce, Pipedrive, Attio, GoHighLevel and folk lists cannot fill a table. Bring their records in as a CSV
+([Add people and companies](/kb/tables/add-people-and-companies)).
+
+## How do I see what GetSales wrote to my CRM, and what failed?
+
+Every person's card, in [Unibox](/kb/inbox/unibox#what-does-the-person%E2%80%99s-card-in-unibox-show) and on a
+table, has a **CRM** section for each connection: the record the lead was matched to and how ("Matched by email",
+"Matched by LinkedIn profile", "Created from this lead" and the others), or "Not in HubSpot yet", then the lead's
+recent CRM calls, each failure with its reason in plain words. A HubSpot record has an **Open in HubSpot** button,
+and the others show the record id. The log needs the Integrations View permission.
+
+The HubSpot card in Settings also lists each portal's last 10 failed calls under **Recent failures**. **Test**, on a
+connection's row, checks that the CRM still accepts it ("Credential works (120 ms)").
+
+A connection that the CRM refuses 5 times in a row for its access (a revoked grant, an uninstalled app, a dead key)
+reads **Failed** on its row, and the CRM's card reads **Needs attention** when no other account of it is on: connect
+the account again. A HubSpot permission the grant lacks does not count toward the 5.
+
+Over the API or MCP: [`search_provider_calls`](/api-reference/integrations/provider_calls/search-provider-calls) and
+[`test_provider_connection`](/api-reference/integrations/provider_connections/test-provider-connection).
+
+## How do I disconnect a CRM, and what stays?
+
+Hover the connection's row on the CRM's card and click **Delete** (the trash icon), then confirm. Over the API or
+MCP, [`delete_provider_connection`](/api-reference/integrations/provider_connections/delete-provider-connection) does
+the same.
+
+- Every sync of that account stops: no more rows sent, no more timeline records, no more segment reads.
+- GetSales revokes its access at the CRM where the CRM allows it: HubSpot, Salesforce and Pipedrive (which then
+  uninstalls the app). On GoHighLevel the app is uninstalled from the location. An Attio or folk key is removed from
+  GetSales and stays valid in Attio or folk: revoke it there.
+- Everything already written stays: records, notes and timeline entries in the CRM, and people, rows and the CRM ids
+  they hold in GetSales.
+- Send to CRM columns and segment sources that used the connection stop working. Connecting the account again makes
+  a new connection: pick it again in each column and source.
+
+On HubSpot, Salesforce, Pipedrive and GoHighLevel, when another GetSales workspace also holds a connection to the same
+account, Delete skips the revoke only if GetSales finds that connection, which it does only when both workspaces sit
+on the same GetSales cluster. After a delete, open the other workspace and click **Test** on that account's row: if
+it answers "Test failed: authentication rejected", the revoke reached it too, so connect the account again there. Do
+not wait for the row to read **Failed**: it turns Failed only after the CRM refuses 5 calls in a row, and a quiet
+workspace can take days to make them.
+
+## What limits apply to a CRM connection?
+
+<Note>
+- No cap on connections: any number of CRMs and accounts per workspace, on every plan, the trial and the Free plan
+  included. The panel and the column's picker show the first 100.
+- A CRM's sign-in must finish within 15 minutes of the click on Connect, or it is refused (`oauth_state_expired`).
+- GetSales paces its calls to one HubSpot portal at 100 requests per 10 seconds on each GetSales cluster (HubSpot
+  allows 110). A portal connected from workspaces on two clusters can be sent up to twice that, and the calls past
+  HubSpot's 110 then fail as `rate_limited`. A busy portal makes the timeline and segment syncs wait and come back.
+- A CRM call waits 30 seconds at most.
+- A segment brings up to 25 mapped properties.
+- 5 refusals in a row for access turn a connection **Failed**.
+</Note>
+
+## What does a CRM connection not do?
+
+- It does not connect Salesforce, Pipedrive or GoHighLevel today: Connect answers `oauth_app_not_configured`.
+- It does not import your CRM's contacts, companies, deals or notes, except a HubSpot segment into a table.
+- It does not link a person to their company in the CRM: the column writes each record on its own (Attio links
+  people to companies by email domain itself, and on folk a mapped company name sets the person's company).
+- It does not create deals, except a GoHighLevel opportunity.
+- It writes nothing from before a timeline switch was turned on, and in the app it has no timeline switch on
+  Pipedrive, Attio, GoHighLevel and folk.
+- It costs no credits.
+
+## Related
+
+- [Set up the HubSpot integration](/guides/hubspot): HubSpot from connecting to uninstalling
+- [Tables](/kb/tables/tables): the rows a Send to CRM column sends
+- [Build an outreach workflow](/kb/workflows/build-a-workflow): the outreach the timeline records
+- [Receive webhooks](/guides/receive-webhooks): send GetSales events to any other tool

@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Sync the generated public OpenAPI documents into this docs repo.
+# Sync the generated public OpenAPI documents into this docs repo, then render the page that
+# lists every webhook event's payload (guides/webhook-events.mdx) from the Integrations copy.
 #
 # Source of truth: product/openapi/gs.openapi.public/services/<svc>/openapi.yaml
 # (itself generated from the Zod MCP tool registry in product/mcp/gs.mcp).
-# The copies under api-reference/ must stay byte-identical to the source;
-# never edit them here. Regenerate upstream, then re-run this script.
+# The copies under api-reference/ must stay byte-identical to the source, and the
+# page must be what scripts/webhook-events.mjs renders from its copy; never edit
+# either here. Regenerate upstream, then re-run this script.
 #
-#   ./sync-openapi.sh          copy the five documents in
-#   ./sync-openapi.sh --check  exit 1 if any copy drifts from the source
+#   ./sync-openapi.sh          copy the five documents in, then render the page
+#   ./sync-openapi.sh --check  exit 1 if any copy drifts from the source, or the page from its copy
 set -euo pipefail
 
 DOCS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,5 +41,12 @@ done
 
 if [[ "$mode" == "--check" && $rc -eq 0 ]]; then
   echo "api-reference specs match gs.openapi.public"
+fi
+
+# The webhook events page is rendered from the Integrations copy, so it follows every sync.
+if [[ "$mode" == "--check" ]]; then
+  node "$DOCS_DIR/scripts/webhook-events.mjs" --check || rc=1
+else
+  node "$DOCS_DIR/scripts/webhook-events.mjs"
 fi
 exit $rc

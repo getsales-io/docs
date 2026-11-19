@@ -1,0 +1,351 @@
+---
+title: "Plans, credits and billing"
+description: "A GetSales plan buys LinkedIn sender profiles ($69 an account a month for 1 to 4 accounts, down to $16 for 100 to 187, then a $3,000 package for up to 300), email inbox capacity (packages of 100 to 10,000 inboxes, $59 to $499 a month, each package one dedicated email server for the workspace, usually ready within minutes of the purchase) and data credits (1,000 for $50), in any mix, monthly or 12 + 2 months, in USD, EUR or GBP, with no platform fee and no charge per member or per message. A new account's first workspace gets a 7-day trial with no card: 10 LinkedIn sender profiles and 500 credits, with no email inboxes and no email server, so a first campaign sends on LinkedIn (a trial started before 09:37 UTC on 18 November 2026 still holds 10 inboxes, with no email server behind them). After a trial or a plan, the Free plan keeps tables and workflows running with LinkedIn and email on hold: a workflow's LinkedIn steps fail with subscription_required and its email steps with sender_profile_has_no_mailbox until a plan covers the accounts. A failed renewal leaves 3 days of grace, then every workspace on the subscription is suspended. Plan credits roll over while a paid plan runs. Credits bought without one last 90 days."
+---
+
+A GetSales workspace runs on a plan of three resources: LinkedIn sender profiles, email inbox capacity and data
+credits. This page covers the trial and the Free plan, what a plan buys and costs, what credits pay for, invoices,
+and what happens when a payment fails.
+
+<Tip>
+**Give this to your AI assistant** (with the [GetSales connector](/kb/ai/connect-your-ai-assistant)):
+
+"Using the GetSales connector: read this workspace's subscription, what it holds and when it renews, the credits
+available and what they went on this period by feature, and the last three invoices. Then quote what adding two
+LinkedIn sender profiles would cost per month. Change nothing."
+</Tip>
+
+## What does a GetSales plan buy?
+
+A plan buys three resources, each on its own and in any mix. There is no platform fee, no charge per team member,
+and no charge per message or connection request sent.
+
+| Resource | What it is | When it is full |
+|---|---|---|
+| **LinkedIn sender profiles** (priced as LinkedIn accounts) | Room for the LinkedIn accounts your sender profiles connect. The cloud browser, the proxy and the limits come with each | A new LinkedIn account is refused with `402` `linkedin_sender_profiles_full`: "All 5 LinkedIn sender profiles of this workspace's plan are in use. Detach a LinkedIn account you no longer need, or add LinkedIn sender profiles in Settings, Billing." (the plan's own number). A plan with none: "This workspace's plan has no LinkedIn sender profiles. Pick a plan in Settings, Billing." |
+| **Email inbox capacity** | Packages of 100, 500, 2,000 or 10,000 inboxes for the mailboxes your sender profiles connect. Each package is one dedicated email server of its size for the workspace, set up after the purchase, usually within minutes. Each mailbox takes one inbox on a server ([Connect a mailbox](/kb/sender-profiles/connect-a-mailbox)) | A new mailbox is refused with `402` `email_inboxes_full`: "All 100 inboxes of this workspace's plan are in use. Disconnect a mailbox you no longer need, or add inboxes in Settings, Billing." A plan with none: "This workspace's plan has no inboxes. Pick a plan in Settings, Billing." A full email server answers `402` `email_server_full`, and a workspace with no server `409` `email_server_missing`. In the app, **Add mailbox** says it in its **Email server** field, with **Add inboxes** or **Buy email** |
+| **Data credits** | One wallet for enrichment, AI columns, contact finding, AI searches, Creator and the AI SDR | Paid work pauses until credits are added ([what stops](#what-happens-when-credits-run-out)) |
+
+A plan whose recurring lines come to 500 a month or more, in its own currency, includes the Business service: a
+quarterly review, one custom feature a quarter, a dedicated team chat and white label. From 1,500 it includes the
+Enterprise service: everything in Business, white label and the dedicated team chat included, plus a monthly growth
+review with dedicated customer success, one custom feature a month and migration. One-time credits count toward
+neither.
+
+Over the API or MCP: [`search_billing_subscriptions`](/api-reference/id/billing_subscriptions/search-billing-subscriptions)
+reads a subscription and what it holds.
+
+## How much does a plan cost?
+
+A plan costs the sum of its lines, a month, before tax: LinkedIn sender profiles from $69 an account (1 to 4) down
+to $16 (100 to 187), email inbox packages from $59 (100 inboxes) to $499 (10,000), and data credits at $50 for
+1,000. The **Buy resources** window prices every order on the server before you pay, and the pricing page at
+https://getsales.io/pricing/ shows the same figures.
+
+**LinkedIn sender profiles.** The bracket your total lands in sets the price of every account:
+
+| LinkedIn accounts | Per account a month |
+|---|---|
+| 1 to 4 | $69 |
+| 5 to 9 | $39 |
+| 10 to 19 | $29 |
+| 20 to 49 | $25 |
+| 50 to 99 | $22 |
+| 100 to 187 | $16 |
+| 188 to 300 | A $3,000 package for up to 300 |
+| Over 300 | $3,000 plus $10 for each account over 300 |
+
+So 4 accounts cost $276 a month and 5 cost $195.
+
+**Email inbox capacity.** Packages, in any mix: 100 inboxes $59, 500 inboxes $119, 2,000 inboxes $249, 10,000
+inboxes $499 a month.
+
+**Data credits.** $50 for 1,000 credits, every month or once, with a discount on the whole order: 3% from 3,000
+credits, 5% from 5,000, 6% from 10,000, 7% from 20,000, 8% from 50,000 and 10% from 100,000, rounded up to whole
+dollars (10,000 credits cost $470). 1,000 credits is the smallest paid amount.
+
+- **Periods**: **Monthly**, or **12 + 2 months**: you pay 12 months and get 14, with the credits granted month by
+  month (14 grants, not one lot up front).
+- **Currencies**: USD, EUR at the same figures, and GBP at 0.9 of each USD line.
+- **Tax**: "Prices before tax. The payment provider adds the tax of your country at checkout."
+- **Payment**: card, PayPal, Apple Pay or Google Pay, through the payment provider's checkout. GetSales never sees
+  the card number.
+
+Over the API or MCP: [`quote_billing_subscription_order`](/api-reference/id/billing_subscriptions/quote-a-billing-order)
+prices an order without buying it.
+
+## How does the trial work?
+
+Every new account's first workspace starts on a 7-day trial, with no card:
+
+- 10 LinkedIn sender profiles and 500 credits, with no email inboxes, no email server and no white label, so a
+  first campaign sends on LinkedIn. **Add mailbox** reads **No email in your plan yet**, with **Buy email**, and a
+  mailbox connect over the API is refused (`402` `email_inboxes_full`: "This workspace's plan has no inboxes. Pick a
+  plan in Settings, Billing.") ([Connect a mailbox](/kb/sender-profiles/connect-a-mailbox)).
+- A trial started before 09:37 UTC on 18 November 2026 still holds the 10 email inboxes it started with
+  (**Settings**, **General** reads **10 email inboxes**), but no email server stands behind them: **Add mailbox**
+  reads **No email in your plan yet** too, and a mailbox connect over the API is refused (`409`
+  `email_server_missing`: "This workspace has no email server. Add an email package in Settings, Billing."). Email
+  comes with an email package of a paid plan, whose purchase replaces the trial.
+- One trial per account. A workspace you create later starts without one and is suspended until it gets a plan.
+- **Settings**, **Subscription** shows **Trial** with the date it ends, and **Buy resources**.
+- 3 days before the end, the owner is told by email and in the app: "Your trial ends in 3 days".
+- The trial's 500 credits expire when its 7 days end, even when a plan replaced the trial earlier, and they are
+  spent before the plan's.
+
+Buying a plan during the trial replaces the trial at once. When the trial ends without a plan, the workspace moves
+to the Free plan and the owner gets "Your trial has ended": nothing is deleted.
+
+## What is the Free plan?
+
+The Free plan is what a workspace runs on after its trial or its plan ends. The workspace stays active and keeps
+all its data, with no deletion date.
+
+- **It holds** no LinkedIn sender profiles, no inboxes and no monthly credits.
+- **It keeps running**: tables, formulas, imports and the workflows' own steps, among them the API call step that
+  calls tools with your own keys.
+- **It holds back** LinkedIn and email: the LinkedIn accounts and mailboxes are parked, nothing new connects and
+  nothing is sent. Workflows keep running, but their LinkedIn steps fail as they come due (`subscription_required`:
+  "The sender's account is on hold: no subscription covers it right now.") and so do their email steps
+  (`sender_profile_has_no_mailbox`: no mailbox can send). A failed step stops that person's journey and does not wait
+  for a plan
+  ([why a workflow step failed](/kb/workflows/troubleshooting#why-did-a-workflow-step-fail-and-how-do-you-fix-it)).
+  A message sent from Unibox (**Messages**) is refused (`402` `subscription_required`), and the AI SDR waits
+  (**Waiting: subscription needed**). **Settings**, **Subscription** puts it as "Playtables and workflows keep
+  working, LinkedIn and email wait for a plan."
+- **Credits**: none are granted. Credits you buy once on the Free plan last 90 days.
+
+Buy a plan and LinkedIn and email come back within its numbers, with its credits. The workflow steps that failed
+meanwhile go out only when you run them again
+([which fix to use](/kb/workflows/troubleshooting#which-fix-to-use-retry-send-now-skip-or-restart-from-top)). Credits
+that expired with an earlier plan do not return. **Settings**, **General** shows the plan as **Free**, also during the
+trial.
+
+## What is a credit worth, and how do credits arrive?
+
+A bought credit costs $0.05 ($50 for 1,000), less the volume discount of a bigger order (down to $0.045 at 100,000).
+AI work is priced from the model's dollar cost at 25 credits a dollar, plus 20%. A credit is the unit of every paid
+action, counted to two decimals (the smallest charge is 0.01 credit). Credits come three ways:
+
+1. **With the plan**: the monthly amount is granted once a month for each month of the paid period.
+2. **Bought once**: **Buy credits** (on the subscription card, on **Usage**, or **Buy more credits** under **Credits**
+   in the sidebar) sells any amount from 1,000. They land in the workspace within a minute of the payment.
+3. **The trial**: 500 credits, once.
+
+How long they last:
+
+- **Plan credits roll over**: the plan's grants, and credits bought while a paid plan runs, stay for as long as the
+  workspace is on a paid plan, and are lost when it leaves one (a cancel at the period's end, or the payment provider
+  ending the subscription after a failed payment). A pause and the 3 days of grace keep them.
+- **Credits bought with no paid plan** last 90 days from the purchase.
+- Credits with an end date are spent first, the soonest first.
+
+The balance shows under **Credits** in the sidebar ("Credits available", "Used this period", "Next refill") and in
+**Settings**, **Usage**. When the credits left fall to a tenth or less of the credits granted, the workspace's owner
+is told once a period, by email and in the app.
+
+Over the API or MCP: [`get_credit_lots_metrics`](/api-reference/id/credit_lots/credit-wallet-balance) reads the wallet.
+
+## What spends credits?
+
+Paid work spends credits: data reads, searches and AI calls. Sending, a workflow's waits, conditions and API calls,
+and CRM syncs do not.
+
+| Action | Credits |
+|---|---|
+| A work email found | 1 per address found and accepted. A miss is free, and an address the verifier rejects costs its check only |
+| An email verified | 0.1 or 1 a check, by the verifier |
+| An Enrich lead read (a LinkedIn profile) | 1 at **Basic**, 3 at **Advanced** |
+| An Enrich company read (a company's LinkedIn page) | 1 at **Basic**, 2 at **Advanced** |
+| A person's latest posts | 2 |
+| An AI search | 3 per page of results that returns somebody (up to 25 people or companies), nothing for a page that returns nobody. Building its filter is one AI call plus 1 for each term it looks up, such as a place or an industry. A term already looked up in the past week, or one that matches nothing, costs nothing |
+| Find people | 1 per company where somebody is found, nothing where nobody is, and 1 more, once per company, to look up its LinkedIn id when the row has only its page or website |
+| Post engagement read on our managed infrastructure | 3 per page of 50 people who engaged, and 1 to 3 for each read that finds the posts. Free when one of your sender profiles can read posts |
+| Use AI columns, Creator, a workflow's **Ask AI** step, dictation and voice-message transcripts | The AI model's price plus 20%, counted at 25 credits per US dollar. A typical Use AI row on the default model (Claude Sonnet 5, about 1,000 tokens in and 300 out) is about 0.15 credit |
+| The AI SDR | Charged by what each turn used, plus 20%, at 25 credits per US dollar ([what the AI SDR spends](/kb/inbox/ai-sdr#what-does-the-ai-sdr-spend)) |
+| A read of a person the row knows only by their profile link, such as Latest posts | 1 more when their LinkedIn id has to be looked up first |
+| An Enrich company read of a company known only by its domain | Up to 0.1 more: one web lookup for its LinkedIn page when GetSales does not already know it, charged whether or not the page is found |
+
+Free, at 0 credits: LinkedIn messages, connection requests and emails sent, adding people to a workflow, CRM reads and
+writes, the API call step and your own tools, a miss and a failed call, and Creator's own turns in the
+[**Getting started** chat](/kb/start/get-started#what-does-the-getting-started-chat-cost) until that chat has used 2 US
+dollars of AI (60 credits at the usual rate). What those turns start, such as an AI search, Find people or a paid
+column, is charged as usual. An Advanced Enrich lead read is charged even when GetSales answers it from saved data.
+The details of each price are in
+[Add people and companies](/kb/tables/add-people-and-companies#which-links-does-an-ai-search-take-and-what-does-it-cost)
+(AI search and [post engagement](/kb/tables/add-people-and-companies#what-does-a-post-engagement-bring-and-what-does-it-cost)),
+[Find people at companies](/kb/tables/find-people-at-companies#what-does-find-people-cost),
+[Find emails and enrich](/kb/tables/find-emails-and-enrich) and [AI columns](/kb/tables/ai-columns).
+
+## What caps credit spend before the wallet is empty?
+
+Four brakes cap credit spend, each with its own number:
+
+- A run started from a table stops at its cap, the estimate's maximum: "Run stopped at its budget".
+- A column's daily credit limit stops it for the day (**Daily credit limit** in the drawer of a Find people, Latest
+  posts or API tool call column, `config.daily_credit_limit` over the API for the others). A column that runs on new
+  rows waits and goes on after 00:00 UTC.
+- The AI SDR spends at most 40 credits on a thread by default, then hands the thread to you.
+- A play's **Daily ceiling** (25 to 2,500 credits, or **No ceiling**) caps what it spends in a day
+  ([Signals](/kb/signals/signals)).
+
+## What happens when credits run out?
+
+When the wallet is empty, paid work stops and nothing is charged for what was refused:
+
+- A column's cell reads **Out of credits** and the run stops.
+- A data source pauses: "The workspace ran out of credits, so the source paused. Top up, then resume."
+- Creator answers "The workspace is out of credits": "Nothing was changed. Top up the credits, then send the message
+  again."
+- The AI SDR stops writing: "The workspace is out of credits. Top up to let the agent go on, or do this step yourself."
+
+Sending does not use credits, so workflow steps that only send keep going. Buy credits, or wait for the plan's next
+monthly grant, and resume.
+
+## Where do I see what the credits went on?
+
+**Settings**, then **Usage** (https://app.getsales.io/settings/usage), open to every member, shows what spent the
+workspace's credits: by product (Playtables, AI SDR, Creator, Other), by table, by sender profile and by person,
+for **This period**, **Last 30 days** or **Last 90 days**, with a chart by day and **Export** as CSV. Each feature
+has its own line: "Work emails found", "Work emails checked", "Use AI columns", "AI search", "Find people",
+"Enrichment", "Replies written", "Chats" and the rest.
+
+Over the API or MCP: [`get_credit_transactions_metrics`](/api-reference/id/credit_transactions/credit-spend-by-day).
+
+## How do I buy or change a plan?
+
+Plans are bought and changed in **Settings**, then **Subscription** (https://app.getsales.io/settings/subscription).
+Seeing it needs the Billing View permission, and buying or changing needs Billing Manage.
+
+**To buy**, click **Buy resources** (on the trial, on the Free plan, or with no plan):
+
+1. Pick the **Currency** and the **Period**.
+2. Set the **Data credits** (**Every month** or **One time**), the **LinkedIn sender profiles** and the **Email inbox
+   capacity**. Below 188 LinkedIn accounts, the window names the next bracket (at 3 accounts: "Add 2 and every
+   account costs $39: $195 a month in all.", with **Take 5**) and, when the bigger count costs less, what it saves
+   ("3 at $207 against 5 at $195: $12 a month saved."). The totals show **Due now** and the **Next payment**, and the
+   service the plan includes or how much more a month reaches it ("$184 a month more reaches Business service, white
+   label included.").
+3. A promo code goes under **Have a code?**: it takes its discount off LinkedIn sender profiles and email inbox
+   capacity, never credits, and a workspace uses a code once.
+4. Click **Continue to payment** and pay in the payment provider's window. "Payment received. The plan activates in a
+   moment."
+
+<Frame caption="Buy resources in USD, Monthly: 1,000 data credits every month ($50), 3 LinkedIn accounts at $69 an account ($207 a month, and Take 5 would make it 5 at $39, $195 a month) and one package of 100 inboxes ($59). Due now $316, the next payment $316 a month later, and $184 a month more reaches Business service.">
+  <img src="/images/kb/workspace/buy-resources.png" alt="The Buy resources window: Currency USD, EUR or GBP set to USD and Period Monthly or 12 + 2 months set to Monthly. Data credits on Every month, Credits 1,000 at $50 a month, and Credits stay in the wallet while the plan runs and are lost when it ends. LinkedIn sender profiles at $207 a month, LinkedIn accounts 3 at $69 an account a month, Add 2 and every account costs $39: $195 a month in all, with Take 5, and 3 at $207 against 5 at $195: $12 a month saved. Email inbox capacity at $59 a month, one package of 100 inboxes and none of 500, 2,000 or 10,000, 100 inboxes in all. Monthly $316, Due now $316, Next payment $316 on Dec 18, 2026, and $184 a month more reaches Business service, white label included. Have a code?, Continue to payment, and Prices before tax. The payment provider adds the tax of your country at checkout." />
+</Frame>
+
+A workspace already on a paid plan cannot buy a second one: "This workspace already runs on a paid subscription.
+Change that plan instead of buying a second one." One-time credits can always be bought.
+
+**To change**, click **Change plan** and move any of the three resources, then **Confirm change**. The window
+previews every step before anything is billed:
+
+- More LinkedIn sender profiles are charged now, prorated. Fewer are prorated too, and what you are owed becomes a
+  credit on later invoices, never a refund to the card.
+- An added inbox package is charged now, prorated, and brings one more email server, usually ready within minutes.
+  A removed one stays until the end of the period, with its server and the mailboxes on it.
+- More monthly credits are charged now and the difference is granted at once. Fewer apply from the next period.
+- The currency, the period and the renewal date do not change. Removing every line is refused: cancel instead.
+
+<Note>
+A subscription belongs to the person who bought it, and only that person can change, pause or cancel it ("Only the
+person who owns the subscription can change it."). Other members see "Paid by another member". Each workspace has a
+plan of its own: splitting one subscription across workspaces is open to partner accounts only.
+</Note>
+
+Over the API or MCP: [`change_billing_subscription`](/api-reference/id/billing_subscriptions/change-the-plan:-linkedin-accounts-inboxes-credits),
+after a priced preview, only as the subscription's owner signed in (the app, or an assistant connected through OAuth as
+that person). An API key is refused, the owner's own Full access key included: `403` `not_subscription_owner` (a key
+without Billing Manage gets `403` `scope_missing` first).
+
+## Where are my invoices and receipts?
+
+**Settings**, then **Invoices** (https://app.getsales.io/settings/invoices), open with the Billing View permission,
+lists the charges you paid, across all your workspaces, and the charges made for this workspace: **Charge**
+(Subscription, Plan change or One-time charge, with the invoice number), **Date**, **Amount** and **Status** (Paid,
+Completed, Billed, Past due, Canceled). **Open invoice** opens the invoice PDF in a new tab. A charge that was never
+billed, such as the $0 charge of a card change, has no invoice.
+
+Every completed charge also sends "Your payment receipt" to the billing email, the paying account's own address:
+"Receipts and payment notices go here, not to the workspace."
+
+The app holds no company name, VAT ID or postal address for an invoice: they are entered in the payment provider's
+checkout.
+
+Over the API or MCP: [`search_billing_transactions`](/api-reference/id/billing_transactions/search-billing-transactions)
+and [`get_billing_transaction_invoice`](/api-reference/id/billing_transactions/get-transaction-invoice).
+
+## How do I update the card?
+
+In **Settings**, **Subscription**, the **Billing information** card has **Update card**. It opens the payment
+provider's page in a new tab, where you change the card the plan bills. The link works for about an hour. Back in
+GetSales, the panel reads the cards again. The card that bills a live plan cannot be removed: add another one first.
+A trial has no card, and a plan billed by invoice has no card to update.
+
+Over the API or MCP: [`get_billing_payment_method_add_link`](/api-reference/id/billing_payment_methods/get-add-card-link)
+returns the same link.
+
+## What happens when a payment fails?
+
+A failed renewal turns the subscription **Past due**, and every workspace on it keeps working for 3 days from the
+failure. The payment provider retries the payment by itself.
+
+1. **At the failure**: everything keeps running. The person who pays gets "Payment failed: update your card by" the
+   date. Every page shows a banner, "The last payment failed.", to members with the Billing View permission (the
+   workspace's owner and Superadmin hold it, the Operator and View only presets do not). Members with Billing Manage
+   also get **Retry payment**, which opens the payment page only for the person who pays, and anyone else who presses it
+   gets "Only the person who owns the subscription can change it."
+2. **24 hours before the grace ends**: one reminder, "One day left".
+3. **After 3 days**: every workspace on the subscription is suspended until the payment lands. Its tables,
+   workflows, Messages and Signals, and the API, answer `402` `subscription_required`, while Settings stays open
+   except its **Stoplist**, **Pipeline stages** and **Website** panels, which answer `402` too. Sends and workflows
+   wait, and the LinkedIn accounts and mailboxes are parked. The data and the credits are kept, but no monthly
+   credits are granted for an unpaid period. Each workspace's owner gets "(the workspace's name) is suspended: the
+   payment is still due".
+
+**Retry payment** and **Update card** open the payment provider's page to fix the card, and do not charge by
+themselves. Once the payment lands, the workspaces come back by themselves, with the period's credits. If the
+payment provider gives up and ends the subscription, the workspaces move to the Free plan, and the plan's credits are
+lost.
+
+## How do I pause or cancel a plan?
+
+Both are on the subscription card in **Settings**, **Subscription**, and both take effect at the end of the current
+period: nothing changes until then.
+
+- **Cancel plan**: "Every workspace on this subscription moves to the Free plan then: Playtables and workflows keep
+  working, LinkedIn and email stop, and the plan's credits expire." **Undo cancel** takes it back before the date.
+  The plan cannot be changed while a cancel is scheduled. GetSales gives no refunds.
+- **Pause**: "Every workspace on this subscription is suspended until you resume; sender profiles and data are
+  held." The credits wait too. A pause has no time limit. **Resume** starts the plan again, and **Don't pause**
+  takes back a pause that has not started.
+
+<Warning>
+Deleting a workspace does not cancel its plan, and a standard account then has no screen left to cancel it from.
+Cancel the plan first, then delete the workspace. Deleting your own account is refused while a paid subscription is
+live: "Cancel it under Billing > Subscription, then try again."
+</Warning>
+
+## What does GetSales billing not do?
+
+- It does not charge per team member, per message or per connection request.
+- It does not refund a payment or the rest of a period.
+- It does not top up credits by itself: credits are added by a purchase or the plan's monthly grant.
+- It does not keep a workflow's LinkedIn and email steps waiting on the Free plan: they fail as they come due, and go
+  out only when you run them again once a plan covers the accounts.
+- It does not let a standard account split one plan across several workspaces.
+- It does not turn credits back into money.
+- It does not buy, pause, resume or cancel a plan over the API or MCP: those are buttons in **Settings**,
+  **Subscription** (buying needs Billing Manage, and pause, resume and cancel are the subscription owner's). The API
+  reads and quotes a plan, and changes it only for the subscription's owner signed in (the app, or an assistant
+  connected through OAuth as that person). An API key is never the owner, even a key the owner made: a change with it
+  is refused with `403` `not_subscription_owner` (or `scope_missing` first, when the key lacks Billing Manage).
+
+## Related
+
+- [Team members and roles](/kb/workspace/team-members-and-roles): who can see and change billing
+- [Sender profiles](/kb/sender-profiles/sender-profiles): what a LinkedIn sender profile and an inbox hold
+- [Find emails and enrich](/kb/tables/find-emails-and-enrich) and [AI columns](/kb/tables/ai-columns): the price of
+  each column
+- [Signals](/kb/signals/signals): what a play spends

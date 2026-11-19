@@ -1,0 +1,277 @@
+---
+title: "Team members and roles"
+description: "Invite teammates under Settings, Teammates (https://app.getsales.io/settings/team): an invitation is an email whose link works 7 days, for the invited address only. A member's access is a list of permissions by area (46 in all), not a stored role: the presets Superadmin (all of them), Operator (the default, 25 of 46) and View only (15 of 46). The owner is the only stored role and always holds every permission. A permission covers its whole area, every sender profile and table in it: to keep a teammate away from some, use a separate workspace. Members cost nothing and no plan caps them. Taking a permission away signs the member out of the workspace within minutes. Removing a member leaves their sender profiles, threads and data in place."
+---
+
+Invite your teammates to a GetSales workspace, choose what each one may do, and remove them when they leave.
+
+<Tip>
+**Give this to your AI assistant** (with the [GetSales connector](/kb/ai/connect-your-ai-assistant)):
+
+"Using the GetSales connector: list the members and pending invites of this workspace, each with their status and
+their permission count. Then prepare an invite for sofia@acme.example on the Operator preset. Show it to me and wait
+for my yes before you send it."
+</Tip>
+
+## How does access work in a GetSales workspace?
+
+A workspace holds the sender profiles, tables, workflows, inbox, credits and plan of one team, and each member works
+in it under their own access. Access has two parts:
+
+1. **The owner.** Exactly one person owns the workspace and always holds every permission, later ones included. Only
+   the owner can transfer the workspace or delete it. This is the only role GetSales stores.
+2. **Permissions.** Every other member holds a list of permissions, grouped by what they act on (Playtables,
+   Workflows, Messages, Billing and the rest), each with verbs such as View, Act and Manage. A preset
+   (**Superadmin**, **Operator**, **View only**) is a starting point that ticks a set of them, not a role: you can
+   tick and untick any permission after picking one.
+
+A permission covers its whole area: a member with Messages View sees every thread of the workspace, and one with
+Playtables View opens every table ([keeping a teammate away from some](#can-i-keep-a-teammate-away-from-some-sender-profiles-or-tables)).
+
+In **Members and invites**, each name carries **Owner** or **Member** and how much of the list the access covers:
+**Full access**, or a count such as **25 of 46**. There is no Admin label.
+
+<Frame caption="Settings, Teammates: each row of Members and invites carries Owner or Member and Full access or a count such as 25 of 46, and a pending invite shows its address with an orange dot. The picked member reads Active, with Edit access beside the name, and under Access shows Role Member and Permissions 25 of 46.">
+  <img src="/images/kb/workspace/teammates-panel.png" alt="The Teammates panel. Left, Members and invites, 4: Maya Chen, Owner · Full access. Daniel Okafor, Member · Full access. Sofia Marquez, Member · 25 of 46, picked. Each of the three has a green dot. Then liam@acme.example, Member · 25 of 46, a pending invite with an envelope and an orange dot. Right, Sofia Marquez, Active, sofia@acme.example, the Edit access button and the More actions button, then Access: Role (The only structural role, everything else is a permission list) reads Member, and Permissions reads 25 of 46." />
+</Frame>
+
+Nobody can give more than they hold: a member who invites or edits someone else can grant only permissions they hold
+themselves. An AI assistant or Creator acting for a member never does more than that member can.
+
+Members cost nothing. No plan, trial or Free plan caps the number of members, and the workspace's plan and credits
+are shared by all of them: a LinkedIn account a member connects takes one of the plan's LinkedIn sender profiles,
+and a mailbox one of its email inboxes, like anyone else's.
+
+## How do I invite a teammate?
+
+To invite a teammate, open **Settings**, **Teammates**, click **Invite**, enter their email address, keep or change
+the preset, and click **Send invite**: the invitation is an email whose link works for 7 days. Inviting needs the
+Members Manage permission.
+
+1. Open **Settings**, then **Teammates** under **Workspace** (https://app.getsales.io/settings/team). **Members** in
+   the account menu at the bottom of the sidebar opens the same page.
+2. Click **Invite**. The dialog **Invite a teammate** opens on the Operator preset.
+3. Enter the email address.
+4. Change the **Preset** or single permissions if you want ([the presets](#what-does-each-preset-allow)).
+5. Click **Send invite**. The toast reads "Invite sent to sofia@acme.example", and the address joins **Members and
+   invites** with an orange dot. Picked, it reads **Invited**.
+
+The invitee gets an email "You are invited to Acme Analytics" with an **Accept invitation** button. The link works
+for 7 days from the send or the last resend. Neither the email nor the app shows that date.
+
+<Note>
+Inviting an address that is already a member or already invited sends nothing and keeps that person's access as
+it was, although the toast still reads "Invite sent to" and the address (over the API the answer carries
+`already_exists: true`). Use **Resend** on a pending invite instead, or **Edit access** on a member.
+</Note>
+
+An invitation can be refused:
+
+- "This address can't receive email: acme.example has no mail server. Check it for a typo."
+- "You can only grant permissions you hold yourself. Pick a narrower grant, or ask the workspace owner."
+
+Over the API or MCP: [`create_team_member`](/api-reference/id/team_members/invite-team-member) takes `preset`
+(`operator` or `view_only`) or a `permissions` list (`["*"]` is Superadmin) and sends the email at once.
+[`search_team_members`](/api-reference/id/team_members/search-team-members) lists members and pending invites.
+
+## What does each preset allow?
+
+A preset ticks a fixed set of the 46 permissions:
+
+| Preset | What it holds | In practice |
+|---|---|---|
+| **Superadmin** | Every permission, including ones added later | Everything a member can do. It is not the owner: it cannot transfer or delete the workspace. Only the owner or another Superadmin can grant it |
+| **Operator** (the default) | 25 of 46 permissions | Works tables, people, workflows, the inbox and the AI SDR's drafts and plans, connects integrations and webhooks, opens a sender profile's cloud browser and changes its proxy. Cannot create, rename or delete tables or their columns, build or publish workflows, delete people, edit pipeline stages or plays, add or remove stoplist entries in Settings or with a table's Actions, Add to Stoplist (a person still goes on the stoplist with Add to stoplist on their thread or on Signals), create, edit or connect sender profiles (a LinkedIn account or a mailbox), stop or start a sender profile's browser, configure the AI SDR, change website tracking, see API keys or billing, invite or remove members, or rename the workspace |
+| **View only** | 15 of 46 permissions | Sees tables, people, workflows, the inbox, sender profiles, the AI SDR, signals, the stoplist, integrations, webhooks, notifications and the member list, and changes nothing but its own sign-ins, connected apps, profile and Signals feed settings, though its Creator chats and dictation spend the workspace's credits. Sees no API keys or billing |
+
+Every member always holds three permissions, drawn ticked and locked: Workspace View, Sessions View and Sessions
+Manage. **Custom** lights up when the ticked set matches no preset.
+
+## Which permissions can a member hold?
+
+The permission picker lists 46 permissions in 23 rows, one row for each thing a member can act on, with its verbs.
+Each permission also has a token, `can_{verb}_{noun}`, whose noun is not always the row's name: Messages Act is
+`can_act_conversations`. The app shows the token under "No access to this area." and on the hover of a greyed button
+such as **New playtable**, and the API and MCP take tokens in `permissions`. In the picker, each row's noun shows
+under its name, a box you can tick shows its token on hover, and **Search permissions** finds a token you type.
+
+| Row | Verbs | Tokens | What they cover |
+|---|---|---|---|
+| Workspace | View, Manage | `can_view_teams`, `can_manage_teams` | Manage: rename the workspace and set its timezone, edit the workspace profile (your company and offer), create another workspace |
+| Members | View, Manage | `can_view_team_members`, `can_manage_team_members` | View: the Teammates list. Manage: invite, resend, edit access, remove |
+| API keys | View, Manage | `can_view_api_keys`, `can_manage_api_keys` | View: the API keys panel. Manage: create, rotate and revoke keys |
+| OAuth apps | View, Manage | `can_view_oauth_clients`, `can_manage_oauth_clients` | The OAuth apps a developer registers |
+| Sessions | View, Manage | `can_view_sessions`, `can_manage_sessions` | Your own sign-ins and connected apps |
+| Billing | View, Manage | `can_view_billing`, `can_manage_billing` | View: Subscription and Invoices. Manage: buy a plan or credits, cards. Changing, pausing or cancelling a subscription is its buyer's alone |
+| SSL certificates | View, Manage | `can_view_ssl_certificates`, `can_manage_ssl_certificates` | The certificates of a white label brand's domains |
+| Notifications | View, Manage | `can_view_notifications`, `can_manage_notifications` | The notification feed and email log |
+| White label | View, Manage | `can_view_whitelabels`, `can_manage_whitelabels` | The white label brands of a partner account |
+| Integrations | View, Manage | `can_view_integrations`, `can_manage_integrations` | CRM connections, your own API connections and custom tools |
+| Webhooks | View, Manage | `can_view_webhooks`, `can_manage_webhooks` | Webhook subscriptions and deliveries |
+| Playtables | View, Act, Manage | `can_view_playtables`, `can_act_playtables`, `can_manage_playtables` | View: open tables. Act: run or stop columns, edit cells, import, work sources. Manage: create, rename, duplicate, archive or delete tables, columns and views |
+| People | View, Act, Manage | `can_view_people`, `can_act_people`, `can_manage_people` | Act: notes, tags, stage moves, merges, running a play. Manage: delete people and companies, pipeline stages, plays |
+| Stoplist | View, Manage | `can_view_stoplist`, `can_manage_stoplist` | Manage: add and remove entries in Settings, Stoplist, and Add to Stoplist on a table's rows or a company card. Add to stoplist on a thread or on Signals needs only Messages Act |
+| Workflows | View, Act, Manage | `can_view_workflows`, `can_act_workflows`, `can_manage_workflows` | Act: pause, resume, add people, retry or skip a step. Manage: create, edit, publish, duplicate, delete |
+| Messages | View, Act | `can_view_conversations`, `can_act_conversations` | The inbox. Act: reply, send, approve or edit the AI SDR's drafts, hand over, close tasks, and Add to stoplist on a thread or on Signals, which puts the lead on the stoplist without Stoplist Manage |
+| Sender profiles | View, Manage | `can_view_sender_profiles`, `can_manage_sender_profiles` | Manage: create, edit or delete a sender profile, connect or detach its LinkedIn account and mailboxes, change its limits and sync hours |
+| Agents | View, Act, Manage | `can_view_agents`, `can_act_agents`, `can_manage_agents` | Act: approve or edit the steps of the AI SDR's plans, steer a plan, test a reply. Manage: build and configure the AI SDR |
+| Signals | View, Manage | `can_view_signals`, `can_manage_signals` | Manage: sites, key pages, tracked events and signal settings, and tying a website visitor to a person by hand |
+| Cloud browser | Open | `can_open_cloud_browser` | Open a sender profile's cloud browser |
+| Proxy | Change | `can_change_proxy` | Change the proxy of a sender profile's browser |
+| LinkedIn accounts | Update | `can_update_linkedin_accounts` | Stop and start a sender profile's browser |
+| The browser profile row (named after the browser's vendor) | Share | `can_share_vendor_profiles` | A browser profile feature this knowledge base does not cover. Of the presets, only Superadmin holds it |
+
+A member without a permission gets "You do not have permission for this. Ask a workspace admin to grant it." when
+they press a button that needs it. A workspace admin there is the owner, or a member with Members Manage who holds
+that permission.
+
+## Can I keep a teammate away from some sender profiles or tables?
+
+Not inside one workspace. Access is by area: a member who holds an area's permission works with all of that area's
+sender profiles and tables, in Sender Profiles, Messages, Playtables and workflows alike, and a member without the
+area's View permission does not see the area at all.
+
+To keep a teammate away from some sender profiles or tables, put them in a separate workspace, one per client, and
+invite the teammate only to the workspaces they work in. Each workspace has its own sender profiles, tables, members
+and plan: [Can I work in several workspaces?](#can-i-work-in-several-workspaces). A member's API keys and AI
+assistants follow the same rule.
+
+## How do I change a member's access?
+
+Changing a member's access needs the Members Manage permission. The list you save may hold only permissions you hold
+yourself, including ones the member already has. A save that keeps or adds a permission you lack is refused with "You
+can only grant permissions you hold yourself. Pick a narrower grant, or ask the workspace owner." The owner and a
+Superadmin hold every permission.
+
+1. In **Teammates**, pick the member and click **Edit access**. The dialog **Access for sofia@acme.example** shows
+   the permission picker: the **Preset** row and the 23 permission rows.
+2. Change the preset or single permissions, and click **Save**. The toast reads **Access updated**.
+
+**Edit access** also works on a pending invite: the change applies when they accept. The owner's row has no **Edit
+access**: the owner always holds every permission.
+
+When a change takes effect:
+
+- **Taking a permission away** signs the member out of this workspace: the app notices within about a minute while it
+  is open, and every GetSales service refuses the old sign-in within 5 minutes. They sign in again under the new
+  access. Their AI assistants and Creator are held to the new access within 5 minutes.
+- **Giving more** signs nobody out: it reaches the member within the hour, when the app renews its sign-in, or at
+  once when they sign in again or switch workspace.
+- The member's API keys follow the new access within 5 minutes, both ways.
+
+Over the API or MCP: [`update_team_member`](/api-reference/id/team_members/update-team-member).
+
+## What does an invited person see when they accept?
+
+The invitation link opens https://app.getsales.io/accept-invitation, and joining takes a signed-in account with the
+invited address:
+
+- **Signed out**: "You are invited to a workspace", with **Sign in** and **Create an account**. Signing in or signing
+  up uses a code by email or Google: there is no password.
+- **Signed in with the invited address**: "Welcome aboard", and the app opens the workspace.
+- **Signed in with another address**: "This invitation is for another address", with the invited address partly
+  hidden (e***@acme.example). **Switch account** signs out so they can sign in with the right one. The invitation
+  stays valid.
+
+Someone who creates their account from the invitation also gets a workspace of their own, with its trial, and may
+land on its Getting started page instead of yours. They then open the link in the email again: it still works.
+
+When the link no longer works, the page says why: "This invitation has expired. Ask the person who invited you to
+send it again.", "This invitation link is not valid: it may have been used, withdrawn or cut short. Ask for a fresh
+one.", or "This invitation was already accepted by another account."
+
+## How do I resend or cancel an invitation?
+
+In **Teammates**, pick the pending invite and open **More actions**:
+
+- **Resend** sends a new email with a new link that works 7 days. The previous link stops working.
+- **Cancel invite** asks "Cancel this invite?": "The link stops working immediately." The invite leaves the list.
+
+An invitation that expired stays in the list as **Invited**: **Resend** gives it a fresh link. An invitation's
+address cannot be changed: cancel it and invite the right address.
+
+Over the API or MCP: [`resend_team_member_invitation`](/api-reference/id/team_members/resend-team-member-invitation),
+and [`delete_team_member`](/api-reference/id/team_members/remove-team-member) on a pending invite cancels it.
+
+## How do I remove a member, and what stays?
+
+1. In **Teammates**, pick the member, open **More actions** and click **Remove**.
+2. Confirm **Remove sofia@acme.example?**: "Their sessions and agent tokens in this workspace are cut. Accounts and
+   data stay." When the member made API keys and you hold API keys View, the dialog lists them and asks: **Revoke
+   all 2 API keys** (the default, with their number) or **Keep them listed (inactive)**. Either way the keys stop
+   working within 5 minutes of the removal.
+
+What removal does:
+
+- The member is signed out of this workspace, and their connected AI assistants lose it, both within 5 minutes.
+  Their other workspaces and their own account are untouched, and no email tells them.
+- Everything they worked on stays with the workspace and keeps running: the sender profiles, LinkedIn accounts and
+  mailboxes they connected, their threads, workflows, tables and sources.
+- A sender profile whose **Assignee** was the removed member keeps them as its assignee: its hand-off emails and live
+  visit alerts then reach nobody, not even the owner. Pick a new assignee on each of their sender profiles.
+
+The owner cannot be removed: their row shows **Transfer ownership first**. There is no Leave button: someone with
+Members Manage removes the member.
+
+Over MCP, [`delete_team_member`](/api-reference/id/team_members/remove-team-member) answers a preview first and
+removes the member on the confirm. Over the REST API the same operation removes at once, with no preview.
+
+## How do I transfer ownership of a workspace?
+
+Only the owner can transfer a workspace, to an active member.
+
+1. Open **Settings**, then **General**, and find **Owner** under **Ownership and plan**.
+2. Click **Transfer**, pick the member, and click **Transfer**.
+
+The new owner gets the deletion rights, and their wider access arrives within the hour, or at once when they sign
+in again. You stay in the workspace with full access, which the new owner can reduce.
+
+<Warning>
+The subscription does not move with the workspace. It belongs to the person who bought it, and only that person can
+change, pause or cancel it. The workspace keeps drawing on it, and its owner sees "Paid by another member" in
+Settings, Subscription. See [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
+</Warning>
+
+Deleting the workspace, under **Danger zone**, is the owner's alone: "Access ends at once: API keys are revoked and
+members lose access. The data is purged after 30 days and cannot be restored."
+
+## Can I work in several workspaces?
+
+Yes. The workspace chip at the top of the sidebar lists every workspace you own or are a member of, and picking one
+switches the app to it. **Create workspace**, at the bottom of that list, makes a new one with its own accounts,
+members and billing, with you as its owner.
+
+- Creating a workspace needs Workspace Manage in the workspace you are in (the owner and Superadmin hold it). The
+  item shows for everyone and refuses anyone else: switch to a workspace you own first.
+- A new workspace starts no trial: an account has one trial, used by its first workspace. The new workspace is
+  suspended ("No subscription covers this workspace, so nothing in it can run") until it gets a plan of its own.
+- Your name and picture are shared across all your workspaces. Joining a workspace bills you nothing and leaves your
+  own trial as it was.
+
+## What does a member see without a permission?
+
+- The sidebar hides a section without its View permission: Playtables, Messages, Signals and Sender Profiles.
+- A page reached by its link shows "No access to this area." and names the permission it needs by its token, such as
+  `can_view_conversations` on Messages ([each token's row](#which-permissions-can-a-member-hold)).
+- **New playtable**, **New workflow** and **New profile** are greyed, with the permission they need on hover.
+- Every Settings item stays listed, and a panel without its permission shows **Not available on your access**. With
+  the Operator or View only preset, a member sees no API keys, Subscription or Invoices.
+- Many other buttons stay pressable and are refused with "You do not have permission for this. Ask a workspace admin
+  to grant it."
+
+## What does GetSales not do with members?
+
+- It does not charge for members or cap how many a workspace has.
+- It stores no role but the owner, and no Admin label exists: access is the permission list.
+- It does not limit a member to some sender profiles or tables inside a workspace: use a separate workspace.
+- It does not email a removed member, and removing a member deletes nothing they built.
+- It does not move the subscription when the workspace's ownership moves.
+- It has no Leave button: a member without Members Manage cannot leave a workspace by themselves, while one who
+  holds it can remove their own row (not the owner, who must transfer ownership first). It does not change an
+  invitation's address or show when an invitation expires.
+
+## Related
+
+- [Plans, credits and billing](/kb/workspace/plans-credits-and-billing): who pays, and what members share
+- [Sender profiles](/kb/sender-profiles/sender-profiles): the assignee of a sender profile
+- [Connect your AI assistant](/kb/ai/connect-your-ai-assistant): an assistant works with its member's access
