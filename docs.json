@@ -40,7 +40,8 @@
               "guides/receive-webhooks",
               "guides/webhook-events",
               "guides/connect-mailboxes",
-              "guides/hubspot"
+              "guides/hubspot",
+              "guides/pipedrive"
             ]
           }
         ]
