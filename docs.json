@@ -41,7 +41,8 @@
               "guides/webhook-events",
               "guides/connect-mailboxes",
               "guides/hubspot",
-              "guides/pipedrive"
+              "guides/pipedrive",
+              "guides/salesforce"
             ]
           }
         ]
