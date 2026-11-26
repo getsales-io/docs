@@ -1,0 +1,102 @@
+---
+title: "Set up the folk integration"
+description: "Connect a folk workspace to GetSales with an API key, choose what syncs, send people from your tables, read folk groups into tables, and disconnect."
+---
+
+The folk integration keeps a folk workspace and your GetSales workspace in step:
+
+- **Groups become table sources.** A folk group fills a table with its people, keeps them in sync on a schedule, and brings the group's fields you choose as columns of their own.
+- **People and companies go to folk.** A Send to CRM column creates or updates a folk person or company for every row, in the group you pick, with the fields you map.
+- **Outreach lands on the person.** LinkedIn messages and connection requests, emails and AI SDR hand-offs are logged as interactions on the person, with their words and the sender profile that sent them, at the time they happened.
+- **A status moves with the conversation.** A select field of one of your groups moves forward as a request is sent, accepted, a message goes out or the lead replies, a date field takes the day of each event, and the AI SDR's class of a reply can land on a field too.
+
+Everything is set up from GetSales with one API key. Nothing is installed in folk.
+
+## Before you start
+
+- A GetSales workspace, and a role that can manage integrations in it.
+- A folk workspace on a plan with API access: folk's Premium or Enterprise plan, or the free trial every new folk workspace starts with.
+- The folk member whose key you use must be able to see the groups you want to sync. A key works as that member: it sees the groups shared with them and their own private groups, nothing else.
+
+## Connect a folk workspace
+
+1. In folk, open **Settings**, then **API**, and click **New API key**. Copy the key: folk shows it once.
+2. Open [https://app.getsales.io/settings/integrations](https://app.getsales.io/settings/integrations) and pick **folk**.
+3. Click **Connect API key** (or **Connect another key** when one is already connected), paste the key and click **Connect**.
+4. GetSales checks the key with folk at once. The key appears under **API keys** with the status **On**, named after the member it belongs to.
+
+Pasting a new key of the same member replaces the old one in the same connection. A key of another member of the same folk workspace is a connection of its own.
+
+folk API keys have no scopes: GetSales can do what the key's member can do in the groups that member sees. It reads and writes people, companies, their links and the groups' fields, and logs interactions. It never deletes a person or a company.
+
+## Choose what syncs
+
+### Activity on the person
+
+Under **Activity sync** on the folk card in Settings, each switch starts logging from the moment it is turned on. Nothing that happened before is written.
+
+- **Log messages to the timeline**: LinkedIn messages your sender profiles send and receive, with their words.
+- **Log emails to the timeline**: emails sent and received. folk syncs a member's own mailbox: leave this off for a mailbox that is also connected to folk, or each email shows twice.
+- **Log connection requests**: a connection request sent, with its note, and its accept.
+- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as an interaction on the person.
+
+Each event is an interaction on the person, dated when it happened: its title says who wrote to whom, and its content holds the words. A lead is matched to a person the same way as in Send to CRM below. An event of a lead who matches no person is not written, and it shows under **Recent failures**.
+
+### Status and dates
+
+Click **Edit** next to **Status and dates** on the folk card:
+
+- **Group**: folk keeps a status in a field of a group, and a person holds a value there only while they are in that group. Pick the group first: the fields below are that group's.
+- **Status field**: a single select or a multiple select of the group. For each event (connection request sent, connection accepted, message sent, replied) pick the option it sets, or leave it as is.
+- The status only moves forward, in the order of the events. A value someone set by hand that is not one of the mapped options stays. On a multiple select, only the options you mapped move, and every other option stays. **Also replace** lists the options GetSales may replace, such as New.
+- **Date goes to**: a date field of the group that takes the day of each event.
+- **Reply class field**: a select of the group that takes the AI SDR's class of a lead's reply (interested, meeting request, not now and the others), each class mapped to an option of yours.
+
+A person who is not in the group is left as they are: an event never adds a person to a group. Put people in the group with Send to CRM, or read the group into a table.
+
+### Send people and companies to folk
+
+Add a **Send to CRM** column to a table and pick the folk connection under **Send to**, then the group the people go into:
+
+- **Matching**: a person is found by the folk id they already hold, then by their LinkedIn profile among the person's links in folk (where folk's own browser extension keeps it), then by their work email or personal email. When none of these finds a person, a new one is created in the group from the row's name or email, with the LinkedIn link added to their links. A company is matched by its website, then by its exact name.
+- **Field mapping**: folk's own fields and the picked group's fields. A list in folk (emails, phones, links, the person's groups) keeps what it holds, and the mapped value joins it. For a select field, write the option as folk names it, any case; several options go comma separated. An option the field does not have is refused in the cell with the options it has: folk would otherwise create a new option.
+- **Send new rows**: when on, every row that lands in the table is sent as it arrives. When another column of the row is still filling its name or email, such as an enrichment, the send waits for it.
+
+Run the column on the rows you choose to send them at once. The cell shows the folk record it wrote, or why folk refused it.
+
+### Read a group into a table
+
+In a table, open **Data sources** and choose **CRM segment**:
+
+1. Pick the folk connection and type to find the group by name.
+2. Under **Sync**, choose every hour, every day or every week. A person added to the group is added to the table. A person taken out of the group leaves the table's campaigns: GetSales reads that person once more before it takes them out, so a person is never removed by mistake while the group is being read.
+3. Under **Columns from folk**, add up to 25 of the group's fields, each with a column name of your own. Name, email, company, job title and the LinkedIn link always come. A mapped field's value wins over enrichment and follows folk on every sync.
+
+**Sync now** reads the group at once.
+
+## Use it
+
+- **Automated:** rows are sent as they arrive when Send new rows is on, activity is logged as it happens, statuses and dates move with each event, and groups sync on their schedule.
+- **Manual:** run a Send to CRM column on chosen rows, or click Sync now on a group source.
+- **See what happened:** a lead's card shows a **CRM** section with the folk person the lead was matched to, how it was found, and the lead's recent folk calls with each failure's reason. The folk card in Settings lists the connection's recent failures.
+
+## folk's API limits
+
+folk limits API requests per member, shared by every key of that member: 20 requests in any 2 seconds and 600 in a minute. GetSales paces its own calls under both. When folk still asks it to wait, GetSales stops calling for that member for the time folk names and then picks up where it stopped: nothing is lost and nothing is written twice. An interaction costs 1 request, a status and date write about 2, and a lead's first match usually 2 to 4.
+
+## Disconnect
+
+On the folk card in [https://app.getsales.io/settings/integrations](https://app.getsales.io/settings/integrations), open the connection's actions and click **Delete**:
+
+- Every sync of that connection stops: no more rows sent, activity logged or groups read.
+- GetSales deletes its copy of the key. The key itself stays valid in folk until you delete it there, under **Settings**, **API**.
+- What is already written stays: people, companies and interactions in folk, and people, rows and column values in GetSales.
+
+## Troubleshooting
+
+- **"folk needs a name or an email for a new person"**: the row matched no person and has neither a name nor an email to create one. Enrich the row or fill one of them, then run the cell again.
+- **"The folk member this key belongs to cannot reach this group"**: the group is private to another member, or not shared with the key's member. Share the group with that member in folk, or connect the key of a member who sees it.
+- **"The field has no option"**: a select field was sent an option it does not have. Pick one of the options the message lists, or add the option to the field in folk first.
+- **The connection needs attention**: folk refused the key, because it was deleted in folk, or because the workspace's plan no longer includes the API (a trial that ended). Create a new key, or move the folk workspace to a plan with API access, and connect again.
+
+Questions: [support@getsales.io](mailto:support@getsales.io).

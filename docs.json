@@ -42,7 +42,8 @@
               "guides/connect-mailboxes",
               "guides/hubspot",
               "guides/pipedrive",
-              "guides/salesforce"
+              "guides/salesforce",
+              "guides/folk"
             ]
           }
         ]
