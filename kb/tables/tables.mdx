@@ -155,8 +155,12 @@ with the tabs **Popular**, **Actions**, **Widgets** and **Basics**. A column's `
   <img src="/images/kb/tables/tables-new-column-actions.png" alt="New column drawer with the box Search column types… and the tabs Popular, Actions, Widgets and Basics, open on Actions. Under the heading Actions: Enrich lead, Enrich a lead's data from LinkedIn. Latest posts, A lead's 10 newest posts, read live, 2 credits a row. Use AI, Auto-fill, summarize, and search the web. Find work email, Use waterfall order to find a valid work email. Send to CRM, Create or update CRM records from rows. API tool call, Interact with external tools using an API call." />
 </Frame>
 
-A new table's **People** tab starts with **Data source** and **Pipeline stage**, and its
-**Companies** tab with **Data source**, **Website**, **LinkedIn**, **People** and **Pipeline stage**.
+A new table's **People** tab starts with **Data source**, **LinkedIn**, **Work email** and **Pipeline stage**, and its
+**Companies** tab with **Data source**, **Website**, **LinkedIn**, **People** and **Pipeline stage**. A table made
+before 26 November 2026 keeps the People columns it had. An empty People or Companies tab keeps its toolbar and its
+grid: **Add** rows under the header adds rows by hand, and **Add from a data source** opens the Data sources tab. A
+tab shows each widget column once: **New column** greys a widget the tab already has ("The column has already been
+added"), and **Duplicate** is off on a widget column.
 Select several column headers to group them under a name, pin a column to keep it in view, or hide it.
 
 API and MCP: [`create_playtable_field`](/api-reference/playtables/playtable_fields/create-playtable-field).
@@ -265,18 +269,18 @@ columns, basic columns, formulas and widgets are free.
 
 | Action | Credits |
 |---|---|
-| AI search | 3 a page of results that returns somebody, nothing for an empty page, plus building the filter from your words: one AI call and 1 for each term it looks up |
+| AI search | 0.5 a page of results that returns somebody, nothing for an empty page, plus building the filter from your words: one AI call and 0.1 for each term it looks up |
 | Check on save on a source | One AI call per 20 records, priced on the source before you save |
-| Post engagement read on our managed infrastructure | From 3 a page of 50 people, free when one of your sender profiles reads it |
-| Find people | 1 a company where somebody is found, plus 1 once when the company's LinkedIn id must be looked up, nothing for a company where nobody is found |
-| Find work email | 1 an address delivered, plus each check at the verifier's rate |
-| Enrich lead | 1 a row at Basic, 3 at Advanced |
-| Enrich company | 1 a row at Basic, 2 at Advanced |
-| Latest posts | 2 a row, plus 1 when the person's LinkedIn id must first be looked up from their profile link |
+| Post engagement read on our managed infrastructure | From 0.5 a page of 50 people, free when one of your sender profiles reads it |
+| Find people | 0.1 a company where somebody is found, plus 0.1 once when the company's LinkedIn id must be looked up, nothing for a company where nobody is found |
+| Find work email | The finder's price for each address found (Hunter 0.5, Findymail 0.4, Anymailfinder 1.46), plus each check at the verifier's rate |
+| Enrich lead | Free from saved data and when one of your sender profiles' LinkedIn accounts reads the row. On our managed infrastructure: 0.1 a row at Basic, 0.5 at Advanced |
+| Enrich company | Free from saved data and on your own LinkedIn account. On our managed infrastructure: 0.1 a row at either level |
+| Latest posts | Free when one of your sender profiles' LinkedIn accounts reads it. On our managed infrastructure: 0.1 a row, plus 0.1 when the person's LinkedIn id must first be looked up from their profile link |
 | Use AI | What the model reads and writes for each row, shown before you run |
 | API tool call | Its tool's price |
 
-Free: basic columns, formulas and templates, widgets, Send to CRM columns, CSV, webhook and HubSpot
+Free: basic columns, formulas and templates, widgets, Send to CRM columns, CSV, webhook and CRM segment
 rows, sender searches on your own sender profiles, exports, moves, the stoplist and pipeline stages.
 What a play spends: [Signals](/kb/signals/signals#what-does-a-play-spend). Plans and prices:
 [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
@@ -288,7 +292,8 @@ lists what was spent.
 ## What happens when the workspace runs out of credits?
 
 When the workspace runs out of credits, the cell that needed them ends `allowance_exhausted` (**Out of
-credits**), its run stops, and each source that spends credits pauses with the same reason. A top-up
+credits**), its run stops, and each source that spends credits pauses with the same reason. On an Enrich or Latest posts column
+in a workspace with a LinkedIn account of its own, the cell ends and the run goes on, since the next row may be free. A top-up
 alone restarts nothing: press **Resume import** in the source's menu and run the stopped cells again.
 The one exception is a Find people search paused for credits: it starts again by itself as soon as its
 Find people column (once there are credits) or a find people play hands it a new company. The
@@ -331,8 +336,8 @@ workflows:
 ## What does a table not do?
 
 A table sends nothing, puts nobody into a workflow by itself, never shares a person with another table
-of the workspace, cannot drop a company from just one table in the app, never hides rows by search, lets
-a column's own auto-run take only the rows a data source adds, and exports CSV only:
+of the workspace, cannot drop a company from just one table in the app, never hides rows by search, does
+not run a column's auto-run on the rows already in the table, and exports CSV only:
 
 - A table sends nothing: a workflow sends, to the table's people. Adding people to a table puts them
   into a workflow only through that workflow's sources or a play. A running workflow whose **From a
@@ -346,8 +351,11 @@ a column's own auto-run take only the rows a data source adds, and exports CSV o
   it with [`detach_company_playtable`](/api-reference/playtables/companies/detach-company-from-playtable),
   which also deletes that table's cells for the company.
 - Search finds rows but never hides them. A filter does.
-- A column's own auto-run takes only the new rows a data source adds to its tab: not rows you add by
-  hand, and not the companies a people source links to the Companies tab. Start a run for those.
+- A column's own auto-run takes every row that enters its tab once it is on: a row a data source adds, a row you
+  add by hand or over the API once it holds an email or a LinkedIn profile (a company: a domain or a LinkedIn
+  page), and a person moved in from another table. It does not take the rows already there, the companies a people
+  source links to the Companies tab, a company a source finds already in the workspace, or a row on the stoplist.
+  Start a run for those.
   Columns also run without a click when a switched-on play reads through them, at each column's price:
   **Keep data fresh** re-reads the LinkedIn profile and company page columns (Enrich lead, Enrich
   company) every 7 and 90 days by default on each row never read or read longer ago, and **Engage with

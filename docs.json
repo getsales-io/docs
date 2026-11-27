@@ -43,7 +43,8 @@
               "guides/hubspot",
               "guides/pipedrive",
               "guides/salesforce",
-              "guides/folk"
+              "guides/folk",
+              "guides/slack"
             ]
           }
         ]
@@ -65,6 +66,7 @@
               "kb/sender-profiles/sender-profiles",
               "kb/sender-profiles/connect-linkedin",
               "kb/sender-profiles/connect-a-mailbox",
+              "kb/sender-profiles/tracking-domains",
               "kb/sender-profiles/smart-limits-and-warmup",
               "kb/sender-profiles/cloud-browser-and-proxies",
               "kb/sender-profiles/troubleshooting"

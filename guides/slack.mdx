@@ -1,0 +1,76 @@
+---
+title: "Set up Slack alerts"
+description: "Add GetSales to a Slack workspace, pick the channels and the alerts each one hears (an interested reply with the lead's words, an AI SDR hand-off, a sender profile that needs you, a lead on your website, a finished collection), send a test card, and disconnect."
+---
+
+Slack alerts post what matters in your GetSales workspace into your Slack channels:
+
+- **Each channel hears the alerts you pick for it.** An interested reply with the lead's words, an AI SDR hand-off, a sender profile that needs you, a lead on your website, a finished collection.
+- **A channel can be one client's.** Narrow a channel to some sender profiles, and it hears only what happens on them.
+- **A card opens the app.** Each alert is one card with what happened and a button that opens it in GetSales. Alerts about one lead stay in one Slack thread. Nothing is approved, edited or answered from Slack.
+
+Alerts cost 0 credits.
+
+## Before you start
+
+- A GetSales workspace, and a role that can manage integrations in it.
+- A Slack workspace where you may add apps. Where only admins add them, an admin approves the app first.
+
+## Connect a Slack workspace
+
+1. Open [https://app.getsales.io/settings/integrations](https://app.getsales.io/settings/integrations) and pick **Slack**, under **Alerts**.
+2. Click **Add to Slack** (or **Add another workspace** when one is already connected), check the access Slack lists and allow it.
+3. Slack sends you back to GetSales, and the workspace appears under **Workspaces** as **Connected**.
+
+Connect within 15 minutes of the click. A sign-in that waited longer is refused, and you start again from step 2.
+
+## Add a channel
+
+1. Click **Add channel**.
+2. Pick the **Workspace** and the **Channel**. The list is read from Slack: its public channels, and the private ones the app was invited to ("A private channel shows up once the app is invited to it in Slack.").
+3. Under **Alerts**, pick what the channel hears.
+4. Under **Sender profiles**, leave the field empty for every sender profile, or pick some to make the channel one client's.
+5. Click **Add channel**. The channel shows under **Channels** as **On**.
+
+A channel of a workspace holds one rule: to change what it hears, click **Edit**. **Send test** posts a test card into the channel, **Turn off** and **Turn on** switch it, and **Remove** stops its alerts.
+
+### The alerts
+
+| Alert | When it is posted |
+| --- | --- |
+| **Interested reply** | A reply the AI SDR read as interested or asking for a meeting, with the lead's words |
+| **Every reply** | Every reply a lead sends, whatever it says. Noisy on a busy workspace |
+| **AI SDR hand-off** | The AI SDR needs a person: a draft to approve, a question it cannot answer, an escalation |
+| **New task** | A task for a person: a call step, a manual step, a play's question |
+| **Sender profile needs attention** | A LinkedIn account that ended its session or disconnected, so sending stopped |
+| **Website visit** | A person or a company you hold is on your website |
+| **Collection finished** | An import or a collection ended, failed or ran out of allowance |
+| **Webhook disabled** | An endpoint of yours stopped receiving events after failing repeatedly |
+
+A channel narrowed to sender profiles hears only the alerts that belong to a sender profile. A website visit, a finished collection and a disabled webhook belong to none, so they never reach such a channel: give them a channel that covers every sender profile.
+
+## When a channel needs attention
+
+A channel reads **Needs attention** when Slack refused a post, or when 10 posts in a row failed, and the row says what Slack answered. The usual causes are a channel that was archived or deleted, and a private channel the app is no longer in. Fix it in Slack, then click **Turn on**: the channel starts again.
+
+A workspace reads **Needs attention** when the app was removed from it or its access was revoked in Slack ("The app was removed or its access revoked in Slack. Add it again."). Click **Add to Slack** again for the same workspace.
+
+## Disconnect
+
+- **Remove** on a channel: the channel stops hearing GetSales alerts. Nothing changes in Slack.
+- **Disconnect** on a workspace: the workspace leaves GetSales and every channel rule on it stops. The app stays in Slack until an admin removes it there.
+
+## Over the API and MCP
+
+The same rules are operations of the Integrations API and tools of the `workspace.integrations` group:
+
+- [`list_slack_workspace_channels`](/api-reference/integrations/slack_channels/list-slack-workspace-channels) reads the channels of a connected workspace from Slack.
+- [`create_slack_channel`](/api-reference/integrations/slack_channels/create-slack-channel) makes a channel hear alerts: `provider_connection_sid` (the workspace), `channel_id` and `channel_name`, `alerts` and, optionally, `sender_profile_sids`. A second rule for the same channel is refused with `409` `duplicate_rejected` and names the one that exists in `error.context.existing_sid`.
+- [`search_slack_channels`](/api-reference/integrations/slack_channels/search-slack-channels) lists the rules with how each is posting, and `status` `failed` finds the ones that need attention.
+- [`update_slack_channel`](/api-reference/integrations/slack_channels/update-slack-channel) changes what a channel hears or switches it, [`test_slack_channel`](/api-reference/integrations/slack_channels/test-slack-channel) posts the test card, and [`delete_slack_channel`](/api-reference/integrations/slack_channels/delete-slack-channel) removes the rule.
+
+Connecting a workspace is a sign-in at Slack, so it starts in the app, or from the link that [`start_provider_connection_oauth`](/api-reference/integrations/provider_connections/start-provider-oauth-connect) answers for `provider` `slack`.
+
+Questions: [support@getsales.io](mailto:support@getsales.io).
+
+Slack is a registered trademark and service mark of Slack Technologies, Inc.

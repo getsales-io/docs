@@ -3,7 +3,7 @@ title: "Connect mailboxes from a script"
 description: "Connect IMAP and SMTP mailboxes to sender profiles with one call per mailbox, read why a mailbox was refused, and know which providers take a password."
 ---
 
-One call connects one mailbox. `POST https://api2.getsales.io/unibox/v1/api/sender-profiles/{sid}/mailboxes/connect-imap` takes the mailbox's IMAP and SMTP settings and both passwords, signs in to both servers, and attaches the mailbox to the sender profile. A script that reads a CSV and makes the call once per row connects any number of mailboxes, and every row that fails comes back with its cause.
+One call connects one mailbox. `POST https://api2.getsales.io/unibox/v1/api/sender-profiles/{sid}/mailboxes/connect-imap` takes the mailbox's IMAP and SMTP settings and both passwords, signs in to both servers, and attaches the mailbox to the sender profile. A script that reads a CSV and makes the call once per row connects any number of mailboxes, and every row that fails comes back with its cause. In the app the same connect is the IMAP and SMTP tab of Add mailbox, one mailbox at a time.
 
 <Note>
   Google Workspace takes an app password over IMAP, and most other mail hosts take the mailbox's own password. Microsoft 365 takes no password over IMAP at all, so a Microsoft 365 mailbox is connected in the app, through Microsoft's consent page.
@@ -33,7 +33,7 @@ curl -X POST "https://api2.getsales.io/unibox/v1/api/sender-profiles/ub_sp_Hx7kQ
   }'
 ```
 
-A `200` answers the sender profile as `item` and its mailboxes in `result.mailboxes`. `history_since` and `history_scope` choose how much of the mailbox's existing mail reaches the inbox; the [endpoint reference](/api-reference/unibox/sender_profiles/connect-an-imap-mailbox-to-a-sender-profile) has every field.
+A `200` answers the sender profile as `item` and its mailboxes in `result.mailboxes`. A new mailbox reads `status` `connecting` while its first sync runs and turns `active` by itself, and only an `active` mailbox sends. `result.bound_existing` is `true` when the mailbox already existed in the workspace it landed on (a mailbox of your own linked gtm-api workspace, for example): it is attached as it is there, and the settings and passwords of the call were not applied. `history_since` and `history_scope` choose how much of the mailbox's existing mail reaches the inbox; the [endpoint reference](/api-reference/unibox/sender_profiles/connect-an-imap-mailbox-to-a-sender-profile) has every field.
 
 ## When a mailbox is refused
 
@@ -71,11 +71,19 @@ Before the mailbox is created, both servers are signed in to with what you sent,
 | `imap_tls_failed` | `connection.imap_encryption` | The encryption does not match the port: `ssl` is usually 993, `starttls` 143. |
 | `smtp_tls_failed` | `connection.smtp_encryption` | The encryption does not match the port: `ssl` is usually 465, `starttls` 587. |
 | `smtp_encryption_required` | `connection.smtp_encryption` | A password is never sent over unencrypted SMTP. Use `ssl` or `starttls`. |
+| `imap_encryption_required` | `connection.imap_encryption` | A password is never sent over unencrypted IMAP. Use `ssl` or `starttls`. |
+| `imap_all_mail_hidden` | `connection.imap_host` | Gmail hides All Mail from IMAP for this mailbox, and All Mail is where its mail is read from. In Gmail open Settings, Labels, tick Show in IMAP for All Mail, then connect again. |
 | `mail_host_unresolvable` | `connection.imap_host` or `connection.smtp_host` | The host name does not resolve. Check its spelling. |
 | `mail_host_not_allowed` | `connection.imap_host` or `connection.smtp_host` | The host is, or resolves to, a private or reserved address. Use the server's public host name. |
 | `imap_timeout` | `connection.imap_host` | The IMAP server did not answer in time. Retry shortly. |
 | `smtp_timeout` | `connection.smtp_host` | The SMTP server did not answer in time. Retry shortly. |
 | `imap_connection_limit` | `connection.imap_host` | The server refuses another session for this mailbox right now. Retry in a few minutes. |
+
+A mailbox that is taken already is a `409` with the code `conflict`, and `error.context.reason` says which way:
+
+- `mailbox_already_connected`: this sender profile already has the mailbox (`error.context.email_account_sid` names it), and nothing was changed. A script run twice over the same rows reads this for every row that connected the first time.
+- `mailbox_bound_elsewhere`: another sender profile of the workspace has it, named in `error.context.sender_profile_sid`, with the mailbox in `error.context.email_account_sid`. Move it instead of connecting it again: `POST https://api2.getsales.io/unibox/v1/api/sender-profiles/{sid}/mailboxes/{emailAccountSid}/move` on the sender profile that holds it, with this sender profile as `to_sender_profile_sid` ([`move_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/move-a-mailbox-to-another-sender-profile)). The mailbox stays connected and its conversations come with it. A detach there would remove the mailbox.
+- `mailbox_in_another_workspace`: the mailbox is connected in another workspace. Disconnect it there first.
 
 These refusals are about the workspace and its email server, not the mailbox, and carry their reason in `error.context.reason` (one in a field error):
 

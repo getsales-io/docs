@@ -6,7 +6,7 @@ description: "Your GetSales workspace, exposed as Model Context Protocol tools a
 
 GetSales runs a managed MCP server for your workspace at `https://mcp2.getsales.io/mcp/public`. Claude, Cursor, ChatGPT or a custom agent runtime can build tables, enrich rows, author and run workflows, read the inbox and the AI SDR's drafts, train the AI SDR, and watch signals in a workspace you own.
 
-MCP and REST are the same contract. Every tool maps 1:1 to an endpoint in the [API reference](/api-reference/overview): one Zod schema defines the tool, the endpoint and this documentation, so an agent and your backend code see identical shapes and work under the same server-side rules.
+MCP and REST are the same contract. Every tool maps 1:1 to an endpoint in the [API reference](/api-reference/overview), but for the two tools of `knowledge-base`, which read this documentation: one Zod schema defines the tool, the endpoint and this documentation, so an agent and your backend code see identical shapes and work under the same server-side rules.
 
 ## One address, or one group at a time
 
@@ -23,12 +23,13 @@ The tools are grouped by the entity they belong to, never by a menu. A prefix ex
 | `playtables.columns` | Build a column, try a prompt on one row, estimate the price, start and stop a run, inspect a cell. |
 | `playtables.rows` | The rows of all tables, people and companies: find, read, edit, merge duplicates, read a LinkedIn profile, the feed of what happened to each. |
 | `playtables.crm` | The CRM mechanics of rows: pipeline stages, tags, notes, and the stoplist (block, unblock, check a value across every table). External CRMs are `workspace.integrations`. |
-| `playtables.sources` | Where rows come from: data sources of six kinds, their items and their funnel. |
+| `playtables.sources` | Where rows come from: data sources of seven kinds, a list of your CRM among them, their items and their funnel. |
 | `playtables.workflows` | Build, validate, publish, run and edit a workflow, and decide who enters it. |
 | `playtables.workflow-records` | One row per person in a workflow and its tasks: where the person stands, pause, resume, restart, exit, approve or retry a step. |
 | `inbox` | Work the inbox: find a thread, read it, reply, approve or cancel drafts, close, hand over, stoplist, tasks, link a thread to a person. |
 | `sender-profiles` | Who sends: the sender profile, its variables, its limits, what it did today and by day. |
-| `sender-accounts` | Connect and disconnect a LinkedIn account and mailboxes without a browser, send out connect links, pause a mailbox, mailbox settings. Not on the public address. |
+| `sender-accounts` | Connect and disconnect a LinkedIn account and mailboxes without a browser, send out connect links, pause a mailbox, move it to another sender profile, mailbox settings, tracking domains and the DNS of a sending domain. Not on the public address. |
+| `gtm-api` | gtm-api.com's own tools, through the workspace's direct integration with gtm-api.com: list its toolsets, read the tools of one and call a tool by name, with the caller's rights. Not on the public address. |
 | `ai-sdr.agents` | The AI SDR itself: create it, its Brief, Rules, hosts, voice, scenarios, plans, runs and how it did. |
 | `ai-sdr.training` | What the AI SDR knows and how it learns: Knowledge (answers and the documents they come from), the golden set, hints, tests on a real thread, one "teach it" entry. |
 | `signals` | Who was on your site and who viewed a profile, and the plays that react to a table's facts. |
@@ -36,11 +37,12 @@ The tools are grouped by the entity they belong to, never by a menu. A prefix ex
 | `workspace.access` | The API keys and OAuth panels: which keys stand and what is connected, revoke a leaked key, disconnect an app. Keys are minted over REST, never through a model. |
 | `workspace.billing` | The Subscription, Usage and Invoices panels: what was bought, the credits left and what they went on, a price or capacity change, reseller allocations. |
 | `workspace.website-tracking` | The Website panel: register a site, hand out the loader, check the installation, key pages and tracked events, reissue the key, the team switches for signals. |
-| `workspace.integrations` | The Integrations panel: your own API and your CRMs, connections by key and OAuth, CRM fields, custom tools for columns, catalog prices, the call log. |
+| `workspace.integrations` | The Integrations panel: your own API and your CRMs, connections by key and OAuth, CRM fields and lists, the CRM sync settings, custom tools for columns, catalog prices, the call log, and the Slack channels that hear alerts. |
 | `workspace.webhooks` | The Webhooks panel: subscribe an endpoint to events, test it, read deliveries and bring back what was missed. |
 | `workspace.whitelabel` | Reseller Admin: brand, domain, certificate, email domain, clients. |
+| `knowledge-base` | How the product works, as published on https://docs.getsales.io: search the knowledge base, the guides and the API reference, and read a page whole. It holds no workspace data. |
 
-The public address serves every group but the tools that act on a channel or set up an account for one: a message is sent, approved or sent again in the GetSales app, a sender profile's accounts are connected there too, and a LinkedIn profile is read in the app. The full facade at `https://mcp2.getsales.io/mcp` and the groups' own URLs serve those tools to a signed-in client.
+The server holds 316 tools in these 22 groups, and the public address serves 272 of them in 20. It serves every group but the tools that act on a channel or set up an account for one: a message is sent, approved or sent again in the GetSales app, a sender profile's accounts are connected there too, and a LinkedIn profile is read in the app. The full facade at `https://mcp2.getsales.io/mcp` and the groups' own URLs serve those tools to a signed-in client.
 
 ## What to ask
 

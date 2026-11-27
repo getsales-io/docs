@@ -1,6 +1,6 @@
 ---
 title: "Connect a LinkedIn account"
-description: "A LinkedIn account connects to a sender profile through a cloud browser made for it: someone signs in to LinkedIn there once (in the app, or on a sign-in link that works for 2 days), and GetSales never stores the password. Each account takes one of the plan's LinkedIn sender profiles, and so does a connect still waiting for a sign-in. A connect waits 24 hours for a sign-in (2 days while a sign-in link is out), and nothing is sent until the account's first sync ends (a workflow step due before then fails). API: start_sender_profile_linkedin_connect."
+description: "A LinkedIn account connects to a sender profile through a cloud browser made for it: someone signs in to LinkedIn there once (in the app, or on a sign-in link that works for 2 days), and GetSales never stores the password. Each account takes one of the plan's LinkedIn sender profiles, and so does a connect still waiting for a sign-in. A connect waits 24 hours for a sign-in (2 days while a sign-in link is out), and nothing is sent until the account's first sync ends (a workflow step due before then waits and goes out once the sync is through). API: start_sender_profile_linkedin_connect."
 ---
 
 A sender profile sends on LinkedIn through one account, signed in once in a cloud browser that belongs to that sender profile alone. The password is typed into LinkedIn itself, in that browser, and GetSales never stores it.
@@ -84,20 +84,25 @@ Through the API or Creator, the same is [`start_sender_profile_linkedin_connect`
 
 ## What does the sender profile show while a connect waits for a sign-in?
 
-Right after you start a LinkedIn connect, the sender profile's LinkedIn tab shows a card that reads **Sign-in pending** and **Waiting for sign-in**, with one note: **A sign-in link is out and works until** the link's end date, when you made a sign-in link, or **Sign in to LinkedIn in the cloud browser dialog; if you closed it, connecting again opens the same browser.** when you sign in yourself. The card has no buttons, and it shows only on the page and in the browser tab where the connect started, for up to 15 minutes: a reload or another page drops it. After that the tab reads **LinkedIn is not connected** again, while the connect keeps waiting and a link that is out keeps working. The list's LinkedIn column shows **Connect** all along. When the account lands while the card is up, the app says **LinkedIn account connected**.
+While a LinkedIn connect waits, the sender profile's LinkedIn tab shows a card that reads **Sign-in pending** and **Waiting for sign-in**, with when the browser was created and its proxy. The card is kept with the sender profile: it is there after a reload, for as long as the connect waits.
 
-To open the browser yourself or make another sign-in link, click **Connect LinkedIn** again with the same proxy country: GetSales reuses the waiting browser, and a link already out keeps working while the connect waits. Another proxy country makes a new browser, and the earlier link stops working.
+- **Open browser** opens the same browser so you can sign in.
+- Under **Someone else signs in?**, **Create sign-in link** makes the link for the account's owner, and the card then shows it with **Copy sign-in link** and the date it works until. One link is out at a time: **Create new link** replaces it, and the link before it stops working.
+- The menu beside **Open browser** holds **Change proxy**, which moves the same browser to another proxy, and **Delete browser**, which gives the connect up.
+- In the list, the LinkedIn column shows **Open browser** in place of **Connect**, with the same menu.
+
+Once someone has signed in, the card and the list read **Finalizing connection** ("Checking and configuring the LinkedIn account. This usually takes less than a minute."), and when the account lands the app says **LinkedIn account connected**. A connect that did not go through reads **Connect failed** with the reason, and **Connect again** opens the same browser. One nobody signed in to reads **Sign-in expired** ("Nobody signed in in time, so the browser was given back. Connect again to start over.").
 
 ## How long does a LinkedIn connect wait for a sign-in?
 
-A LinkedIn connect waits 24 hours for a sign-in, or as long as the sign-in link that is out on it works (2 days), whichever is later. Then an hourly check gives its browser back, and the next connect starts over with a new browser. Starting a connect again while one waits, with the same proxy country, reuses its browser, never a second one, and the 24 hours count again from then.
+A LinkedIn connect waits 24 hours for a sign-in, or as long as the sign-in link that is out on it works (2 days), whichever is later. Then an hourly check gives its browser back, and the next connect starts over with a new browser. Opening the waiting browser again counts the 24 hours again from then, and never makes a second browser.
 
 ## What does the first sync of a LinkedIn account do?
 
 The first sync reads the account's history from LinkedIn once it is in: its conversations, its invitations and its connections, and the Sales Navigator and Recruiter inboxes when the account has those licences.
 
 - It runs straight through, whatever the account's [sync hours](/kb/sender-profiles/cloud-browser-and-proxies#what-are-a-linkedin-account%E2%80%99s-sync-hours) say.
-- **Nothing is sent from the account until it finishes, and a workflow step that comes due before then fails.** Start workflows on this sender profile once the first sync is through.
+- **Nothing is sent from the account until it finishes. A workflow step that comes due before then waits: GetSales tries it again every half hour, and it goes out once the sync is through.** The sender profile's mailboxes keep sending meanwhile.
 - A large account is read at a measured pace on purpose, so its first sync can take a day or more.
 - When it finishes, the account's daily limits are set from its warmup score (how old the account is, the invitations and messages it sent in the last 30 days, how often LinkedIn refused its actions or people blocked it in that time, how many LinkedIn sessions it has open and how complete its profile is): [How the warmup sets a LinkedIn account's limits](/kb/sender-profiles/smart-limits-and-warmup#how-does-the-warmup-score-set-a-linkedin-account%E2%80%99s-limits).
 
@@ -105,11 +110,11 @@ The first sync reads the account's history from LinkedIn once it is in: its conv
 
 A connected LinkedIn account shows in three places:
 
-- On the LinkedIn tab, the account card reads **Active**, with **Syncing history** beside it while its past conversations come in, then **Synced** and how long ago.
-- In the list, the sender profile's LinkedIn column shows the account with no warning mark.
+- On the LinkedIn tab, the account card reads **Syncing** while the first sync runs, under a line that starts **This account is syncing.** and says about how long it will take. After that it reads **Active**, with **Synced** and how long ago.
+- In the list, the sender profile's LinkedIn column shows the account with no warning mark, reading **Syncing** until the first sync ends.
 - Under **Auto tasks and daily limits**, the account's limit rows appear right after the connect, at starting numbers. They are set for the account when its first sync finishes.
 
-Through the API, [`search_sender_profiles`](/api-reference/unibox/sender_profiles/search-sender-profiles) shows `linkedin_account_sid` set and `linkedin_status` `active`.
+Through the API, [`search_sender_profiles`](/api-reference/unibox/sender_profiles/search-sender-profiles) shows `linkedin_account_sid` set and `linkedin_status` `active`. While the first sync runs, [`read_sender_profile_limits`](/api-reference/unibox/sender_profiles/read-sender-profile-caps) answers `result.initial_sync` (its `state`, `conversations_synced`, `resumes_at`, `estimated_completion_at` and `estimated_days_left`), and `null` once it is done.
 
 ## Why does a LinkedIn connect fail?
 
@@ -117,12 +122,12 @@ A LinkedIn connect fails when the plan has no LinkedIn sender profile free, no m
 
 | What you see | What it means and what to do |
 |---|---|
-| **All 10 LinkedIn sender profiles of this workspace's plan are in use** | Every LinkedIn sender profile of the plan is taken, by a connected account or by a connect still waiting for a sign-in, and a detached account keeps its place for now: add more in **Settings**, **Subscription** |
+| **All 10 LinkedIn sender profiles of this workspace's plan are in use** | Every LinkedIn sender profile of the plan is taken, by a connected account or by a connect still waiting for a sign-in: detach a LinkedIn account you no longer need (its place in the plan is free again), or add more in **Settings**, **Subscription** |
 | **This workspace's plan has no LinkedIn sender profiles. Pick a plan in Settings, Billing.** | The plan holds no LinkedIn sender profiles, as after a trial or a plan ends: pick a plan in **Settings**, **Subscription** |
 | **No proxy is free in that country right now. Pick another country, or route the browser through your own proxy.** | Pick another country, or click **Bring my own proxy** |
 | **All cloud browsers are busy right now. Nothing went wrong on your side, try again in a few minutes.** | Wait a few minutes, then click **Try again** in the cloud browser |
 | **Couldn't connect to the cloud browser** | Click **Try again** in the cloud browser. If it keeps failing, write to support@getsales.io with the sender profile's name |
-| The cloud browser said **Your LinkedIn session is saved**, but minutes later the account is still not on the sender profile | The account is already connected in another workspace (it works in one workspace at a time: remove it there) or already on another sender profile of this workspace (detach it there: its LinkedIn tab, **Manage**, **Detach LinkedIn**). Then click **Connect LinkedIn** again |
+| **Connect failed** on the LinkedIn tab and in the list | The card names the reason, such as **This LinkedIn account is already connected in another workspace. Disconnect it there first, then try again.** (an account works in one workspace at a time) or **This LinkedIn account is already on another profile. Detach it there first.** (its LinkedIn tab, **Manage**, **Detach LinkedIn**). Then click **Connect again** on the card |
 | **Copying to the clipboard is blocked, update your browser settings** | Pasting from your computer into the cloud browser is blocked: allow clipboard access for the app in your browser's site settings, or type instead of pasting |
 | LinkedIn restricted the account | Clear the restriction with LinkedIn on your own device first, then connect again |
 

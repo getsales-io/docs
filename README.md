@@ -2,8 +2,8 @@
 
 Developer documentation for GetSales, served at [docs.getsales.io](https://docs.getsales.io):
 quickstart, authentication, the response contract, the webhooks guide, MCP setup, and the
-generated reference for the whole public contract: five services, 422 operations (Playtables 147,
-Unibox 130, ID and Teams 88, Signals 30, Integrations 27).
+generated reference for the whole public contract: five services, 345 operations (Playtables 123,
+Unibox 108, ID and Teams 65, Integrations 32, Signals 17).
 
 Related:
 

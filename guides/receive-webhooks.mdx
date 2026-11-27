@@ -84,12 +84,14 @@ The body is a fixed envelope, with a reference to what happened nested under `pa
   "trace_id": "0198f2ab-7c11-7e32-9a41-d2b64f2a91c3",
   "payload": {
     "sid": "ub_ms_Jk2mP9nR4qW1",
-    "conversation_sid": "ub_cv_Bv9nK4xP1sD7"
+    "conversation_sid": "ub_cv_Bv9nK4xP1sD7",
+    "person_sid": "cr_pp_T4wZ8bN1kR6m",
+    "sender_profile_sid": "ub_sp_M3xC7vB2nQ9k"
   }
 }
 ```
 
-`occurred_at` equals `emitted_at` today and becomes the object's own moment once a producer names it. `payload` is a trimmed reference, never the entity's whole row: the sids of what the event is about, with at most a few of its fields under the names the REST API uses. `messages.received` carries ids only, the message's sid and its conversation's, and never the text: read the message back through the REST API or the MCP server when you need its words. The reference page of the entity is the field guide for what you read back, and [Webhook events](/guides/webhook-events) lists the payload of every type, field by field.
+`occurred_at` equals `emitted_at` today and becomes the object's own moment once a producer names it. `payload` is a trimmed reference, never the entity's whole row: the sids of what the event is about, with at most a few of its fields under the names the REST API uses. `messages.received` carries ids only, the message's sid and its conversation's among them, and never the text: read the message back through the REST API or the MCP server when you need its words. The three message events (`messages.sent`, `messages.received` and `messages.bounced`) also name who the thread is with and who it is on: `person_sid` (the person, null while the thread is linked to none) and `sender_profile_sid` (the sender profile, null when there is none), so a receiver can match a message to its person without a second call. The example above shows a few of the payload's fields. The reference page of the entity is the field guide for what you read back, and [Webhook events](/guides/webhook-events) lists the payload of every type, field by field.
 
 The signature is `HMAC-SHA256(secret, "{t}.{raw_body}")` over the raw request body, with the timestamp mixed in to block replays. Verify before parsing, and reject signatures older than about 5 minutes:
 
@@ -182,12 +184,12 @@ The log holds **one row per event per subscription**, not one per attempt: a ret
 
 ## 6. The event catalog
 
-33 types across the producing services, each a business fact an integrator can act on, never a per-row progress tick (a 5,000-row import tells you once, with `data-sources.completed`, not 5,000 times).
+37 types across the producing services, each a business fact an integrator can act on, never a per-row progress tick (a 5,000-row import tells you once, with `data-sources.completed`, not 5,000 times).
 
 | Service | Events |
 | --- | --- |
-| Playtables | `data-sources.completed`, `data-sources.failed`, `data-sources.paused`, `data-sources.deleted`, `playtable-runs.finished`, `playtable-runs.cancelled`, `workflows.published`, `workflow-records.entered`, `workflow-records.completed`, `workflow-records.failed`, `workflow-records.exited`, `workflow-records.paused`, `workflow-records.resumed` |
-| Unibox | `messages.sent`, `messages.received`, `messages.bounced`, `conversations.created` (not for the old threads a mailbox's history import brings in), `conversations.state-changed`, `conversations.scenario-changed`, `conversations.signals-changed`, `conversations.merged`, `conversations.person-linked`, `conversations.person-unlinked`, `tasks.created`, `tasks.completed`, `sender-profiles.created`, `sender-profiles.deleted`, `sender-profiles.health-changed`, `agents.mode-changed` |
+| Playtables | `data-sources.completed`, `data-sources.failed`, `data-sources.paused`, `data-sources.deleted`, `playtable-runs.finished`, `playtable-runs.cancelled`, `workflows.published`, `workflow-records.entered`, `workflow-records.completed`, `workflow-records.failed`, `workflow-records.exited`, `workflow-records.paused`, `workflow-records.resumed`, `linkedin-connection-requests.sent`, `linkedin-connection-requests.accepted` |
+| Unibox | `messages.sent`, `messages.received`, `messages.bounced`, `conversations.created` (not for the old threads a mailbox's history import brings in), `conversations.state-changed`, `conversations.scenario-changed`, `conversations.signals-changed`, `conversations.merged`, `conversations.person-linked`, `conversations.person-unlinked`, `tasks.created`, `tasks.completed`, `sender-profiles.created`, `sender-profiles.deleted`, `sender-profiles.health-changed`, `sender-profiles.limit-reached`, `sender-profiles.limit-released`, `agents.mode-changed` |
 | Signals | `signals.website-visited`, `website-sites.broken`, `website-sites.recovered` |
 | Integrations | `webhooks.failed` |
 

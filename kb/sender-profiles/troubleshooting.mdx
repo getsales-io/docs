@@ -1,7 +1,7 @@
 ---
 title: "When a sender profile needs attention"
 sidebarTitle: "Troubleshooting"
-description: "What each mark on a sender profile means and what to do: signed out of LinkedIn (reconnect_required), a LinkedIn verification or restriction, a proxy that does not answer, an account connected in another workspace, We're on it, No activity (stalled), an action on hold (a used-up daily limit, or a LinkedIn block of 1, 3, 6 or 24 hours), InMail credits at zero, a mailbox to reconnect or a deleted one to detach, and a mailbox whose sending paused because the provider blocked it (3 refusals in 24 hours) or its daily quota ran out (24 hours). GetSales sends no email about any of them."
+description: "What each mark on a sender profile means and what to do: signed out of LinkedIn (reconnect_required), a LinkedIn verification or restriction, a proxy that does not answer, an account connected in another workspace, We're on it, No activity (stalled), an action on hold (a used-up daily limit, or a LinkedIn block of 1, 3, 6 or 24 hours), InMail credits at zero, a mailbox to reconnect or a deleted one to detach, and a mailbox whose sending paused because the provider blocked it (3 refusals in 24 hours) or its daily quota ran out (24 hours). GetSales emails the sender profile's assignee, or the workspace's owner, when a LinkedIn account is signed out or restricted or a mailbox needs reconnecting, and again when it works."
 ---
 
 A sender profile that needs a person wears a red mark: in the list, on the tab of the channel in trouble, and on the **Sender Profiles** icon in the sidebar (hover it for the count). Its card says what is wrong in one line. Find that line below.
@@ -14,7 +14,9 @@ While one channel is in trouble the other keeps working: a sender profile whose 
 
 ## Does GetSales tell anyone when a sender profile breaks?
 
-GetSales sends no email when a sender profile needs attention: the marks are in the app only. A developer can have a webhook call them instead: `sender-profiles.health-changed` fires when a sender profile's LinkedIn status or its cause changes, with `linkedin_status` and `linkedin_status_reason`. A mailbox fires no event. See [Webhook events](/guides/webhook-events).
+GetSales emails the person a sender profile is assigned to, or the workspace's owner when it has no assignee, when a channel breaks or comes back: a LinkedIn account that was signed out ("Maya Chen was signed out of LinkedIn"), restricted by LinkedIn or paused for a cause on your side, a Recruiter that needs a sign-in, a mailbox that needs reconnecting ("Reconnect maya@acme.example"), and the same account or mailbox once it works again or is ready to send. A mail about trouble leaves ten minutes after it began, and only if the trouble still holds. A paused mailbox, an action on hold, **We're on it** and **No activity** send none. Each person turns these mails off under **Settings**, **Notifications**, **Channels**.
+
+A developer can have a webhook call them too: `sender-profiles.health-changed` fires when a sender profile's LinkedIn status or its cause changes, with `linkedin_status` and `linkedin_status_reason`, and `sender-profiles.limit-reached` and `sender-profiles.limit-released` fire when a daily cap of its LinkedIn account closes and opens again. A mailbox fires no event. See [Webhook events](/guides/webhook-events).
 
 ## What does each LinkedIn status mean?
 
@@ -112,11 +114,15 @@ The card goes back to **Active**. While a mailbox is down, email steps send thro
 
 ## What do you do with a mailbox that reads Deleted or Subscription needed?
 
-A mailbox that reads **Deleted** was removed and cannot come back: **Detach** it ([`detach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/detach-a-mailbox-from-a-sender-profile) over the API). A sender profile's last channel cannot be detached (`409` `last_channel_account`: **This is the profile's last channel. Delete the profile instead**), so when the deleted mailbox is its only channel, connect a LinkedIn account or a new mailbox first ([Connect a mailbox](/kb/sender-profiles/connect-a-mailbox)), or delete the sender profile. **Subscription needed** means the plan no longer covers the mailbox: [Plans, credits and billing](/kb/workspace/plans-credits-and-billing). Neither sends: email steps go through the sender profile's other active mailboxes.
+A mailbox that reads **Deleted** was removed: **Detach** it, or connect the same address again from **Add mailbox**, which brings it back ([`detach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/detach-a-mailbox-from-a-sender-profile) over the API). A sender profile's last channel cannot be detached (`409` `last_channel_account`: **This is the profile's last channel. Delete the profile instead**), so when the deleted mailbox is its only channel, connect a LinkedIn account or a new mailbox first ([Connect a mailbox](/kb/sender-profiles/connect-a-mailbox)), or delete the sender profile. **Subscription needed** means the plan no longer covers the mailbox: [Plans, credits and billing](/kb/workspace/plans-credits-and-billing). Neither sends: email steps go through the sender profile's other active mailboxes.
+
+## What does a mailbox that reads Syncing need?
+
+Nothing. A mailbox reads **Syncing** from its sign-in until its first sync ends ("Reading this mailbox's mail for the first time. Sending from it starts when that is done."), then turns **Active** by itself, and it is not counted under **Needs attention**. "The mail provider is slowing the sync down. It goes on by itself." means the same. An email step due meanwhile waits, for up to 24 hours.
 
 ## Why did a mailbox stop sending?
 
-A mailbox that reads **Sending paused** stays connected and keeps receiving replies: only its sending stopped. It is not an alert. Someone clicked **Pause sending**, or GetSales paused it on its own:
+A mailbox that reads **Sending paused** stays connected and keeps receiving replies: only its sending stopped. It is not an alert. Email steps due meanwhile wait and go out after **Resume sending**. Someone clicked **Pause sending**, or GetSales paused it on its own:
 
 | Why GetSales paused it | What comes next |
 |---|---|
@@ -134,7 +140,7 @@ The **Recruiter** chip reads **Signed out** with **LinkedIn Recruiter asked for 
 
 ## What does GetSales never do when a sender profile needs attention?
 
-- **Email anyone about it.** The marks are in the app only, and the webhook event for them, `sender-profiles.health-changed`, covers the LinkedIn channel alone.
+- **Email anyone about a paused mailbox or an action on hold.** Those marks are in the app only, and the webhook event `sender-profiles.health-changed` covers the LinkedIn channel alone.
 - **Sign a LinkedIn account back in by itself.** Only a new sign-in does, in the app or on a sign-in link: a proxy change does not.
 - **Let an assistant reconnect a mailbox.** No MCP tool does it, Creator's included: click **Reconnect** in the app.
 - **Clear a LinkedIn restriction or end a LinkedIn block early.** **Lift hold** ends only a hold GetSales set.

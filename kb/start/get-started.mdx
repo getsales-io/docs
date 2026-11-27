@@ -1,6 +1,6 @@
 ---
 title: "Get started"
-description: "Sign up at https://app.getsales.io/signup with an emailed 6-digit code or Google, no password, no card: a new account's first workspace gets a 7-day trial with 10 LinkedIn sender profiles and 500 credits, and no email (a mailbox connects once the plan has an email package, each package one dedicated email server for the workspace, so a first campaign on the trial sends on LinkedIn). On Getting started, Creator fills your profile row and the cards Your company, Who buys and Your offer from your LinkedIn profile, your company's LinkedIn page and your site. Each card's head says who filled it last, and you change any value in place. The first campaign plan takes two yeses: Run plan (Set up) builds the rows in one pass, leaves the LinkedIn and mailbox connects to you and the launch to the second yes, and sends nothing. Approve and go live (Launch) publishes and starts the workflow once the workflow and the channel connects are done. Replies land in Messages."
+description: "Sign up at https://app.getsales.io/signup with an emailed 6-digit code or Google, no password, no card: a new account's first workspace gets a 7-day trial with 10 LinkedIn sender profiles, an AI SDR license and 100 credits (500 with a card), and no email (a mailbox connects once the plan has an email package, each package one dedicated email server for the workspace, so a first campaign on the trial sends on LinkedIn). On Getting started, Creator fills your profile row and the cards Your company, Who buys and Your offer from your LinkedIn profile, your company's LinkedIn page and your site. Each card's head says who filled it last, and you change any value in place. The first campaign plan takes two yeses: Run plan (Set up) builds the rows in one pass, leaves the LinkedIn and mailbox connects to you and the launch to the second yes, and sends nothing. Approve and go live (Launch) publishes and starts the workflow once the workflow and the channel connects are done. Replies land in Messages."
 ---
 
 Sign up, let Creator learn your company and your offer, approve its first plan and go live: the path from a new
@@ -23,14 +23,16 @@ and no card.
 1. Enter your **Work email** and click **Continue with email**, or click **Continue with Google**. A short human
    check runs before a code is sent.
 2. For email, **Check your email**: type the 6-digit code. The form sends itself on the sixth digit.
-3. The app opens your new workspace on its **Getting started** page.
+3. The app opens your new workspace on its **Getting started** page. It first asks **How do you want to start?**:
+   **Start without a card** ($5 of vendor credits, 100 credits) or **Add a card** ($25, 500 credits, and a plan that
+   starts when the trial ends unless you cancel before).
 
 The code works for 10 minutes. **Resend the code** opens after 60 seconds, an address gets at most 5 codes an hour,
 and 5 wrong tries end a code. Signing in later works the same way, at https://app.getsales.io/login.
 
 Any address that receives email works, a personal one too: Creator then asks for your website. Your first workspace
 is named after you ("Maya Workspace" for maya@acme.example) and starts a 7-day trial with 10 LinkedIn sender
-profiles and 500 credits, and no email inboxes. A workspace you create later is suspended until it gets a plan
+profiles, an AI SDR license and 100 credits, or 500 credits with a card, and no email inboxes. A workspace you create later is suspended until it gets a plan
 ([the trial](/kb/workspace/plans-credits-and-billing#how-does-the-trial-work)). A mailbox connects once the plan has
 an email package, which is one dedicated email server for the workspace, so a first campaign on the trial sends on
 LinkedIn ([Where does a new mailbox land?](/kb/sender-profiles/connect-a-mailbox#where-does-a-new-mailbox-land)).
@@ -89,7 +91,8 @@ opens Getting started again.
 
 Getting started spends little. Reading your site costs nothing, and so does a LinkedIn read answered from a copy
 GetSales already holds (at most 30 days old). Otherwise a workspace's first three profile reads and first three
-company page reads are free, and later ones cost 3 credits a profile and 2 a company page. Creator's own turns in the
+company page reads are free, and later ones cost 0.5 credit a profile and 0.1 a company page when our managed
+infrastructure reads them. Creator's own turns in the
 Getting started chat, including the ones that build the first campaign's rows, are free until the chat has used 2 US
 dollars of AI, then bill at the usual rate. What those rows start (the AI search, the Find people column, the paid
 columns) costs credits as usual. This chat shows no price under its answers.
@@ -108,7 +111,7 @@ them, and works through the replies and tasks with you. Open it with **Creator**
   ask again this session**. A send or a delete asks every time, and writes to the Getting started cards never ask.
   An ask nobody answers expires after 5 minutes, and nothing runs.
 
-Every answer costs credits: the AI model's price plus 20%, at 25 credits per US dollar, shown under it ("12 cr"),
+Every answer costs credits: the AI model's own price, at 20 credits per US dollar, shown under it ("12 cr"),
 except in the Getting started chat, which starts free. A turn takes up to 40 steps and 10 minutes. A workspace runs 2
 turns at once and keeps up to 10 open chats (an eleventh archives the oldest idle one). A chat idle for an hour is
 archived, and a message reopens it.
@@ -136,7 +139,9 @@ The plan is a card with one row per thing Creator makes, at most 12. A first cam
 7. The workflow.
 8. Go live: the launch, after your OK.
 
-Each row shows its price at the right ("1 cr per email", "3 cr a page"). Open a row to read what it will do, what
+Each row shows its price at the right ("1 cr per email", "3 cr a page"). These labels still print the figures
+from before 26 November 2026: the wallet takes the current prices
+([what spends credits](/kb/workspace/plans-credits-and-billing#what-spends-credits)). Open a row to read what it will do, what
 Creator assumed and what it costs. **Skip this step** inside it leaves the row out. **Change**, or a reply in the
 chat, re-plans. The foot shows the expected spend and a cap ("~120 credits · cap 150 credits"): click it to edit the
 cap before the run.
@@ -148,8 +153,8 @@ every row but Go live, without asking anything, and starts nothing that sends.
 
 - The table and its columns are created. The paid columns run on each new row under a daily credit limit, and only
   people who pass the fit check get an email search and an opener.
-- The AI search starts collecting companies (3 credits a page that returns somebody, up to 100 pages), and the Find
-  people column searches each company as it lands (1 credit for each company where somebody is found).
+- The AI search starts collecting companies (0.5 credit a page that returns somebody, up to 100 pages), and the Find
+  people column searches each company as it lands (0.1 credit for each company where somebody is found).
 - The sender profile and the AI SDR's Brief are saved, and the pipeline gets its default stages.
 - A row that connects a channel waits for you with **Connect**, and the run moves on.
 - The workflow is saved as a draft, its audience the table's people who pass the fit check. Nothing is published.
@@ -194,7 +199,7 @@ wait for you, with **Connect** at the right:
   LinkedIn account** dialog: pick the proxy country, open the cloud browser and sign in to LinkedIn once
   ([Connect a LinkedIn account](/kb/sender-profiles/connect-linkedin)). The account sends nothing until its
   [first sync](/kb/sender-profiles/connect-linkedin#what-does-the-first-sync-of-a-linkedin-account-do) ends, and a
-  workflow step that comes due before then fails: with a large account, go live once the first sync is through.
+  workflow step that comes due before then waits and goes out once the sync is through.
 - **Email**: the mailbox row opens **Add mailbox** on the sender profile's **Email** tab. A mailbox connects once
   the plan has an email package: each package is one dedicated email server for the workspace, usually ready within
   minutes of the purchase, and the dialog's **Email server** field then shows the server the mailbox lands on
@@ -219,10 +224,9 @@ Replies land in **Messages** (https://app.getsales.io/messages), the workspace's
 
 - The plan's first row writes the AI SDR's Brief. The AI SDR starts as a draft: it labels each reply on its threads
   (**Interested**, **Not now**, **Out of office** and the rest) and drafts and sends nothing. It answers once it is
-  live, which needs every section of its Brief answered. Then the thread's mode decides whether it sends on its own:
-  on a **Co-pilot** thread, which is where every thread a workflow hands over starts, every message it writes waits
-  for your OK (a scenario on **Copilot** puts its whole plan up for it first), and on a thread you switch to
-  **Auto-pilot** from its mode pill in Unibox it sends on its own. Ask Creator to set it live, or see
+  live, which needs every section of its Brief answered. Then each reply's scenario decides whether it sends on its own:
+  on **Autopilot**, as most are, it answers on its own, and on **Copilot** its plan and its messages wait for your
+  OK. A mode you set on a thread from its mode pill in Unibox comes first. Ask Creator to set it live, or see
   [AI SDR](/kb/inbox/ai-sdr).
 - **Signals** in the sidebar shows what the people you write to do: an accept, a reply, a visit to your site
   ([Signals](/kb/signals/signals)), with a badge counting the new ones of the types you asked to be told about, and

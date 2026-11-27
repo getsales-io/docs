@@ -38,7 +38,7 @@ Connecting the same HubSpot account again from the same workspace updates its co
 | `crm.objects.contacts.read`, `crm.objects.contacts.write` | Finds the contact for a lead, creates or updates it, and logs messages, requests, emails and notes on it. |
 | `crm.objects.companies.read`, `crm.objects.companies.write` | Finds and writes the company of a row sent from a company table. |
 | `crm.schemas.contacts.read`, `crm.schemas.companies.read` | Reads your contact and company properties, so you can map fields and statuses to them. |
-| `crm.lists.read` (optional) | Reads your segments and their members, for the HubSpot segment source. |
+| `crm.lists.read` (optional) | Reads your segments and their members, for the CRM segment source. |
 | `sales-email-read` (optional) | Logs emails sent and received on the contact's timeline. |
 
 ### Allow optional access
@@ -58,13 +58,13 @@ Under **Activity sync** on the HubSpot card in Settings, each switch starts logg
 - **Log messages to the timeline**: LinkedIn messages your sender profiles send and receive, with their words.
 - **Log emails to the timeline**: emails sent and received, each with its subject and words. GetSales turns this on only when HubSpot has given it email access. If it has not, the switch says what to allow and stays off.
 - **Log connection requests**: a connection request sent, with its note, and its accept.
-- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as a note on the contact.
+- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as a note on the contact, when GetSales already knows the lead's HubSpot contact from an earlier message or request, a Send to CRM column or a segment. A hand-off of a lead with no known contact is skipped.
 
 A lead is matched to a contact the same way as in Send to CRM below. An event of a lead who matches no contact is not written, and it shows under **Recent failures**.
 
 ### Status and dates
 
-Click **Edit** next to **Status and dates** on the HubSpot card:
+Click **Set up** next to **Status and dates** on the HubSpot card (the button reads **Edit** once something is mapped):
 
 - **Status property**: the contact property that follows the conversation, such as Lead Status. For each event (connection request sent, connection accepted, message sent, replied) pick the value it sets, or leave it as is.
 - The status only moves forward, in the order of the events. A value someone set by hand that is not one of the mapped values stays. **Also replace** lists the values GetSales may replace, such as New.
@@ -77,16 +77,16 @@ Click **Edit** next to **Status and dates** on the HubSpot card:
 Add a **Send to CRM** column to a table and pick the HubSpot account under **Send to**:
 
 - **Matching**: a person is found by the HubSpot contact id they already hold, then by their LinkedIn profile, then by their work email or personal email. When none of these finds a contact, a new one is created from the row's name or email. A company is matched by its domain.
-- **Field mapping**: each HubSpot field you add gets its value from the row, written per row. Only mapped fields are written.
+- **Field mapping**: each HubSpot field you add gets its value from the row, written per row. Type `/` in a value to insert a column of the table. Only mapped fields are written.
 - **Send new rows**: when on, every row that lands in the table is sent as it arrives. When another column of the row is still filling its name or email, such as an enrichment, the send waits for it.
 
 Run the column on the rows you choose to send them at once. The cell shows the HubSpot record it wrote, or why HubSpot refused it.
 
 ### Read a HubSpot segment into a table
 
-In a table, open **Data sources** and choose **HubSpot segment**:
+In a table, open **Data sources** and choose **CRM segment**:
 
-1. Pick the account and type to find the segment by name.
+1. Under **CRM account** pick the HubSpot account, then type under **Segment** to find the segment by name.
 2. Under **Sync**, choose every hour, every day or every week. Contacts added to the segment are added to the table. Contacts removed from it leave the table's campaigns.
 3. Under **Columns from HubSpot**, add up to 25 contact properties, each with a column name of your own. Name, email, company, title and LinkedIn profile always come. A mapped property's value wins over enrichment and follows HubSpot on every sync.
 
@@ -103,8 +103,9 @@ In a table, open **Data sources** and choose **HubSpot segment**:
 On the HubSpot card in [https://app.getsales.io/settings/integrations](https://app.getsales.io/settings/integrations), open the account's actions and click **Delete**:
 
 - Every sync of that account stops: no more rows sent, activity logged or segments read.
-- GetSales revokes its access at HubSpot, unless another GetSales workspace of yours still uses the same HubSpot account.
+- GetSales deletes its copy of the access. HubSpot gives one access per HubSpot account to every GetSales workspace connected to it, so the app stays installed in the account; to remove it there too, uninstall it as described below.
 - What is already written stays: contacts, companies, notes and timeline records in HubSpot, and people, rows and column values in GetSales.
+- Connecting the same account again after a Delete makes a new connection with no settings: turn its switches on and set Status and dates again, pick it in each Send to CRM column, and create its sources again. A source of the deleted connection stops as Failed and keeps its people.
 
 ## Uninstall from HubSpot
 
@@ -114,7 +115,7 @@ After an uninstall GetSales can no longer read or write that account. The connec
 
 ## Troubleshooting
 
-- **"HubSpot needs a name or an email for a new contact"**: the row matched no contact and has neither a name nor an email to create one. Enrich the row or fill one of them, then run the cell again.
+- **"Not created: HubSpot needs a name or an email for a new contact."**: the row matched no contact and the column sends neither an email nor a name. HubSpot gets only the fields you map: map First name or Last name under **Field mapping**, or give the row an email, then run the cell again.
 - **Segments say the account was connected before segments could be read**: allow lists access (see [Allow optional access](#allow-optional-access)) and connect again.
 - **Log emails will not turn on**: allow email access for GetSales.io in HubSpot's Data Permissions, then connect the account again.
 - **The account needs attention**: HubSpot refused its access, often after an uninstall or a removed user. Connect it again.

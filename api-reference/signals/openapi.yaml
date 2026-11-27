@@ -910,10 +910,10 @@ components:
             - "off"
             - key_pages
             - all_known
-          description: "off | key_pages (default) | all_known: when a known person on the site alerts the team now."
+          description: "off (default) | key_pages | all_known: when a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner). Turn it on only when the person asks for it."
         live_alert_tasks:
           type: boolean
-          description: A live alert also opens a task, due now, on the person's open threads. Default true; false sends the notice alone.
+          description: "A live alert also opens a task, due now, on the person's open threads. Default false: the email goes alone."
         live_alert_task_minutes:
           type: integer
           nullable: true
@@ -1221,10 +1221,10 @@ components:
                 - "off"
                 - key_pages
                 - all_known
-              description: "When a known person on the site alerts the team now: off, key_pages (default: a key page reached), all_known (any visit)."
+              description: "When a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner): off (default: a person turns it on), key_pages (a key page reached), all_known (any visit)."
             live_alert_tasks:
               type: boolean
-              description: "A live alert also opens a task, due now, on each of the person's open threads. false: only the notice goes. Default true."
+              description: "A live alert also opens a task, due now, on each of the person's open threads. false (default): only the email goes."
             live_alert_task_minutes:
               type: integer
               nullable: true
@@ -1902,10 +1902,10 @@ components:
                 - "off"
                 - key_pages
                 - all_known
-              description: "When a known person on the site alerts the team now: off, key_pages (default: a key page reached), all_known (any visit)."
+              description: "When a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner): off (default: a person turns it on), key_pages (a key page reached), all_known (any visit)."
             live_alert_tasks:
               type: boolean
-              description: "A live alert also opens a task, due now, on each of the person's open threads. false: only the notice goes. Default true."
+              description: "A live alert also opens a task, due now, on each of the person's open threads. false (default): only the email goes."
             live_alert_task_minutes:
               type: integer
               nullable: true
@@ -2957,10 +2957,10 @@ components:
                 - "off"
                 - key_pages
                 - all_known
-              description: "When a known person on the site alerts the team now: off, key_pages (default: a key page reached), all_known (any visit)."
+              description: "When a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner): off (default: a person turns it on), key_pages (a key page reached), all_known (any visit)."
             live_alert_tasks:
               type: boolean
-              description: "A live alert also opens a task, due now, on each of the person's open threads. false: only the notice goes. Default true."
+              description: "A live alert also opens a task, due now, on each of the person's open threads. false (default): only the email goes."
             live_alert_task_minutes:
               type: integer
               nullable: true
@@ -5999,10 +5999,10 @@ components:
                       - "off"
                       - key_pages
                       - all_known
-                    description: "When a known person on the site alerts the team now: off, key_pages (default: a key page reached), all_known (any visit)."
+                    description: "When a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner): off (default: a person turns it on), key_pages (a key page reached), all_known (any visit)."
                   live_alert_tasks:
                     type: boolean
-                    description: "A live alert also opens a task, due now, on each of the person's open threads. false: only the notice goes. Default true."
+                    description: "A live alert also opens a task, due now, on each of the person's open threads. false (default): only the email goes."
                   live_alert_task_minutes:
                     type: integer
                     nullable: true
@@ -7144,10 +7144,10 @@ components:
             - "off"
             - key_pages
             - all_known
-          description: "off | key_pages (default) | all_known: when a known person on the site alerts the team now."
+          description: "off (default) | key_pages | all_known: when a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner). Turn it on only when the person asks for it."
         live_alert_tasks:
           type: boolean
-          description: A live alert also opens a task, due now, on the person's open threads. Default true; false sends the notice alone.
+          description: "A live alert also opens a task, due now, on the person's open threads. Default false: the email goes alone."
         live_alert_task_minutes:
           type: integer
           nullable: true
@@ -7455,10 +7455,10 @@ components:
                 - "off"
                 - key_pages
                 - all_known
-              description: "When a known person on the site alerts the team now: off, key_pages (default: a key page reached), all_known (any visit)."
+              description: "When a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner): off (default: a person turns it on), key_pages (a key page reached), all_known (any visit)."
             live_alert_tasks:
               type: boolean
-              description: "A live alert also opens a task, due now, on each of the person's open threads. false: only the notice goes. Default true."
+              description: "A live alert also opens a task, due now, on each of the person's open threads. false (default): only the email goes."
             live_alert_task_minutes:
               type: integer
               nullable: true
@@ -7844,10 +7844,10 @@ components:
                 - "off"
                 - key_pages
                 - all_known
-              description: "When a known person on the site alerts the team now: off, key_pages (default: a key page reached), all_known (any visit)."
+              description: "When a known person on the site alerts the team now, by email to whoever works the conversation (else the workspace owner): off (default: a person turns it on), key_pages (a key page reached), all_known (any visit)."
             live_alert_tasks:
               type: boolean
-              description: "A live alert also opens a task, due now, on each of the person's open threads. false: only the notice goes. Default true."
+              description: "A live alert also opens a task, due now, on each of the person's open threads. false (default): only the email goes."
             live_alert_task_minutes:
               type: integer
               nullable: true

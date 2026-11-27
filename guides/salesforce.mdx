@@ -55,13 +55,13 @@ Under **Activity sync** on the Salesforce card in Settings, each switch starts l
 - **Log messages to the timeline**: LinkedIn messages your sender profiles send and receive, with their words.
 - **Log emails to the timeline**: emails sent and received, each with its subject and words. Leave it off when your team already logs its mailboxes into Salesforce, so an email is not there twice.
 - **Log connection requests**: a connection request sent, with its note, and its accept.
-- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as a task on the record.
+- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as a task on the record, when GetSales already knows the lead's record from an earlier message or request, a Send to CRM column or a campaign or list view. A hand-off of a lead with no known record is skipped.
 
-Each event is a completed task on the lead or contact: its subject says who wrote to whom, its comments hold the words, and its date is the day the event happened. A LinkedIn event reaches Salesforce when GetSales reads it from the sender profile's conversations, within the profile's sync hours: one sent outside them lands when they open, dated by its own day. Where the org's task types include LinkedIn, a LinkedIn event is a LinkedIn task. The task belongs to the user who connected the org. A lead is matched the same way as in Send to CRM below; an event of a lead who matches no record is not written, and it shows under **Recent failures**. When a record is merged in Salesforce, the lead's next events land on the record Salesforce kept.
+Each event is a completed task on the lead or contact: its subject says who wrote to whom, its comments hold the words, and its date is the day the event happened. What a sender profile sends lands as it goes out. A lead's message, or one typed in LinkedIn itself, lands once the sender profile's LinkedIn account has read it, on its schedule inside the profile's sync hours. Each is dated by its own day. Where the org's task types include LinkedIn, a LinkedIn event is a LinkedIn task. The task belongs to the user who connected the org. A lead is matched the same way as in Send to CRM below; an event of a lead who matches no record is not written, and it shows under **Recent failures**. When a record is merged in Salesforce, the lead's next events land on the record Salesforce kept.
 
 ### Status and dates
 
-Click **Edit** next to **Status and dates** on the Salesforce card:
+Click **Set up** next to **Status and dates** on the Salesforce card (the button reads **Edit** once something is mapped):
 
 - **Status field**: a picklist that follows the conversation. Each field shows where it lives: on Lead and Contact, on Lead only, or on Contact only. For each event (connection request sent, connection accepted, message sent, replied) pick the value it sets, or leave it as is.
 - One field name serves leads and contacts. To move both, keep a picklist with the same API name on Lead and on Contact, such as Outreach Status. The lead's own **Lead Status** moves leads only, and contacts stay as they are.
@@ -75,7 +75,7 @@ Click **Edit** next to **Status and dates** on the Salesforce card:
 Add a **Send to CRM** column to a table and pick the Salesforce org under **Send to**:
 
 - **Matching**: a person is found by the Salesforce lead or contact id they already hold, then by their LinkedIn profile in your LinkedIn field, then by their work email or personal email. A contact is preferred to a lead on every step, a converted lead is its contact, and a record merged into another is the one Salesforce kept. When none of these finds one, a new lead is created from the row's name and company, with the LinkedIn link written into the lead's LinkedIn field.
-- **Field mapping**: each field you add gets its value from the row, written per row. Only mapped fields are written. A field the matched record does not have (a lead's Company on a contact) is left out of that write. For a picklist, write the value as Salesforce names it.
+- **Field mapping**: each field you add gets its value from the row, written per row. Type `/` in a value to insert a column of the table. Only mapped fields are written. A field the matched record does not have (a lead's Company on a contact) is left out of that write. For a picklist, write the value as Salesforce names it.
 - **Send new rows**: when on, every row that lands in the table is sent as it arrives. When another column of the row is still filling its name or email, such as an enrichment, the send waits for it.
 
 Run the column on the rows you choose to send them at once. The cell shows the Salesforce record it wrote, or why Salesforce refused it.
@@ -93,13 +93,13 @@ In a table, open **Data sources** and choose **CRM segment**:
 
 ## Use it
 
-- **Automated:** rows are sent as they arrive when Send new rows is on, activity is logged as GetSales reads it, statuses and dates move with each event, and campaigns and views sync on their schedule.
+- **Automated:** rows are sent as they arrive when Send new rows is on, activity is logged as it happens, statuses and dates move with each event, and campaigns and views sync on their schedule.
 - **Manual:** run a Send to CRM column on chosen rows, or click Sync now on a campaign or view source.
 - **See what happened:** a lead's card shows a **CRM** section with the Salesforce record the lead was matched to, how it was found, and the lead's recent Salesforce calls with each failure's reason. The Salesforce card in Settings lists the org's recent failures.
 
 ## Salesforce's API limits
 
-Every integration and user of a Salesforce org shares one daily pool of API requests, counted over a rolling 24 hours: 15,000 for a Developer Edition org, 100,000 plus 1,000 per Salesforce license for Enterprise Edition. GetSales reads where the pool stands on every answer. Once the org has used 90% of it, GetSales pauses its own calls to that org for an hour, so the rest stays for your other tools, and then picks up where it stopped: nothing is lost and nothing is written twice. A task costs one request (two for a lead), a status and date write two, a lead's first match up to five.
+Every integration and user of a Salesforce org shares one daily pool of API requests, counted over a rolling 24 hours: 15,000 for a Developer Edition org, 100,000 plus 1,000 per Salesforce license for Enterprise Edition. GetSales reads where the pool stands on every answer. Once the org has used 90% of it, GetSales pauses its own calls to that org for an hour, so the rest stays for your other tools, and then picks up where it stopped: nothing is lost and nothing is written twice. A Send to CRM cell that meets the pause fails with Rate limit reached: run the rows with errors again an hour later. A task costs one request (two for a lead), a status and date write two, a lead's first match up to five.
 
 ## Disconnect
 
@@ -108,6 +108,7 @@ On the Salesforce card in [https://app.getsales.io/settings/integrations](https:
 - Every sync of that org stops: no more rows sent, activity logged or campaigns and views read.
 - GetSales revokes its access at Salesforce and deletes its copy. Other workspaces connected to the same org keep theirs.
 - What is already written stays: leads, contacts, accounts and tasks in Salesforce, and people, rows and column values in GetSales.
+- Connecting the same account again after a Delete makes a new connection with no settings: turn its switches on and set Status and dates again, pick it in each Send to CRM column, and create its sources again. A source of the deleted connection stops as Failed and keeps its people.
 
 ## Uninstall from Salesforce
 
@@ -119,7 +120,7 @@ To come back, install GetSales Sync again and click **Connect another org** with
 
 - **"A Salesforce lead needs a company"**: the row matched no record and has no company to create a lead with. Map Company in the column, fill the row's company, or create the person as a contact.
 - **Leads are not found by their LinkedIn profile**: keep the LinkedIn link in a URL or text field on Lead and on Contact (a long text area cannot be searched), or pick your field under **Status and dates**, **LinkedIn link**. Pick it there too when your org has two LinkedIn fields.
-- **A campaign source stopped with "list not found"**: the campaign was deleted, or the connected user can no longer see it. Nobody is taken out of the table for it; pick the campaign again or another one.
+- **A campaign source stopped as Failed** ("The CRM refused the list: it was deleted or is not a list of contacts. Pick it again in a new source."): the campaign was deleted, or the connected user can no longer see it. Nobody is taken out of the table for it. Make the campaign visible to that user again and click **Resume import**, or create a new source on another campaign.
 - **Salesforce refuses the connection**: the org has not installed GetSales Sync, your user is not permitted to use it, or your user has no API access. Ask an admin to check the steps under Install GetSales Sync.
 - **The connect or later calls fail for a user whose profile limits login IP ranges**: Salesforce holds GetSales Sync to the same ranges by default. In External Client App Manager, open **GetSales Sync**, then **Policies**, and set **IP Relaxation** to **Relax IP restrictions**, or ask [support@getsales.io](mailto:support@getsales.io) for the addresses GetSales calls from and add them to the profile's ranges.
 - **The org reads Failed, or calls are refused**: Salesforce refused its access, often after an admin revoked it or uninstalled GetSales Sync, the user was deactivated, or the connection made no call for 30 days. Install the package again if it was uninstalled, then click **Connect another org** with the same org: it comes back with its settings.

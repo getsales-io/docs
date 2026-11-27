@@ -1,7 +1,7 @@
 ---
 title: "AI SDR"
 sidebarTitle: "AI SDR"
-description: "The GetSales AI SDR (agents, ub_ag_) labels each reply on the threads it works as one of 15 platform scenarios or one of your own, runs the scenario's steps, and answers: on its own on a thread in Auto-pilot, as drafts for your OK in Co-pilot, where every thread a workflow hands over starts. A scenario on Copilot first puts its plan up for your OK, unless the thread's own mode is Auto-pilot. A workspace's first agent, AI SDR, is a draft that only labels replies until its Brief is complete and its state is on. At https://app.getsales.io it is set up through Creator or an AI assistant on the GetSales MCP, as the app's Agents section is not open there. While live it hands a thread to a person, by default, on a legal or security question, a question its Brief and Knowledge cannot answer, a third reschedule, a reply it cannot read with confidence, a job seeker or a support request, and always on a file. At its credits cap (40 a thread by default) the thread goes to a person whatever the agent's state. A thread stops as Stalled after its follow-ups (3 by default). It is told never to mention tracking or quote a price its Brief or Knowledge does not state. Its work spends credits, labels included, and sending spends none. API: get_agent, update_agent, update_agent_scenario, update_conversation, approve_messages, cancel_messages, update_task."
+description: "The GetSales AI SDR (agents, ub_ag_) labels each reply on the threads it works as one of 15 platform scenarios or one of your own, runs the scenario's steps, and answers: on its own where the reply's scenario is on Autopilot, as drafts for your OK where it is on Copilot, unless the thread's own mode, set from its pill, says otherwise. It needs an AI SDR license on the workspace's plan ($99 a month, and a trial holds one), and an agent switched off labels replies and does nothing else. A workspace's first agent, AI SDR, is a draft that only labels replies until its Brief is complete and its state is on. At https://app.getsales.io it is set up through Creator or an AI assistant on the GetSales MCP, as the app's Agents section is not open there. While live it hands a thread to a person, by default, on a legal or security question, a question its Brief and Knowledge cannot answer, a third reschedule, a reply it cannot read with confidence, a job seeker or a support request, and always on a file. At its credits cap (40 a thread by default) the thread goes to a person whatever the agent's state. A thread stops as Stalled after its follow-ups (3 by default). It is told never to mention tracking or quote a price its Brief or Knowledge does not state. Its model calls spend credits at the model's own price, labels included, and sending spends none. API: get_agent, update_agent, update_agent_scenario, update_conversation, approve_messages, cancel_messages, update_task."
 ---
 
 The AI SDR labels every reply on the threads it works and answers it: on its own, or as a draft that waits for your
@@ -27,16 +27,15 @@ The AI SDR answers a reply in a fixed order, and each step can stop it:
 2. **It classifies the reply** as one scenario: one of the platform's (**Interested**, **Meeting request**, **Info
    request**, **Not now**, **Out of office**, **Auto-reply**, **Objection**, **Referral**, **Wrong person**, **Not
    interested**, **Do not contact**, **Vendor pitch**, **Reschedule request**, **Cancel request**, **Low signal**)
-   or one of your own, with how sure it is and why. An agent that is a draft stops here, except that a
-   **Do not contact** reply still puts the person on your stoplist. A paused agent does not stop here: it skips the
-   hand-offs below and goes on to plan, write and send as the thread's mode says.
+   or one of your own, with how sure it is and why. An agent that is a draft or paused stops here, except that a
+   **Do not contact** reply still puts the person on your stoplist.
 3. **It checks the hand-offs.** A reply that must go to a person opens a task for you. Until the task is closed,
    the AI SDR plans and writes nothing more on that thread, and only labels new replies.
 4. **It runs the scenario's steps**: a reaction, a stage move, a message, the dialog led toward your goal, a wait, a
    task, the stoplist.
-5. **The thread's mode decides how a message goes out**: on its own on an **Auto-pilot** thread, as a draft for your
-   OK on a **Co-pilot** one. A scenario on **Copilot** first puts its whole plan up for your OK, unless the thread's
-   own mode is **Auto-pilot**.
+5. **The scenario's level decides how a message goes out**: on its own on **Autopilot**, as a draft for your OK on
+   **Copilot**, where the whole plan first waits for your OK. A mode you set on the thread from its pill comes
+   first: **Auto-pilot** sends, **Co-pilot** drafts, **Off** keeps the AI SDR out.
 6. **It keeps to its limits.** At the credits cap, or when the lead writes again past the 10 messages of a dialog it
    leads, the thread comes to you with a task in **Needs you**. When the lead stays quiet after its last follow-up,
    or at the message cap on a thread whose own mode is **Auto-pilot**, or that has none and whose latest reply's
@@ -54,10 +53,10 @@ to it:
 
 - **In a workflow:** **After a reply** set to **Hand over to the AI SDR** (`on_reply` `ai_sdr`, the default of a new
   workflow) gives the workflow's replies to the agent picked under **AI SDR**: the table's, unless you pick another.
-  Those threads start in **Co-pilot**. See [build an outreach workflow](/kb/workflows/build-a-workflow).
+  Its scenarios decide what it sends on its own. See [build an outreach workflow](/kb/workflows/build-a-workflow).
 - **Outside any workflow:** the agent's **Outside a workflow** setting (its `mode`): **Co-pilot** (the default for a
-  new agent), **Auto-pilot** or **Off**. It is the mode of those threads unless a thread has its own, and **Off**
-  keeps the AI SDR out of them.
+  new agent), **Auto-pilot** or **Off**. **Off** keeps the AI SDR out of those threads, and the other two decide a thread on
+  which no reply was labelled yet.
 - **Which agent:** a table's **AI SDR**, picked from the table's menu, is the agent that takes its people's replies:
   in the table's workflows that hand replies over, and outside a workflow. The workflow's own pick comes first, then
   the table's, then the workspace's **Default** agent.
@@ -76,6 +75,11 @@ At https://app.getsales.io you set the AI SDR up through Creator or an AI assist
 there. Your workspace starts with one agent, named **AI SDR** and marked **Default**, as a draft (`state`
 `setup_required`): it labels the replies on the threads it works and answers none until it goes live. Changing an
 agent takes the **Manage** permission on **Agents** ([team members and roles](/kb/workspace/team-members-and-roles)).
+
+The AI SDR needs an AI SDR license on the workspace's plan. A trial holds one. A paid plan holds one when **The AI
+SDR for this workspace** is on in **Buy resources** or **Change plan** ($99 a license a month), the Free plan holds
+none, and a plan bought before 26 November 2026 holds none until the AI SDR is added in **Change plan**:
+[Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
 
 1. **Write the Brief**, what the AI SDR knows about you, read before every answer. A new agent's Brief is a template
    of five headings, each with a bracketed slot: **Who it answers** (role, company, size, where), **What we sell**
@@ -116,10 +120,15 @@ real reply first ([`start_agent_test`](/api-reference/unibox/agent_tests/test-th
 sent). A draft (`setup_required`) is refused `on` (422 `validation_failed`, its message on `state` naming
 `setup_incomplete`) until every section of its Brief has an answer and no bracketed slot is left, and
 [`get_agent`](/api-reference/unibox/agents/get-agent) with `include` `readiness` lists what is left. Until then it
-labels the replies on the threads it works and answers none. `off` pauses it only in part today: a paused agent
-still labels and answers new replies and still follows up, on its own or as drafts as the thread's mode says. What
-stops is a hand-off on **Always to a person** or a file, the follow-ups it plans after your own message, and
-**Regenerate draft**.
+labels the replies on the threads it works and answers none. In a workspace with no AI SDR license, `on` is refused
+with `402` `ai_sdr_not_in_plan`: "This workspace has no AI SDR license. Add the AI SDR in Settings, Billing." So are
+a test, a regenerated draft, a retry and a plan's approval.
+
+`off` pauses it: a paused agent labels each new reply and does nothing else. It plans, writes and sends nothing, its
+plans and follow-ups wait where they stand, and a draft already waiting stays for you to approve. Set it back to `on`
+and it goes on from there within about 15 minutes: a reply that came meanwhile is read as if it had just arrived,
+unless it is older than the agent's recency window (30 days by default) or a hand-off task is open on the thread.
+What waited longer than that window is dropped, not sent.
 
 ## Where are the AI SDR's screens in the app?
 
@@ -136,9 +145,8 @@ section and slot of the Brief has an answer.
 
 ## How does the AI SDR decide between sending on its own and waiting for your OK?
 
-The thread's mode decides, as its mode pill in Unibox shows it. On **Auto-pilot** a message the AI SDR writes goes
-out on its own, within its limits. On **Co-pilot** every message waits as a draft for your OK. The pill shows the
-first of these that is set:
+The AI SDR decides in this order, and the first rule that applies wins. A message that goes out on its own stays
+within its limits, and one that waits is a draft for your OK:
 
 1. **The thread's own mode**, set from the pill (`agent_mode_override` on
    [`update_conversation`](/api-reference/unibox/conversations/update-conversation)): **Auto-pilot**
@@ -146,23 +154,29 @@ first of these that is set:
    replies are not labelled, nothing is planned or sent, nothing is spent). A mode you set from the pill applies to
    every thread of that person. When you write yourself in a thread whose dialog the AI SDR leads, and the thread
    has no mode of its own, that thread turns to **Co-pilot** until you clear it.
-2. **The workflow's After a reply**: **Hand over to the AI SDR** reads as **Co-pilot**.
-3. **The agent's Outside a workflow** setting, for a thread no workflow handed over.
+2. **Off from the workflow or the agent**: a thread whose workflow's **After a reply** is **Stop, I reply myself**
+   or **Continue the sequence**, or, outside a workflow, whose agent's **Outside a workflow** is **Off**, is left
+   alone.
+3. **The level of the scenario the newest labelled reply resolved to** (next section): **Autopilot** sends on its
+   own, **Copilot** waits for your OK.
+4. **Before any reply is labelled, or under a level that resolved to Off**: a thread a workflow handed over counts
+   as **Co-pilot**, and outside a workflow the agent's **Outside a workflow** setting decides.
 
-So on a thread a workflow handed over, every message the AI SDR writes waits for your OK until you set that
-thread's pill to **Auto-pilot**. The scenario's level (next section) holds a plan back for your OK, but never makes
-a **Co-pilot** thread send on its own.
+The pill shows the thread's own mode, else the workflow's, else the agent's. It does not show the scenario's level.
+So a thread a workflow handed over reads **Co-pilot** on its pill, and the AI SDR still answers on its own a reply
+whose scenario is on **Autopilot**, as most platform scenarios are. To have every message wait for your OK, set the
+scenarios to **Copilot**, or set the thread's pill to **Co-pilot**. A level you change applies from each lead's next
+reply.
 
 ## What does a scenario's level change?
 
 A scenario's level ([`update_agent_scenario`](/api-reference/unibox/agent_scenarios/update-agent-scenario)) shapes
-what the AI SDR does with a reply of that scenario, under the thread's mode. It never makes a **Co-pilot** thread
-send on its own:
+what the AI SDR does with a reply of that scenario. A mode set on the thread from its pill comes first:
 
 | Level | `level` | What happens |
 |---|---|---|
-| **Autopilot** | `autopilot` | The plan runs without asking. Its messages go out on their own on an **Auto-pilot** thread and wait as drafts on a **Co-pilot** one |
-| **Copilot** | `copilot` | The plan waits for your OK (**Plan suggested**) before any step runs, unless the thread's own mode is **Auto-pilot** |
+| **Autopilot** | `autopilot` | The plan runs without asking and its messages go out on their own, also on a thread a workflow handed over. Only a thread whose own mode, set from the pill, is **Co-pilot** holds them as drafts |
+| **Copilot** | `copilot` | The plan waits for your OK (**Plan suggested**) and its messages wait as drafts, unless the thread's own mode is **Auto-pilot**. In a dialog the AI SDR leads, its reply is drafted at once and waits for its own **Approve & send** while the plan waits |
 | **Conditional** | `conditional` | Reads your conditions on every reply: up to six, each in your own words with what the reply gets when it holds. When none holds, it acts as **Autopilot** |
 | **Off** | `off` | Drafts nothing: the chain runs without its messages |
 
@@ -265,6 +279,7 @@ The AI SDR's drafts and plans wait in the thread, and the thread sits in **Needs
 | **Handed to you** | Answer, then **Done, hand back to AI SDR** | [`update_task`](/api-reference/unibox/tasks/answer-or-update-a-task) |
 | **AI SDR could not answer** | **Try again**, or reply yourself | [`retry_conversation_agent`](/api-reference/unibox/conversations/ask-the-ai-sdr-to-try-again-on-a-conversation) |
 | **Waiting: out of credits** | Top up: it goes on by itself | |
+| **Waits for the AI SDR license** on a plan step, with its buttons greyed ("This workspace has no AI SDR license. A billing manager adds it in Settings, Billing.") | Add the AI SDR in **Settings**, **Subscription**, **Change plan**: what waited goes on by itself | |
 
 Each reply it labels gets a row in the thread: **Classified as**, the scenario and how sure it is, from 0 to 1, with
 its reason quoted under it.
@@ -280,11 +295,8 @@ can edit a draft (`update_message`), have it written again (`regenerate_message`
 
 To stop the AI SDR on a person's threads, use **Pause agent on this thread** or set the mode pill to **Off**: like
 any pill change it applies to every thread of that person, and their replies are no longer labelled or answered.
-Pausing the agent (`state` `off` with `update_agent`) does not stop its answers today: a paused agent applies no
-hand-off under **Always to a person**, nor for a file the lead attaches, and an open hand-off task no longer holds
-the thread, but it still labels each new reply, plans it and writes the answer, as a draft on a **Co-pilot** thread
-and sent on an **Auto-pilot** one. A step it planned before still runs, and a dialog it leads toward your goal still
-follows up. To keep it off a person's threads, set their pill to **Off**.
+Pausing the agent (`state` `off` with `update_agent`) stops it on every thread at once: it still labels each new
+reply, and plans, writes and sends nothing until it is `on` again.
 
 ## What does the AI SDR never do?
 
@@ -307,8 +319,8 @@ mention of tracking.
 
 ## What does the AI SDR spend?
 
-The AI SDR's work draws on your workspace's credits, the same ones the pricing page sells as data credits: the AI
-model's price plus 20%, at 25 credits a US dollar. Sending what it wrote spends none.
+The AI SDR needs an AI SDR license to work, and its model calls draw on your workspace's credits at the AI model's own
+price, at 20 credits a US dollar. Sending what it wrote spends none.
 
 | Work | Credits |
 |---|---|
@@ -321,23 +333,22 @@ model's price plus 20%, at 25 credits a US dollar. Sending what it wrote spends 
 
 <Warning>
 The AI SDR's thread cap is checked after each turn, so the turn that crosses it is charged in full before the
-thread is handed to you. A turn, a label included, starts only when your balance covers **7.5 credits**, the fuse
-that stops an ordinary turn. A turn that reads a lead's voice message stops at **15 credits**. A turn ends after
+thread is handed to you. A turn, a label included, starts only when your balance covers **5 credits**, the fuse
+that stops an ordinary turn. A turn that reads a lead's voice message stops at **10 credits**. A turn ends after
 the call that crosses its fuse, so it can cost a little more. Below the balance it needs, the thread shows
 **Waiting: out of credits**, the AI SDR tries again every ten minutes, and it goes on once you top up.
 </Warning>
 
 ## How do teams use the AI SDR?
 
-**Approve every message the AI SDR writes.** Leave a workflow's **After a reply** on **Hand over to the AI SDR**.
-Result, once the agent is live (`state` `on`): its threads run in **Co-pilot**, so every message waits in
-**Needs you** as **Draft · awaiting your approval**, and a reply on **Objection** or **Wrong person** first waits
-as **Plan suggested**. On a scenario set to **Autopilot**, a reaction and a stage move still run on their own.
+**Approve every message the AI SDR writes.** Set every scenario's level to **Copilot** (`level` `copilot` on
+`update_agent_scenario`). Result, once the agent is live (`state` `on`): every plan waits as **Plan suggested** and
+every message in **Needs you** as **Draft · awaiting your approval**. A level you change applies from each lead's
+next reply. On a scenario left on **Autopilot**, the plan and its messages go out on their own.
 
-**Let routine replies go on their own outside workflows, keep interested leads for your OK.** Set the agent's
-**Outside a workflow** to **Auto-pilot** (`mode` `autopilot` on `update_agent`), and **Interested** and
-**Meeting request** to **Copilot** (`level` `copilot` on `update_agent_scenario`). Result, once the agent is live
-(`state` `on`): on threads no workflow handed over, an interested lead's reply waits as **Plan suggested**, and an
+**Let routine replies go on their own, keep interested leads for your OK.** Set **Interested** and
+**Meeting request** to **Copilot** (`level` `copilot` on `update_agent_scenario`) and leave the routine scenarios on
+**Autopilot**. Result, once the agent is live (`state` `on`): an interested lead's reply waits as **Plan suggested**, and an
 out-of-office reply gets one short nudge on its own, 3 days after the return date they named (21 days after their
 reply when they named none). A thread whose own pill is **Auto-pilot** runs every scenario on its own, Copilot ones
 included.
@@ -355,19 +366,20 @@ to you.
 
 ## What can the AI SDR not do?
 
-- The AI SDR does not send on its own on a thread in **Co-pilot**, whatever the scenario's level: threads a
-  workflow hands over start in Co-pilot.
+- The AI SDR does not work without an AI SDR license: it still labels replies, and plans, drafts, sends and hands
+  over nothing.
+- It does not send on its own on a thread whose own mode, set from the pill, is **Co-pilot**, whatever the
+  scenario's level. A thread a workflow hands over has no mode of its own, so there the scenario's level decides.
 - It does not answer while a hand-off task on the thread is open.
-- It does not read your [stoplist](/kb/tables/tables#what-does-the-stoplist-block-and-how-do-i-add-to-it): on each
-  thread, only a **Do not contact** label (a reply that asks not to be contacted, or **Add to stoplist** on that
-  thread) stops it. A person you stoplist from a table is still answered on their threads.
+- It does not write to someone on your [stoplist](/kb/tables/tables#what-does-the-stoplist-block-and-how-do-i-add-to-it):
+  the stoplist is read at every send, the AI SDR's and your own reply alike, and a message to a person on it is
+  refused until you remove the entry. A **Do not contact** label also blocks the thread.
 - It does not read a file a lead attaches: a document, an image, an audio file or a video hands the thread to you.
 - It does not place calls or send voice messages: it writes LinkedIn messages and emails.
 - It does not work LinkedIn group threads or, unless you turn it on, threads from the history import.
 - It does not follow up on threads synced from before it started, unless you turn that on.
-- It does not answer while it is a draft (`setup_required`): it only labels the replies, and labelling spends
-  credits. A paused agent (`off`) still answers new replies, as the thread's mode says (a draft for your OK on
-  Co-pilot, on its own on Auto-pilot). Neither a draft nor a paused agent hands a thread over on its
+- It does not answer while it is a draft (`setup_required`) or paused (`off`): it only labels the replies, and
+  labelling spends credits. Neither a draft nor a paused agent hands a thread over on its
   **Always to a person** triggers, but the credits cap still does: every turn on the thread, a label included,
   counts toward it. On a thread set to **Off** it does not even label them.
 

@@ -1,6 +1,6 @@
 ---
 title: "Unibox"
-description: "Unibox is a GetSales workspace's one inbox (Messages in the sidebar, https://app.getsales.io/messages): every reply to every sender profile, LinkedIn and email, as threads (one person and one account of a sender profile) whose status (Needs you, AI SDR handling, Waiting on lead, Stalled, Snoozed, Closed, in the API needs_you, agent, waiting, stalled, later, done) is set again after every message, draft or task. Its views are All replies, Sent, Snoozed and Tasks, with four saved filters kept in your browser and Agent scenarios counting the replied threads by the classification of their reply. The person's card beside a thread shows the AI SDR Summary, Conversations, Workflows (each with its state and step, such as Paused on reply #3), their Playtable row, CRM when the team has one connected, and Tags. A reply goes out as the thread's sender profile and spends no credits, Mark done and Snooze sit under the composer, and Return to orchestration resumes the workflows a reply paused. A LinkedIn reply arrives on the account's Messages sync, every 180 minutes by default or real-time at 15 minutes, inside its sync hours (Monday to Friday, 08:00 to 20:00 by default), and an email reply, once a mailbox is connected, on the mailbox's sync, every 15 minutes. A mailbox connects once the plan has an email package (one dedicated email server for the workspace), so on the trial, which has no email, only LinkedIn replies reach Unibox. API: search_conversations, update_conversation, send_message, retry_messages, return_conversation_to_orchestration."
+description: "Unibox is a GetSales workspace's one inbox (Messages in the sidebar, https://app.getsales.io/messages): every reply to every sender profile, LinkedIn and email, as threads (one person and one account of a sender profile) whose status (Needs you, AI SDR handling, Waiting on lead, Stalled, Snoozed, Closed, in the API needs_you, agent, waiting, stalled, later, done) is set again after every message, draft or task. Its views are All replies, Sent, Snoozed and Tasks, with four saved filters kept in your browser and Agent scenarios counting the replied threads by the classification of their reply. The person's card beside a thread shows the AI SDR Summary, Conversations, Workflows (each with its state and step, such as Paused on reply #3), their Playtable row, CRM when the team has one connected, and Tags. A reply goes out as the thread's sender profile and spends no credits, an email picks the mailbox it leaves from and takes Cc, Bcc, files and the sender profile's signature, Send later holds a message until a time and pauses it if the lead answers first, Mark done and Snooze sit under the composer, and Return to orchestration resumes the workflows a reply paused. A LinkedIn reply arrives on the account's Messages sync, every 180 minutes by default or real-time at 15 minutes, inside its sync hours (Monday to Friday, 08:00 to 20:00 by default), and an email reply, once a mailbox is connected, on the mailbox's sync, every 15 minutes. A mailbox connects once the plan has an email package (one dedicated email server for the workspace), so on the trial, which has no email, only LinkedIn replies reach Unibox. API: search_conversations, update_conversation, send_message, retry_messages, return_conversation_to_orchestration."
 ---
 
 Unibox is your GetSales workspace's one inbox. Every reply that reaches one of your sender profiles, on LinkedIn or
@@ -39,7 +39,7 @@ reply, the thread moves to **All replies**.
 | **All replies** | Every thread with a reply, closed ones included, except the snoozed ones. The thread with the newest message is on top. |
 | **Sent** | The threads nobody answered yet. Nothing there is unread. |
 | **Snoozed** | Threads put away until a date. |
-| **Tasks** | Replied threads with a task open: a hand-off of the AI SDR, a **Manual task** of a workflow (see [the Manual task step](/kb/workflows/build-a-workflow#what-does-a-manual-task-step-do)), a task someone made with **Create task** under the composer. A task on a thread nobody answered yet sits on that thread under **Sent**, and a workflow's **Manual task** for someone you have no conversation with does not show in Unibox. |
+| **Tasks** | Replied threads with a task open: a hand-off of the AI SDR, a **Manual task** of a workflow (see [the Manual task step](/kb/workflows/build-a-workflow#what-does-a-manual-task-step-do)), a scheduled message the lead's answer paused (**Scheduled message, paused**), a task someone made with **Create task** under the composer. A task on a thread nobody answered yet sits on that thread under **Sent**, and a workflow's **Manual task** for someone you have no conversation with does not show in Unibox. |
 
 **Senders** lists your sender profiles with the unread replies of each. From 8 sender profiles up, a search box
 (**Sender or assignee**) finds a sender profile by its name or its assignee's name, and, unless they all have the
@@ -130,9 +130,20 @@ sends or replies.
   group**, **New email thread** and **Hand over to a teammate** where they apply.
 - To send from another sender profile, pick it after **as** in the composer (the **Send as** menu). It opens its own
   thread with the person.
+- **from** picks the mailbox an email leaves from (the **Send from** menu). Each mailbox shows its state beside its address, such as **Active**, **Syncing**, **Sending paused** or **Reconnect needed**, with **Primary** and **This thread** where they apply, and only an active one can be picked. A reply leaves from the thread's own mailbox, which keeps it in the thread. Pick another mailbox and the email goes out as a new thread with the person, or into the thread that mailbox already has with them: a line under the pickers says which. On LinkedIn the sender profile's button shows the account's state, and a message to an account that cannot send right now waits.
 - An email that starts a new thread needs a **Subject**.
+- **Cc** and **Bcc**, on an email, take up to 5 addresses each. Cc opens with the people the thread already holds in copy, and Bcc with the mailbox's standing copy (the **BCC** on its card): remove that chip to send this one reply without it. The people you put in Cc join the thread once the email is out, so their answers land in it. An address on your stoplist is refused until you take it out.
+- **Insert signature** puts the sender profile's signature under an email. An email goes unsigned unless you insert it. The signature is written on the sender profile's **Variables** tab: [Sender profiles](/kb/sender-profiles/sender-profiles#where-does-a-sender-profile%E2%80%99s-signature-go).
+- **Attach files** (or drop files on the composer) sends up to 5 files with a message, 20 MB together, on LinkedIn and by email: documents (pdf, doc, docx, xls, xlsx, ppt, pptx, txt, csv, rtf), pictures (png, jpg, jpeg, gif, webp), video (mp4, mov), audio (mp3, m4a, wav) or a zip. A message with files needs words ("Write a message to go with the files.").
+- **Send later**, beside **Send**, offers **Tomorrow, 10:00**, **Monday, 10:00** or **Pick a date and time**. A time is read in the lead's time zone, or the workspace's when the lead's is not known. The message waits in the thread as **Scheduled**, with **Send now**, **Edit** and **Cancel**.
 - **New message** starts a conversation from scratch, to a LinkedIn profile or an email address. Two or more
   LinkedIn profiles start a group.
+
+If the lead answers before a scheduled message leaves, in this thread or in another thread of the same person, the message is paused and nothing sends itself. Its card reads **Paused**, with who answered before it left, the thread shows **Scheduled message paused**, and a task opens for whoever scheduled it (**Scheduled message, paused**): **Send anyway**, **Edit** or **Cancel** decides it.
+
+An email you send from Unibox is not tracked: it carries no open pixel and its links are not rewritten.
+
+Over the API, `send_message` takes `new_thread.email_account_sid` (the mailbox a first email leaves from, the primary one when left out), `cc` and `bcc` (up to 5 addresses each: `bcc` left out sends the mailbox's standing copy, `[]` sends none), `include_signature` (`true` signs an email), `attachments` (up to 5 files, each named by an https address, 20 MB together) and `scheduled_at`. A reply over the API copies only the addresses `cc` names. A message the lead's answer paused reads `hold_reason` `lead_replied`: [`update_message`](/api-reference/unibox/messages/update-message-draft) with a new `scheduled_at`, or `null` for now, sends it, and `cancel_messages` drops it.
 
 A LinkedIn message or InMail you sent can be deleted for both sides with **Delete** within **one hour** of sending
 it, in LinkedIn's own messenger only, not in Sales Navigator. The person sees that a message was deleted. An email
@@ -152,8 +163,8 @@ that failed reads **Send failed** with its reason:
   failed or a still queued message, drops it: it never goes out.
 
 Where a second try cannot help, only **Cancel** is offered: the recipient's server rejected the address, the address
-is on the do-not-send list, an email that starts a thread has no subject, LinkedIn restricted the sender's account,
-or the quoted message cannot be quoted.
+is on the do-not-send list, an email that starts a thread has no subject, the conversation holds no email address for the lead, LinkedIn restricted the
+sender's account, or the quoted message cannot be quoted.
 
 ## How do you close, snooze or send a Unibox thread back to its workflows?
 
@@ -289,7 +300,7 @@ the workspace's credits:
 | The AI SDR's labels, drafts and answers | The model's rate, capped per thread: see [AI SDR](/kb/inbox/ai-sdr) |
 | A lead's voice message turned into text, made when it arrives (an imported one's when you press **Play**), whether or not the AI SDR works the thread | The model's rate |
 | Dictation into the composer | The model's rate |
-| A work email found from the card, on a table with a Find work email column | 1 credit per address delivered. If the column has a verifier, each check it runs costs the verifier's rate too (0.1 or 1 credit), even for an address it rejects. A miss costs nothing |
+| A work email found from the card, on a table with a Find work email column | The finder's price for the address found (0.4 to 1.46 credits). If the column has a verifier, each check it runs costs the verifier's rate too (0.064 or 0.4 credit), even for an address it rejects. A miss costs nothing |
 
 ## What does Unibox not do?
 
@@ -300,7 +311,8 @@ the workspace's credits:
 - It does not filter on job title, industry or company size yet.
 - It does not read LinkedIn's read marker: reading a reply on LinkedIn leaves it unread in Unibox.
 - It does not send a failed message again on its own: **Send again** checks first, and you decide.
-- It does not send files yet: a message you send carries words only. Files a lead sends do show in the thread.
+- It does not send a scheduled message once the lead has answered: the message is paused, and you decide.
+- It does not send a file alone: a message with files needs words. Files a lead sends show in the thread.
 - It does not hand an email thread over to a teammate yet: a hand-over opens a LinkedIn group.
 - It does not mix workspaces: each workspace has its own Unibox.
 

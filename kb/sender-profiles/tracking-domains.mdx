@@ -1,0 +1,86 @@
+---
+title: "Set up a tracking domain"
+description: "Opens, clicks and the unsubscribe link of a mailbox are served from a subdomain of your own, a tracking domain. In a mailbox's card, Manage tracking domains opens the workspace's list: add a subdomain such as link.yourdomain.com, add the one CNAME record it shows at your DNS host as DNS only, click Check DNS, and once the domain reads Verified click Use for this mailbox. A domain reads Waiting for DNS, Record not found, Host not ready (the record is right and the host is still being set up, usually a few minutes) or Verified. With a verified domain set, the mailbox's Track opens and Track clicks switches work, and an unsubscribe link in an email step is signed. Without a verified tracking domain, a workflow whose Send email step holds an unsubscribe link or turns tracking on is not published (tracking_domain_required), and a due email that holds the link waits until a domain is verified."
+---
+
+A tracking domain is a subdomain of your own that serves a mailbox's open pixel, its click links and its unsubscribe link. Until a mailbox has a verified one, its opens and clicks are not counted, and an email that holds an unsubscribe link waits instead of going out without it.
+
+## Why does a mailbox need a tracking domain?
+
+Three things in an email are links to a server that counts them: the pixel that tells an open, the links that tell a click, and the unsubscribe link. They are served from a subdomain of yours, such as `link.yourdomain.com`. One tracking domain can serve several mailboxes of the workspace, and each mailbox is set on one.
+
+## How do you add a tracking domain?
+
+A tracking domain is added from a mailbox's card, on the sender profile's **Email** tab on [https://app.getsales.io/sender-profiles](https://app.getsales.io/sender-profiles).
+
+<Steps>
+<Step title="Open Tracking domains">
+
+Open the mailbox's card and, on the **Custom tracking domain** row, click the pencil, **Manage tracking domains**. The **Tracking domains** sheet lists the workspace's domains ("Opens, clicks and the unsubscribe link of a mailbox are served from a domain of yours. Add a subdomain, point it at us with one CNAME record at your DNS host, then set the mailbox on it."), or reads **No tracking domain yet.**
+
+</Step>
+<Step title="Add the subdomain">
+
+Under **Add a domain**, type a subdomain you do not use for anything else, such as `link.yourdomain.com`, and click **Add**. The field takes a hostname alone, with no `https://` and no path, and a subdomain, never the root of a domain. A hostname another workspace already uses is refused: "Another workspace already uses this hostname. Pick another subdomain".
+
+</Step>
+<Step title="Add the record at your DNS host">
+
+The domain's row shows one record ("Add this record at your DNS host, as DNS only (not proxied):") with its **Type** (CNAME), **Host** and **Value**, and **Copy the host** and **Copy the value** beside them. Add it where your domain's DNS is kept. At a DNS host that offers a proxy, switch the proxy off for this record.
+
+</Step>
+<Step title="Check DNS">
+
+Click **Check DNS**. While the record is not found the row reads **Waiting for DNS** or **Record not found** ("The record is not there yet. DNS can take a few hours to spread: check again later."). Once the record is found, the host is set up, which usually takes a few minutes: the row reads **Host not ready** and the list updates by itself, with no second click. Then it reads **Verified**.
+
+</Step>
+<Step title="Set the mailbox on it">
+
+On the verified domain's row, click **Use for this mailbox**. The row reads **Used by this mailbox**, and the card's **Custom tracking domain** row names the domain.
+
+</Step>
+</Steps>
+
+## What does each status of a tracking domain mean?
+
+| Status | What it means | What to do |
+|---|---|---|
+| **Waiting for DNS** | The record has not been found yet | Add the record, or wait for it to spread, then click **Check DNS** |
+| **Record not found** | The last check found no record, or one with another value | Compare the **Host** and the **Value** with the row, then click **Check DNS** |
+| **Host not ready** | The record is right, and the host does not serve tracking links yet | Read the line under the row. Most often nothing: the list updates by itself |
+| **Verified** | The host serves tracking links | Click **Use for this mailbox** |
+
+A row that reads **Host not ready** says why under it once you click **Check DNS**. Until then it says the host is not serving yet, which usually takes a few minutes after the record is found.
+
+| The row says | What to do |
+|---|---|
+| "The record is right and the host is being set up, which usually takes a few minutes. Nothing more is needed from you: this list updates by itself, and the domain can be used once it reads verified." | Wait |
+| "The record is right, but the certificate for this host was refused: a CAA record of your domain does not let Amazon issue it." with **CAA record to add:** and **Copy the CAA record** | Add the CAA record shown next to the ones your domain already has, then click **Check DNS**. The certificate is asked for again at most once every ten minutes |
+| "The record is right, but the certificate for this host was not issued." | Click **Check DNS** to ask for it once more. If it keeps failing, write to support@getsales.io |
+| "The record is right, but this host name is already in use: by another workspace, or at another provider on the network that serves tracking links, often a previous tracking tool." | Have it removed there, then click **Check DNS** |
+| "The record is right, but the host did not answer in time, so it could not be checked." | Click **Check DNS** in a minute |
+| "The record is right, but the host has no address behind it yet", "the host has no valid certificate yet" or "its tracking links do not reach the mailbox's email server yet" | Wait: nothing changes on your side, and the list updates by itself once the host is ready |
+| "The record is right, but the host resolves to an address that is not on the public internet" | Click **Check DNS** in a few minutes. If it stays, write to support@getsales.io |
+
+## How do you turn on open and click tracking?
+
+With a verified tracking domain set on the mailbox, switch on **Track opens** ("Counts who opened, unless a step says otherwise") and **Track clicks** ("Counts link clicks, unless a step says otherwise") on the mailbox's card. Without one, both read "Set a verified tracking domain first: opens and clicks are counted through it." A **Send email** step follows the mailbox's switches unless the step turns tracking on or off itself: [What does a Send email step need?](/kb/workflows/build-a-workflow#what-does-a-send-email-step-need).
+
+## How do you delete a tracking domain?
+
+Click the trash on the domain's row and confirm **Delete** ("Links and unsubscribe links in emails already sent through this domain may stop working, and their opens and clicks stop being counted."). A domain a mailbox sends through is not deleted ("This mailbox sends through it. Set another tracking domain on the mailbox, or none, first."): set the mailbox on another domain, or on none, first.
+
+## How does an AI assistant or a script set up a tracking domain?
+
+Over the API, and for Creator, the assistant inside the app, [`create_sender_profile_mailbox_tracking_domain`](/api-reference/unibox/sender_profiles/create-a-sender-profile-mailbox-tracking-domain) registers the subdomain and answers the one CNAME record to add, [`verify_sender_profile_mailbox_tracking_domain`](/api-reference/unibox/sender_profiles/verify-a-sender-profile-mailbox-tracking-domain) checks it, [`list_sender_profile_mailbox_tracking_domains`](/api-reference/unibox/sender_profiles/list-a-sender-profile-mailbox-tracking-domains) lists the workspace's domains with their records and statuses, [`update_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/update-a-sender-profile-mailbox) sets `email_tracking_domain_sid`, `track_opens` and `track_clicks` on the mailbox, and [`delete_sender_profile_mailbox_tracking_domain`](/api-reference/unibox/sender_profiles/delete-a-sender-profile-mailbox-tracking-domain) deletes a domain no mailbox is set on (`409` `tracking_domain_in_use` otherwise). The record itself is added at your DNS host by a person: no tool does that. A domain being set up turns verified by itself, so read the list again instead of checking in a loop. An assistant connected at the public address ([Connect your AI assistant](/kb/ai/connect-your-ai-assistant)) has none of these tools: they belong to the group that sets up a sender profile's accounts.
+
+## What does a tracking domain not do?
+
+- **No sending.** A tracking domain serves links. The mailbox's own domain is what mail is sent from, and its DNS is read on the card's **Domain health** row: [How do you check a mailbox's sending domain?](/kb/sender-profiles/connect-a-mailbox#how-do-you-check-a-mailbox%E2%80%99s-sending-domain).
+- **No tracking without it.** A mailbox with no verified tracking domain counts no opens and no clicks. In the workflow builder, **Insert unsubscribe link**, **Unsubscribe footer**, **Track opens** and **Track clicks** of a **Send email** step are held off while no mailbox of the workflow's sender profiles has a verified domain, and a draft that still asks for one of them is not published (`tracking_domain_required`). A due email that holds the unsubscribe link stays scheduled until a domain is verified ("Waits for a verified tracking domain: the email holds the unsubscribe link, and no mailbox it can go from has one."), and a step that turns tracking on for itself, sent from a mailbox without one, goes out untracked.
+- **No record added for you.** GetSales shows the record and checks it. Your DNS host is where it is added.
+
+## Related
+
+- [Connect a mailbox](/kb/sender-profiles/connect-a-mailbox): the mailbox's other settings.
+- [Build a workflow](/kb/workflows/build-a-workflow): the Send email step's tracking and unsubscribe link.

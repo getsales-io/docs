@@ -1,6 +1,6 @@
 ---
 title: "Find people at companies"
-description: "The Find people column (action_find_people) of a Companies tab turns your words into one search filter and searches each company for 1 to 25 people (1 by default), ranked by relevance, one company at a time. With Run on new rows on it searches each new company a companies source adds, never the companies a people source links, and a run you start covers the others. It costs 1 credit a company where somebody is found, plus 1 credit once to look up a company's LinkedIn id when the row holds only its page or website, and puts the people on the table's People tab linked to their company. A search tries each company once: running a cell again answers from that try, free."
+description: "The Find people column (action_find_people) of a Companies tab turns your words into one search filter and searches each company for 1 to 25 people (1 by default), ranked by relevance, one company at a time. With Run on new rows on it searches each new company a companies source adds and each company you add by hand, never the companies a people source links, and a run you start covers the others. It costs 0.1 credit a company where somebody is found, plus 0.1 credit once to look up a company's LinkedIn id when the row holds only its page or website, and puts the people on the table's People tab linked to their company. A search tries each company once: running a cell again answers from that try, free."
 ---
 
 The Find people column searches each company of a table for the people you describe and adds them to
@@ -84,9 +84,10 @@ A Find people column with **Run on new rows** on searches every new company that
 adds to the Companies tab, such as an AI search for companies or a CSV of companies. A sweep picks new
 companies up every minute.
 
-Other companies wait for a run you start: the companies a people source links to the Companies tab,
-companies added by hand or over the API, companies that already existed in the workspace, and the ones
-already in the table when you save the column. Run them with **Save and run rows that haven't run or
+Other companies wait for a run you start: the companies a people source links to the Companies tab, a
+company a source finds already in the workspace, and the ones already in the table when you save the
+column. A company you add by hand or over the API is searched by itself once it holds a domain or a
+LinkedIn page. Run them with **Save and run rows that haven't run or
 have errors**, or the column's header menu, **Run column**, **Run all N rows that haven't run**.
 
 Before a company is searched, the column checks it for free:
@@ -145,21 +146,21 @@ with `type: enrich`.
 
 ## What does Find people cost?
 
-Find people costs 1 credit for each company where somebody is found and nothing where nobody is, plus
-1 credit, once, to look up a company's LinkedIn id when the row has only its page or website, charged
+Find people costs 0.1 credit for each company where somebody is found and nothing where nobody is, plus
+0.1 credit, once, to look up a company's LinkedIn id when the row has only its page or website, charged
 even if nobody is then found:
 
 | What | Credits |
 |---|---|
-| A company where somebody is found | 1 |
+| A company where somebody is found | 0.1 |
 | A company where nobody is found | 0 |
-| Looking up a company's LinkedIn id when the row has only its page or website | 1, once per company, even if nobody is then found |
+| Looking up a company's LinkedIn id when the row has only its page or website | 0.1, once per company, even if nobody is then found |
 | A cell run again for a company the column's search already tried | 0 |
-| Building the search filter from your words | One AI call, plus 1 for each term it looks up |
+| Building the search filter from your words | One AI call, plus 0.1 for each term it looks up |
 | Check on save, when on | One AI call per 20 people |
 
-The drawer's line **1 credit per company searched, a miss is free.** and the run estimate count the
-searches, not the lookups. **Settings**, **Usage** lists the spend as **Find people**, **Identifier
+The drawer's line still reads **1 credit per company searched, a miss is free.**, the figure from before 26
+November 2026: the wallet takes 0.1. The run estimate counts the searches, not the lookups. **Settings**, **Usage** lists the spend as **Find people**, **Identifier
 lookups** and **Source check**.
 
 ## What happens when Find people reaches its daily limit or the credits run out?
@@ -220,7 +221,7 @@ Teams use Find people to turn a list of companies into a list of people, without
 Find people adds the people it finds at each company, and stops there:
 
 - Find people does not search by itself the companies a people source links to the Companies tab, or
-  the ones you add by hand or over the API: run the column for them.
+  the ones already in the table when you save the column: run the column for them.
 - Find people does not search a company twice with one search: a cell run again for a company the
   column's search already tried answers from that try, free.
 - Find people does not move a person who is already in another table of the workspace.

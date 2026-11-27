@@ -1,6 +1,6 @@
 ---
 title: "Connect your AI assistant"
-description: "Connect Claude, ChatGPT, Cursor, Claude Code or any MCP client to GetSales at https://mcp2.getsales.io/mcp/public (260 tools in 19 groups behind four meta-tools): you sign in on a GetSales consent page and pick the workspaces, and the assistant works tables, workflows, the inbox, the AI SDR, signals and settings with your permissions. A delete, a cancel, a publish or a plan change answers a preview first, whose token expires in 300 seconds. This address has no tool that sends a message, approves a draft or connects an account, but a workflow the assistant publishes still sends, and so does the AI SDR on a thread whose mode is Auto-pilot. 600 calls and 120 writes a minute per workspace. Disconnect it under Settings, Connected apps. A headless client uses an API key (gs_live_)."
+description: "Connect Claude, ChatGPT, Cursor, Claude Code or any MCP client to GetSales at https://mcp2.getsales.io/mcp/public (272 tools in 20 groups behind four meta-tools): you sign in on a GetSales consent page and pick the workspaces, and the assistant works tables, workflows, the inbox, the AI SDR, signals and settings with your permissions. A delete, a cancel, a publish or a plan change answers a preview first, whose token expires in 300 seconds. This address has no tool that sends a message, approves a draft or connects an account, but a workflow the assistant publishes still sends, and so does the AI SDR where a reply's scenario is on Autopilot. 600 calls and 120 writes a minute per workspace. Disconnect it under Settings, Connected apps. A headless client uses an API key (gs_live_)."
 ---
 
 Connect an AI assistant to GetSales once, and it works in your workspace when you ask: it builds tables and
@@ -26,11 +26,11 @@ events:
    **Allow**.
 3. The assistant receives a token that lasts one hour and renews itself. Your sign-in never passes through the
    assistant.
-4. From then on the assistant finds the tool it needs among 260 tools in 19 groups, through four tools of its
+4. From then on the assistant finds the tool it needs among 272 tools in 20 groups, through four tools of its
    own: `search_tools`, `describe_tool`, `call_tool` and `list_toolsets`.
 
 The assistant never does more than you can: in each workspace it holds at most the permissions you hold there
-(see [Team members and roles](/kb/workspace/team-members-and-roles)). Every tool is also an API operation: the
+(see [Team members and roles](/kb/workspace/team-members-and-roles)). Every tool but the two of `knowledge-base`, which read these docs, is also an API operation: the
 [API reference](/api-reference/overview) documents each one, with the tool's name as its operation id.
 
 ## What do I need before I connect an assistant?
@@ -131,7 +131,7 @@ permissions it holds: **Workspace and members**, **API keys, apps and sessions**
 permissions on the work itself: **Playtables** (tables), **People**, **Workflows**, **Conversations** (the inbox),
 **Agents** (the AI SDR), **Sender profiles**, **Signals** and **Stoplist**. Click an area to see one line per object
 with its verbs (**View**, **Manage** and the like). An assistant that registers itself asks for every permission of
-the catalog, 80 today: more than the 46 the permission picker under **Teammates** lists, since the consent card also
+the catalog, 83 today: more than the 46 the permission picker under **Teammates** lists, since the consent card also
 shows permissions that picker leaves out, most of them under **LinkedIn** and **Email**. A permission you do not hold
 in the workspace you are signed in to is dimmed, with a minus sign instead of a tick: in any workspace, the assistant
 never gets a permission you lack there. The consent page does not narrow them: **Scope** under Connected apps does,
@@ -178,7 +178,7 @@ An assistant connected to GetSales works almost everything you work on in the ap
 columns, rows, sources and workflows, the inbox and the AI SDR, signals and plays, and the workspace's team, keys,
 billing, website tracking, integrations, webhooks and white label. It reads sender profiles and what each did today,
 but it cannot act on a channel: it never sends, approves a draft or connects an account
-([what it cannot do](#what-can-the-assistant-not-do)). Its tools come in 19 groups named after what they belong to,
+([what it cannot do](#what-can-the-assistant-not-do)). Its tools come in 20 groups named after what they belong to,
 and if it looks in the wrong place, name the group: "look in playtables.crm".
 
 | Group | What the assistant can do | Try asking |
@@ -187,7 +187,7 @@ and if it looks in the wrong place, name the group: "look in playtables.crm".
 | `playtables.columns` | Add columns (Use AI, Find work email, API tool call, Find people on a Companies tab), try a prompt on one row, estimate and run with a cap, stop a run, read why a cell failed, change many rows at once | "Estimate the work email column on the 40 people without one. Do not run it." |
 | `playtables.rows` | Search people and companies, open a person's card, edit, merge companies, move a person, read the activity feed | "Who in the fintech table has a work email but no reply yet?" |
 | `playtables.crm` | Pipeline stages, tags, notes, and the stoplist (check, add, remove) | "Is maria@acme.example on the stoplist, and since when?" |
-| `playtables.sources` | Create a source (an AI search, a sender search on a sender profile's own account, a post engagement source, a Find people search, a webhook), import a CSV through an upload link, read a source's funnel, pause or delete it | "Why did only 80 of the 120 rows of yesterday's CSV make it in?" |
+| `playtables.sources` | Create a source (an AI search, a sender search on a sender profile's own account, a post engagement source, a Find people search, a webhook, a list of your CRM), see the companies a description fits before a source exists, import a CSV through an upload link, read a source's funnel, pause or delete it | "Why did only 80 of the 120 rows of yesterday's CSV make it in?" |
 | `playtables.workflows` | Build a workflow from a description (validated first), set its senders and sending windows, attach an audience, publish, pause, resume, delete | "Draft a workflow: an email, two days of waiting, a follow-up. Show me before you publish." |
 | `playtables.workflow-records` | See where each person is and why one stopped, pause, resume, restart or take a person out, edit a planned text or its time, skip a step | "Which step is Anna Keller on, and why did she stop?" |
 | `inbox` | Find and read threads, edit an AI SDR draft or ask for a new one, dismiss a draft or cancel a message not sent yet, close, snooze, set one thread's AI SDR mode, link a thread to a person, merge two threads, tasks | "Which replies are waiting for me, and what did the AI SDR draft for each?" |
@@ -199,12 +199,13 @@ and if it looks in the wrong place, name the group: "look in playtables.crm".
 | `workspace.access` | List API keys and revoke one, list connected apps and disconnect one | "Which keys have not been used in 60 days?" |
 | `workspace.billing` | Subscriptions, the price of a change before it is made, invoices and their PDF, the credit balance, what the credits went on | "How many credits do we have left, and what did enrichment cost this month?" |
 | `workspace.website-tracking` | Register a site (its level and your consent duty confirmed first), get the script, check the install, key pages and events | "Why does acme.example show no visits since Tuesday?" |
-| `workspace.integrations` | The price list of paid operations, your own API connections and tools, CRM connections and their fields, the call log | "What does email verification cost?" |
+| `workspace.integrations` | The price list of paid operations, your own API connections and tools, CRM connections with their fields, lists and sync settings, the call log, and the Slack channels that hear alerts | "What does email verification cost?" |
 | `workspace.webhooks` | Subscribe an endpoint to events, send a signed test, read deliveries, send failed deliveries again | "Which webhook deliveries failed this week, and why?" |
 | `workspace.whitelabel` | Brands on your own domain, their certificate and email domain, who registered (white label accounts only) | "Why is the partnerco.example certificate not live yet?" |
+| `knowledge-base` | Search these docs and read a page whole: how the product works, the guides and the API reference. It holds no workspace data | "How do sync hours work?" |
 
-A plan change ([`change_billing_subscription`](/api-reference/id/billing_subscriptions/change-the-plan:-linkedin-accounts-inboxes-credits))
-is open only to the subscription's owner. A CSV file does not travel through the chat: the assistant gets a
+A plan change ([`change_billing_subscription`](/api-reference/id/billing_subscriptions/change-the-plan:-data-subscription-linkedin-inboxes-ai-sdr-credits))
+is open to the subscription's buyer and to a member holding Billing Manage in the workspace the plan feeds. A CSV file does not travel through the chat: the assistant gets a
 single-use upload link that works for 15 minutes, the file goes to it as one plain HTTP `PUT`, and
 [`import_data_source`](/api-reference/playtables/data_sources/import-data-source) then confirms the column mapping
 and starts the import. An assistant that can run commands sends the file itself. With one that cannot, import the
@@ -253,11 +254,13 @@ anything" when it matters.
 
 The assistant spends credits from the workspace's balance only on paid work, the same work that costs credits in
 the app: email finding and verification, AI columns, Find people, enrichment, AI searches, a post's engagers read on
-our managed infrastructure, and the plays it switches on. Reading and editing are free. Two previews are paid:
+our managed infrastructure, and the plays it switches on. Reading and editing are free. Three previews are paid:
 seeing the filters an AI search would use
 ([`plan_data_source_filters`](/api-reference/playtables/data_sources/plan-data-source-filters)) costs what building
-the filter costs, one AI call plus 1 credit for each term it looks up (a term already looked up in the past week, or
-one that matches nothing, costs nothing), and trying a prompt on one row
+the filter costs, one AI call plus 0.1 credit for each term it looks up (a term already looked up in the past week, or
+one that matches nothing, costs nothing), seeing the companies a description fits
+([`preview_company_search`](/api-reference/playtables/data_sources/preview-company-search)) costs that plan and one
+page of results, and trying a prompt on one row
 ([`preview_playtable_field_run`](/api-reference/playtables/playtable_fields/preview-playtable-field-run)) costs what
 that row costs. Prices are in
 [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
@@ -267,16 +270,17 @@ that row costs. Prices are in
   expected and a maximum.
 - A run takes a cap, `max_budget`, and stops at it. A run with no cap is uncapped.
 - A column can carry a daily credit limit of its own (`daily_credit_limit`, per UTC day).
-- An AI search source has no estimate and no cap: it spends 3 credits on every page of results that returns
+- An AI search source has no estimate and no cap: it spends 0.5 credit on every page of results that returns
   someone, up to 100 pages, so a careful assistant says so and waits for your yes.
 - A plan change spends money, not credits: after its preview shows the amount, the confirm charges the
-  subscription's card. Only the subscription's owner can make it, and the assistant never types a card.
+  subscription's card. The buyer, or a member holding Billing Manage in the workspace the plan feeds, can make it,
+  and the assistant never types a card.
 
 ## What can the assistant not do?
 
 An assistant connected at `https://mcp2.getsales.io/mcp/public` has no tool that acts on a channel: it never sends a
 message, approves a draft or connects a LinkedIn account or mailbox itself, though a workflow it publishes still
-sends, and so does the AI SDR on any thread whose mode is Auto-pilot
+sends, and so does the AI SDR where a reply's scenario is on Autopilot
 ([which changes lead to sends](#which-of-the-assistant%E2%80%99s-changes-lead-to-messages-being-sent)). These stay
 in the GetSales app, where you do them yourself or ask Creator, the assistant inside the app, which has the tools for
 most of them and runs each one on your word. Keys, cards and the workspace itself are yours alone, and so is signing
@@ -310,8 +314,7 @@ The assistant cannot send, but GetSales sends on its own after these changes the
 resuming a workflow, adding people to a live workflow, attaching an audience to one, widening a view or filter
 audience (or changing tags or values so more people match it), moving a person into another table, handing a thread
 back to its workflow, resuming or restarting one person, moving a planned step's time into the past, switching a play
-on, putting a thread on **Auto-pilot** (or the agent, for threads outside workflows), and raising a scenario's level
-on **Auto-pilot** threads. When it matters, tell it to show you before any of these:
+on, putting a thread on **Auto-pilot**, setting the AI SDR live, and raising a scenario's level to **Autopilot**. When it matters, tell it to show you before any of these:
 
 - **A workflow it publishes and resumes** sends its steps on schedule, and both calls preview first. People it
   adds to a live workflow ([`add_workflow_people`](/api-reference/playtables/workflows/add-people-to-workflow), or a
@@ -334,8 +337,9 @@ on **Auto-pilot** threads. When it matters, tell it to show you before any of th
   a time moved into the past sends the step at once.
 - **A play it switches on** runs every day by itself, and a people play adds people to its workflow
   ([plays](/kb/signals/signals#what-is-a-play-and-how-do-i-switch-one-on)).
-- **The AI SDR's mode**: the thread's mode decides, as its mode pill in Unibox shows it. The AI SDR sends without
-  approval only on a thread whose mode is **Auto-pilot**. On **Co-pilot** every message it writes waits as a draft.
+- **The AI SDR's scenarios and modes**: the AI SDR sends without approval where the reply's scenario is on
+  **Autopilot**, as most are, unless the thread's own mode, set from its pill, is **Co-pilot** or **Off**. So raising
+  a scenario's level, or setting the agent live, leads to sends from each lead's next reply.
   How a thread's mode is decided:
   [AI SDR](/kb/inbox/ai-sdr#how-does-the-ai-sdr-decide-between-sending-on-its-own-and-waiting-for-your-ok). The
   assistant can change the agent's **Outside a workflow** mode
@@ -349,7 +353,7 @@ The GetSales server meters every workspace, so a looping assistant cannot flood 
 
 <Note>
 - 600 calls and 120 writes a minute per workspace (for an API key, per key).
-- A batch of at most 16 calls, and 25 seconds for each call.
+- A batch of at most 16 calls, and 25 seconds for each call (`preview_company_search` waits up to 150 seconds).
 - An answer over 48,000 characters loses rows off the end of its list, with a note saying how many and how to get
   them. A search page is then asked again at the size that fits, which counts as two calls. One record is never cut.
 
@@ -365,8 +369,9 @@ the workspace's cap on runs at once answers `429`, until one ends.
 ## How does the assistant learn how GetSales works?
 
 The GetSales connector gives an assistant the tools, and these docs give it the product: how sender profiles,
-tables, workflows and the inbox behave, and what each limit means. The GetSales connector does not search these
-docs. Add the documentation's own MCP server as a second connector, the same way as the GetSales one:
+tables, workflows and the inbox behave, and what each limit means. The GetSales connector reads these docs too:
+`search_knowledge` searches them and `get_kb_article` reads a page whole. The documentation's own MCP server is there
+for a client that wants the docs alone, added as a second connector the same way as the GetSales one:
 
 - Address: `https://docs.getsales.io/mcp`. Its tools, `search_get_sales` and `query_docs_filesystem_get_sales`,
   search and read the knowledge base, the guides and the API reference. It needs no sign-in and cannot change

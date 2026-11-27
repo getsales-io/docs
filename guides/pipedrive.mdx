@@ -27,7 +27,7 @@ Everything is set up from GetSales. Nothing is installed in Pipedrive by hand.
 
 Connect within 15 minutes of clicking Connect Pipedrive. A link that waited longer is refused, and you start again from step 2.
 
-Pipedrive installs an app per user: when a colleague connects the same company from their own Pipedrive user, it is a connection of its own.
+A workspace holds one connection per Pipedrive company. Pipedrive installs an app per user, so when a colleague connects the same company from their own Pipedrive user, the connection moves to that user and keeps its settings: GetSales then reads and writes what that user may.
 
 ### What GetSales can access
 
@@ -46,7 +46,7 @@ Under **Activity sync** on the Pipedrive card in Settings, each switch starts lo
 - **Log messages to the timeline**: LinkedIn messages your sender profiles send and receive, with their words.
 - **Log emails to the timeline**: emails sent and received, each with its subject and words. Leave it off when your team already syncs its mailboxes into Pipedrive, so an email is not there twice.
 - **Log connection requests**: a connection request sent, with its note, and its accept.
-- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as a note on the person.
+- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as a note on the person, when GetSales already knows the lead's Pipedrive person from an earlier message or request, a Send to CRM column or a saved filter. A hand-off of a lead with no known person is skipped.
 
 Each event is a note on the person, its first line saying who wrote to whom, then the words. A lead is matched to a person the same way as in Send to CRM below. An event of a lead who matches no person is not written, and it shows under **Recent failures**.
 
@@ -54,7 +54,7 @@ Pipedrive keeps at most 100 notes on a person. Past that, Pipedrive refuses a ne
 
 ### Status and dates
 
-Click **Edit** next to **Status and dates** on the Pipedrive card:
+Click **Set up** next to **Status and dates** on the Pipedrive card (the button reads **Edit** once something is mapped):
 
 - **Status field**: the person field that follows the conversation, a single option field or the person's labels. For each event (connection request sent, connection accepted, message sent, replied) pick the value it sets, or leave it as is.
 - The status only moves forward, in the order of the events. A value someone set by hand that is not one of the mapped values stays. On the labels, only the labels you mapped move, and every other label stays. **Also replace** lists the values GetSales may replace, such as New.
@@ -67,7 +67,7 @@ Click **Edit** next to **Status and dates** on the Pipedrive card:
 Add a **Send to CRM** column to a table and pick the Pipedrive company under **Send to**:
 
 - **Matching**: a person is found by the Pipedrive person id they already hold, then by their LinkedIn profile in your LinkedIn field, then by their work email or personal email. When none of these finds a person, a new one is created from the row's name or email, with the LinkedIn link written into your LinkedIn field. An organization is matched by its exact name, and its domain is written to Website.
-- **Field mapping**: each Pipedrive field you add gets its value from the row, written per row. Only mapped fields are written. For a field with options, such as a status field or the labels, write the option as Pipedrive names it (Contacted), any case; several labels go comma separated. A name the field does not have is refused in the cell with the options it has.
+- **Field mapping**: each Pipedrive field you add gets its value from the row, written per row. Type `/` in a value to insert a column of the table. Only mapped fields are written. For a field with options, such as a status field or the labels, write the option as Pipedrive names it (Contacted), any case; several labels go comma separated. A name the field does not have is refused in the cell with the options it has.
 - **Send new rows**: when on, every row that lands in the table is sent as it arrives. When another column of the row is still filling its name or email, such as an enrichment, the send waits for it.
 
 Run the column on the rows you choose to send them at once. The cell shows the Pipedrive record it wrote, or why Pipedrive refused it.
@@ -91,7 +91,7 @@ In a table, open **Data sources** and choose **CRM segment**:
 
 ## Pipedrive's API limits
 
-Every app and API token of a Pipedrive company shares one daily budget of API tokens, set by the company's plan and its number of seats, and Pipedrive also limits how many requests arrive in any two seconds. GetSales paces its own calls to stay under the two second limit. When Pipedrive answers that the company's day is spent, GetSales stops calling that company until Pipedrive's next reset and then picks up where it stopped: nothing is lost and nothing is written twice. A note costs 10 tokens, a status write about 6, and a lead's first match about 50 at most (more when many persons share a LinkedIn link).
+Every app and API token of a Pipedrive company shares one daily budget of API tokens, set by the company's plan and its number of users, and Pipedrive also limits how many requests arrive in any two seconds. GetSales paces its own calls to stay under the two second limit. When Pipedrive answers that the company's day is spent, GetSales stops calling that company until Pipedrive's next reset. Notes, status writes and filter reads then pick up where they stopped, and nothing is written twice. A Send to CRM cell waits out a short hold, trying again every minute for up to 15 minutes, but a cell that meets a spent day fails with Rate limit reached: run the rows with errors again after the reset. A note costs 10 tokens, a status write about 6, and a lead's first match about 50 at most (more when many persons share a LinkedIn link).
 
 ## Disconnect
 
@@ -100,6 +100,7 @@ On the Pipedrive card in [https://app.getsales.io/settings/integrations](https:/
 - Every sync of that company stops: no more rows sent, activity logged or filters read.
 - GetSales deletes its copy of the access. To remove the app from Pipedrive too, uninstall it as described below.
 - What is already written stays: persons, organizations and notes in Pipedrive, and people, rows and column values in GetSales.
+- Connecting the same account again after a Delete makes a new connection with no settings: turn its switches on and set Status and dates again, pick it in each Send to CRM column, and create its sources again. A source of the deleted connection stops as Failed and keeps its people.
 
 ## Uninstall from Pipedrive
 
@@ -109,7 +110,7 @@ After an uninstall GetSales can no longer read or write that company. The connec
 
 ## Troubleshooting
 
-- **"Pipedrive needs a name or an email for a new person"**: the row matched no person and has neither a name nor an email to create one. Enrich the row or fill one of them, then run the cell again.
+- **"Not created: Pipedrive needs a name or an email for a new contact."**: the row matched no person and has neither a name nor an email to create one. Enrich the row or fill one of them, then run the cell again.
 - **Leads are not found by their LinkedIn profile**: pick your LinkedIn field under **Status and dates**, **LinkedIn link**. Pipedrive's search matches the link as it is typed in the field, so a link typed with capital letters is found by the email instead.
 - **The company needs attention**: Pipedrive refused its access, often after an uninstall, a removed user, or 60 days with no call at all. Connect it again.
 - **Calls wait until tomorrow**: the company's daily API budget is spent, often by other apps or scripts on the same company. Pipedrive's admins can see the usage under Company settings, and buy more.

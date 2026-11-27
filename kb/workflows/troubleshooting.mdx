@@ -1,7 +1,7 @@
 ---
 title: "When a workflow does not send"
 sidebarTitle: "Workflow troubleshooting"
-description: "Why a GetSales workflow sends nothing, and the fix: nobody enters (a draft or paused workflow, no source, auto-add off, a full People limit, the stoplist, a person already in, whom only Restart from top, add_workflow_people with restart, a Move to workflow step or a play runs again), people wait (the sending window, a wait or delay, a sender profile's daily limit, a paused workflow, an accept wait decided after the account's LinkedIn sync, a suspended workspace), a step was skipped (already_connected, already_invited, required_fields_missing), failed (not_connected, email_missing, no_recent_post when the person has no post of their own from the last 90 days, no_endorsable_skills, nothing_to_withdraw, an account that needs attention or that no plan covers, with up to 3 attempts for a passing failure, at least 15 and then 30 minutes apart) or may have arrived already (send_unconfirmed), or a reply paused the person (paused_on_reply). Retry, Send now, Skip and Restart from top, with their API operations."
+description: "Why a GetSales workflow sends nothing, and the fix: nobody enters (a draft or paused workflow, no source, auto-add off, a full People limit, the stoplist, a person already in, whom only Restart from top, add_workflow_people with restart, a Move to workflow step or a play runs again), people wait (the sending window, a wait or delay, a sender profile's daily limit, a paused workflow, an accept wait decided after the account's LinkedIn sync, a mailbox that is paused or still syncing, a LinkedIn account in its first sync, an email that holds an unsubscribe link with no verified tracking domain, a suspended workspace), a step was skipped (already_connected, already_invited, required_fields_missing, no_endorsable_skills, recipient_suppressed), failed (not_connected, email_missing, no_recent_post when the person has no post of their own from the last 90 days, nothing_to_withdraw, an account that needs attention or that no plan covers, with up to 3 attempts for a passing failure, at least 15 and then 30 minutes apart) or may have arrived already (send_unconfirmed), or a reply paused the person (paused_on_reply). Retry, Send now, Skip and Restart from top, with their API operations."
 ---
 
 A GetSales workflow that sends nothing is almost always waiting for something it can name. The person's state in
@@ -93,8 +93,8 @@ wait at a source limit or are blocked at entry, or they were in it already. Chec
 ## Why do people sit in a workflow while nothing goes out?
 
 People sit in a workflow with nothing going out when the sending window is closed, the workflow is paused, a step
-waits on purpose, the sender profile's limits are used up or shared, an accept wait waits for the account's sync, or
-the workspace is suspended. Check these in order:
+waits on purpose, the sender profile's limits are used up or shared, an accept wait waits for the account's sync, a mailbox or a
+LinkedIn account is not ready to send yet, or the workspace is suspended. Check these in order:
 
 1. **It is outside the sending window.** The pill reads **Active** with a clock and the time sends resume. Hover it
    for **Out of schedule, sends resume**. Change the hours in **Workflow settings**, under **Sending window**. With
@@ -111,7 +111,17 @@ the workspace is suspended. Check these in order:
 6. **An accept wait waits for the account's sync.** A **Wait for event** on **Connection accepted** is decided on
    the account's LinkedIn syncs, so it can run past its time limit: see
    [why a wait for Connection accepted runs past its time limit](#why-does-a-wait-for-connection-accepted-run-past-its-time-limit).
-7. **The workspace is suspended.** A workspace suspended for an unpaid renewal or a paused plan runs no step:
+7. **A mailbox is paused or still syncing.** A due **Send email** step waits while the mailboxes it could leave
+   from read **Sending paused**, and goes out within the hour after **Resume sending**. It also waits for a mailbox
+   that reads **Syncing** (its first sync after connecting), for up to 24 hours from the start of that sync, and
+   after that the step fails with its own reason. The task reads **Scheduled** meanwhile, and the sender profile's
+   LinkedIn steps keep going.
+8. **The email holds an unsubscribe link and no tracking domain is verified.** The task reads **Scheduled** with
+   **Waits for a verified tracking domain**. Verify a tracking domain on one of the sender profile's mailboxes and
+   the email goes out within the hour: [Set up a tracking domain](/kb/sender-profiles/tracking-domains).
+9. **The LinkedIn account is in its first sync.** Its steps wait and are tried again every half hour, so they go
+   out once the sync is through.
+10. **The workspace is suspended.** A workspace suspended for an unpaid renewal or a paused plan runs no step:
    everything planned stays **Scheduled** and goes on once the workspace is active again. See
    [plans, credits and billing](/kb/workspace/plans-credits-and-billing).
 
@@ -136,8 +146,8 @@ the date it fails on: on hover, or on its line once the account has stopped sync
 When a sender profile's LinkedIn account or mailboxes need attention (signed out, a browser that kept failing and
 was stopped, no mailbox that can send), its steps on that channel fail as they come due, each with the account's
 reason line, and the journey stops there. A sign-out fails the step at once, while a passing fault, such as a browser
-that did not start, is tried again first. An action on hold for a limit waits instead, and the sender profile's other
-channel keeps sending. The **Who sends** card says how many senders need attention: click it to see which one. Fix
+that did not start, is tried again first. An action on hold for a limit waits instead, and so does an email whose mailbox is only paused or still in its
+first sync. The sender profile's other channel keeps sending. The **Who sends** card says how many senders need attention: click it to see which one. Fix
 the account in **Sender Profiles** ([when a sender profile needs attention](/kb/sender-profiles/troubleshooting)),
 then **Retry** the failed tasks.
 
@@ -145,11 +155,14 @@ New people go to the workflow's sender profiles that can send, and people alread
 of the workflow's sender profiles can send (its only sender profile is signed out, say), a new person still enters
 with no sender profile, and their first send fails (`sender_missing`): **The sender of this step no longer exists.
 Choose another sender for the workflow and retry.** **Retry** fails the same way, since the step still has no sender
-profile. Once a sender profile can send again, click **Restart from top** on them, which picks a sender profile again.
+profile. Once a sender profile can send again, click **Restart from top** on them, which picks a sender profile again. When the
+only thing in the way is a mailbox that reads **Sending paused** or **Syncing**, a new person's email waits instead,
+and their LinkedIn steps go out from a sender profile of the workflow that has a LinkedIn account.
 
 A new LinkedIn account sends nothing until its
 [first sync](/kb/sender-profiles/connect-linkedin#what-does-the-first-sync-of-a-linkedin-account-do) is through: a
-step that comes due before then fails, and **Retry** runs it once the sync has finished.
+step that comes due before then waits and is tried again every half hour, so it goes out once the sync has
+finished. Nothing fails, and the sender profile's mailboxes keep sending.
 
 ## Why was a workflow step skipped?
 
@@ -161,6 +174,8 @@ and the person moves on to the next step:
 | **Already a connection of this account, so no invitation was needed.** | `already_connected` | **Connection request** found them among the account's connections. A wait for the accept behind it moves on at once. |
 | **An invitation from this account is already waiting for this person, so no second one was sent.** | `already_invited` | An invite sent before, from a workflow or by hand on LinkedIn, is still pending. The wait for the accept waits on that one. |
 | **A value the text needs is empty for this person. Fill it in and retry.** | `required_fields_missing` | The step's **When a value is empty** is **Skip the step**: the status reads **Skipped**, with the same reason line a failure would show. |
+| **This person lists no skills the sender can endorse: none, or all endorsed already.** | `no_endorsable_skills` | **Endorse skills** found nothing to endorse. The step is skipped and the person moves on. |
+| **This address is on the do-not-send list after an earlier bounce, unsubscribe or complaint, so nothing was sent.** | `recipient_suppressed` | A **Send email** step met an address that cannot be written to. The step is skipped and the journey goes on, so later LinkedIn steps still run. The do-not-send list blocks email only and is kept apart from your [stoplist](/kb/tables/tables#what-does-the-stoplist-block-and-how-do-i-add-to-it): taking the address off the stoplist does not clear it. |
 
 A reply right before a send does not skip the step. In a workflow whose **After a reply** pauses, GetSales reads
 the thread just before each **LinkedIn message** and **InMail** goes out, so a reply the account has not synced yet
@@ -189,15 +204,17 @@ missing email or a sign-out, shows as **Failed** at once.
 | **A value the text needs is empty for this person. Fill it in and retry.** | `required_fields_missing` | Fill the value in the table, or give the variable a fallback in the step, then **Retry**. |
 | **The sender's LinkedIn account is signed out. Sign in again in Sender profiles, then press Retry.** | `browser_logged_out` | Sign in again, then **Retry**. Other account problems read the same way: see [when a sender profile needs attention](/kb/sender-profiles/troubleshooting). |
 | **LinkedIn asked the sender's account to pass a security check.** | `captcha_required` | Pass it in the account's browser from **Sender Profiles**, then **Retry**. |
-| **The sender has no LinkedIn account connected.** or **no mailbox connected** | `sender_profile_has_no_linkedin`, `sender_profile_has_no_mailbox` | Connect a LinkedIn account to the sender profile, then **Retry**. An email step fails this way when no mailbox of the sender profile can send: none is connected (on the trial none can be, since it comes with no email server), or each reads **Disconnected**, **Reconnect needed**, **Sending paused**, **Subscription needed** (no plan covers it, as on the Free plan, which holds no inboxes) or **Deleted**. With **Reply in the previous email thread** on, a follow-up fails this way when the mailbox of the earlier email is in one of these states, even while other mailboxes can send: fix that mailbox, or **Detach** it so the follow-up starts a new thread from another one. Click **Reconnect** on a **Disconnected** or **Reconnect needed** mailbox or **Resume sending** on a paused one, get a plan that covers it (see [plans, credits and billing](/kb/workspace/plans-credits-and-billing)), or connect another mailbox, then **Retry** once the mailbox reads **Active** (after a plan change that can take up to a day). A mailbox that is only at its daily limit makes the step wait instead. |
+| **The sender has no LinkedIn account connected.** or **no mailbox connected** | `sender_profile_has_no_linkedin`, `sender_profile_has_no_mailbox` | Connect a LinkedIn account to the sender profile, then **Retry**. An email step fails this way when no mailbox of the sender profile can send: none is connected (on the trial none can be, since it comes with no email server), or each reads **Disconnected**, **Reconnect needed**, **Subscription needed** (no plan covers it, as on the Free plan, which holds no inboxes) or **Deleted**. A mailbox that reads **Sending paused** or **Syncing** does not fail the step: the email waits. With **Reply in the previous email thread** on, a follow-up fails this way when the mailbox of the earlier email is in one of these states, even while other mailboxes can send, and waits when that mailbox is paused or syncing: fix that mailbox, or **Detach** it so the follow-up starts a new thread from another one. Click **Reconnect** on a **Disconnected** or **Reconnect needed** mailbox, get a plan that covers it (see [plans, credits and billing](/kb/workspace/plans-credits-and-billing)), or connect another mailbox, then **Retry** once the mailbox reads **Active** (after a plan change that can take up to a day). A mailbox that is only at its daily limit makes the step wait instead. |
 | **InMail needs a Premium LinkedIn account, and the sender's is not one.** | `inmail_requires_premium` | Send a **LinkedIn message** instead, or send from a Premium account. |
 | **The sender's LinkedIn account has no InMail credits left.** | `no_inmail_credits` | **Retry** once LinkedIn renews them. |
 | **This person has no recent post of their own, so there was nothing to like or comment on.** | `no_recent_post` | **Like latest post** and **Comment latest post** act only on a post the person wrote in the last 90 days: a repost with no words of theirs does not count. **Retry** once they have posted. |
-| **This person lists no skills the sender can endorse: none, or all endorsed already.** | `no_endorsable_skills` | **Endorse skills** found nothing left to endorse. A **Retry** fails the same way until the person lists a skill the sender has not endorsed. |
 | **This journey sent no invitation, so there was nothing to withdraw.** or **The invitation is gone already: it was accepted, withdrawn or expired, so there was nothing to withdraw.** | `nothing_to_withdraw`, or `target_not_found` on this step | **Withdraw request** withdraws only a pending invite that this journey's own **Connection request** sent, not one sent by hand or from another workflow. A **Retry** fails the same way. |
 | **This person blocked the sender's LinkedIn account, so nothing can reach them from it.** | `target_blocked` | Choose another sender profile, or leave them. |
-| **This address is on the do-not-send list after an earlier bounce, unsubscribe or complaint, so nothing was sent.** | `recipient_suppressed` | GetSales does not send to an address on that list. The do-not-send list blocks email only and is kept apart from your [stoplist](/kb/tables/tables#what-does-the-stoplist-block-and-how-do-i-add-to-it): taking the address off the stoplist does not clear it. Reach them on another channel. |
-| **The mailbox's tracking domain is not verified, so the email could not carry tracking.** | `tracking_domain_not_verified` | Verify the domain, or set tracking off for the step, then **Retry**. |
+| **The sender's mailbox has been in its first sync for more than a day and cannot send yet, so this email was not sent.** | `mailbox_first_sync_unfinished` | A due email waits up to 24 hours for a mailbox that reads **Syncing**, then fails this way. **Retry** when the sync ends. If it does not end, detach the mailbox in **Sender Profiles** and connect it again. |
+| **A file attached to this step is no longer in the library. Attach it again in the step, then press Retry.** | `attachment_missing` | Attach the file again in the step, publish, then **Retry**. |
+| **The files attached to this step are too large together. Attach fewer or smaller files in the step, then press Retry.** | `attachment_too_large` | A step carries 20 MB of files at most: attach fewer or smaller ones, publish, then **Retry**. |
+| **The email came out empty for this person. Write its text in the step, then press Retry.** | `empty_content` | Write the email's text in the step, publish, then **Retry**. |
+| **The mailbox's tracking domain is not verified, so the email could not carry tracking.** | `tracking_domain_not_verified` | Only on a task that failed before 26 November 2026. Since then such an email goes out untracked instead of failing: **Retry** sends it. |
 | **The sender's account is on hold: no subscription covers it right now.** | `subscription_required` | The plan no longer covers this sender profile's account, as on the Free plan after a trial or a plan ends: see [plans, credits and billing](/kb/workspace/plans-credits-and-billing). **Retry** once a plan covers it. |
 | **The sending service did not answer. The fault is on our side: press Retry.** | | **Retry**. If it fails again, write to support. |
 

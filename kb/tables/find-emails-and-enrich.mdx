@@ -1,6 +1,6 @@
 ---
 title: "Find emails and enrich"
-description: "Find work email (action_waterfall) asks one finder after another (Hunter, Findymail and Anymailfinder by default), stops at the first address accepted and costs 1 credit an address delivered plus each check at the verifier's rate (EmailListVerify 0.1, Findymail 1). A miss is free. Enrich lead costs 1 credit a row at Basic and 3 at Advanced, Enrich company 1 and 2 (plus a 0.1 web lookup when only the domain is known), Latest posts 2 (3 when the profile has to be read first to find its LinkedIn id), and each data point becomes its own column. There is no phone finder."
+description: "Find work email (action_waterfall) asks one finder after another (Hunter, Findymail and Anymailfinder by default), stops at the first address accepted and costs the finder's price for an address found (Hunter 0.5, Findymail 0.4, Anymailfinder 1.46 credits) plus each check at the verifier's rate (EmailListVerify 0.064, Findymail 0.4). A miss is free, and a found address the verifier rejects is charged. An Enrich read is free from saved data and on your own LinkedIn accounts, and costs 0.1 credit a row at Basic or 0.5 at Advanced for a person and 0.1 for a company only when our managed infrastructure reads it (plus a 0.02 web lookup when only the domain is known). Latest posts costs 0.1 the same way (0.2 when the profile has to be read first to find its LinkedIn id), and each data point becomes its own column. There is no phone finder."
 ---
 
 Two kinds of columns fill in what a row is missing. **Find work email** looks for each person's work
@@ -76,7 +76,8 @@ down the address the row already holds and no finder brings a better one, the ad
     **Accept emails that can't be fully verified** appears, switched on.
   </Step>
   <Step title="Save">
-    **Auto-update** (on) runs the column on every new person a data source adds, and **Only run if**
+    **Auto-update** (on) runs the column on every person that enters the tab (from a data source, added by
+    hand or moved in), and **Only run if**
     keeps it to the rows that pass a rule. Save with **Save and don't run**, **Save and run first 5
     rows** or **Save and run rows that haven't run or have errors**.
   </Step>
@@ -97,14 +98,14 @@ with no such column opens **New column** first, since the finders and their orde
 
 ## What does Find work email cost?
 
-Find work email charges for what it delivers and for the checks it runs. A miss costs nothing.
+Find work email charges for every address a finder finds, at that finder's price, and for the checks it runs. A miss costs nothing.
 
 | Outcome | Credits |
 |---|---|
-| An address found and accepted | 1 |
-| Each check by the verifier | The verifier's rate, shown beside it in the drawer: 0.1 for EmailListVerify, 1 for Findymail. An EmailListVerify check that comes back **Couldn't check**, or finds the address malformed, costs nothing, and so does a check that fails |
+| An address found and accepted | The finder's price, shown beside it in the drawer: 0.5 for Hunter, 0.4 for Findymail, 1.46 for Anymailfinder |
+| Each check by the verifier | The verifier's rate, shown beside it in the drawer: 0.064 for EmailListVerify (the drawer rounds it to 0.06), 0.4 for Findymail. An EmailListVerify check that comes back **Couldn't check**, or finds the address malformed, costs nothing, and so does a check that fails |
 | A finder that finds nothing, or skips the row | 0 |
-| An address found and then rejected by the verifier | Its check only |
+| An address found and then rejected by the verifier | The find and its check |
 | The row's own address | 0, plus a check at the verifier's rate unless its status is already **Verified** |
 
 A lookup the platform already answered, by the same provider for the same inputs, is answered again at
@@ -118,25 +119,36 @@ a company's LinkedIn page. You pick a level and the data points you need, and ea
 column of its own, filled from the column's read. The record's identifiers (**LinkedIn identifiers**
 for a person, **Company identifiers** for a company) are always written to it, whatever you pick.
 
-| Column | Level | Credits a row | On by default | Also offered |
+| Column | Level | Credits a row on our managed infrastructure | On by default | Also offered |
 |---|---|---|---|---|
-| Enrich lead | **Basic** | 1 | Full name, Headline | First name, Last name, Location, Country, Premium, Verified, Creator, Open to work, Hiring, Top Voice |
-| Enrich lead | **Advanced** | 3 | Full name, Position, Company name, Location, About, Experience | Headline, Company LinkedIn ID, Avatar URL, Skills, Education, Work email, Work phone, Website, X (Twitter), Country, and the Basic marks |
-| Enrich company | **Basic** | 1 | Company name | Employee count, Company size (min) and (max), Headquarters city, region and country, Website, About, Tagline, Phone, Founded, Company type, Specialities, Verified page, Logo URL |
-| Enrich company | **Advanced** | 2 | Company name, Industry, Company size, Headquarters, Website, About | Followers, Founded, Specialities, Logo URL |
+| Enrich lead | **Basic** | 0.1 | Full name, Headline | First name, Last name, Location, Country, Premium, Verified, Creator, Open to work, Hiring, Top Voice |
+| Enrich lead | **Advanced** | 0.5 | Full name, Position, Company name, Location, About, Experience | Headline, Company LinkedIn ID, Avatar URL, Skills, Education, Work email, Work phone, Website, X (Twitter), Country, and the Basic marks |
+| Enrich company | **Basic** | 0.1 | Company name | Employee count, Company size (min) and (max), Headquarters city, region and country, Website, About, Tagline, Phone, Founded, Company type, Specialities, Verified page, Logo URL |
+| Enrich company | **Advanced** | 0.1 | Company name, Industry, Company size, Headquarters, Website, About | Followers, Founded, Specialities, Logo URL |
 
 ## Where does an Enrich read come from, and what does it cost?
 
-An Enrich read runs on our managed infrastructure, so there is nothing to connect for it, and it costs
-its level's rate per row: 1 or 3 credits for a person, 1 or 2 for a company. A company known only by
-its domain can also take one web lookup of 0.1 credit to find its LinkedIn page, charged whether or not
-the page is found. A read that fails costs nothing beyond that lookup. A read the workspace repeats
-comes back free: a Basic read of a person within 24 hours, a company read at the same level within 7
-days. An Advanced read of a person is charged every time.
+An Enrich read is answered by the first of three that can, and there is nothing to connect for it:
+
+1. **Saved data, free.** The workspace's own earlier read (a person within 24 hours, a company within 7
+   days), then saved data no older than the column's **Use saved data up to** window: 30 days unless you
+   change it, **3 months**, **6 months**, **1 year** or **Don't use saved data**.
+2. **One of your sender profiles' LinkedIn accounts, free**, when one is free at that moment.
+3. **Our managed infrastructure**, for credits: 0.1 a row for Enrich lead at Basic and for Enrich company
+   at either level, 0.5 for Enrich lead at Advanced.
+
+The line under the window says so: "Free when there is saved data or one of your sender profiles reads it.
+Otherwise it costs credits". The level's price in the drawer still reads 1 or 3 a row, the figure from
+before 26 November 2026: a cell's **Log** shows what a row cost. Saved data and reads on our managed
+infrastructure count against the plan's allowance: past it neither answers until it refills, and your own
+LinkedIn accounts keep reading. A company known only by its domain can also take one web lookup of 0.02
+credit to find its LinkedIn page, charged whether or not the page is found. A read that fails costs
+nothing beyond that lookup.
 
 Work email and Work phone at the Advanced level come back empty for most people: LinkedIn shows them
 only to a profile's own connections, so use Find work email for addresses. For a person's posts, the
-**Latest posts** column reads their 10 newest posts, live, at 2 credits a row, plus 1 credit when the
+**Latest posts** column reads their 10 newest posts, live: free on one of your sender profiles' LinkedIn
+accounts, 0.1 credit a row on our managed infrastructure, plus 0.1 credit when the
 row knows the person by their LinkedIn nickname alone and the profile has to be read once to find
 their `ln_id`.
 
@@ -155,7 +167,9 @@ Enrich lead is added on the People tab and Enrich company on the Companies tab, 
     **Companies** tab, pick **Enrich company**.
   </Step>
   <Step title="Pick the level">
-    Under **Enrichment type**, pick **Basic** or **Advanced**. Each shows its price per row.
+    Under **Enrichment type**, pick **Basic** or **Advanced**, then **Use saved data up to**: 30 days,
+    **3 months**, **6 months**, **1 year** or **Don't use saved data**. The line under it says when a row
+    costs credits.
     **Auto-update** (on) and **Only run if** sit under **Run settings** on the same screen. Click
     **Next**.
   </Step>
@@ -169,7 +183,7 @@ Enrich lead is added on the People tab and Enrich company on the Companies tab, 
 </Steps>
 
 Enrich lead needs a LinkedIn identifier on the row. Enrich company needs the company's LinkedIn page
-or its domain. A domain alone can take one web lookup of 0.1 credit to find the page.
+or its domain. A domain alone can take one web lookup of 0.02 credit to find the page.
 
 <Frame caption="The second screen of Enrich lead at Advanced: LinkedIn identifiers always on, Full name, Position, Company name, Location, About and Experience switched on (6 selected), and Company LinkedIn ID, Headline, Avatar URL, Skills and Education off.">
   <img src="/images/kb/tables/enrich-lead-data-points.png" alt="Enrich lead drawer, second screen, headed Advanced enrichment with a back arrow. Select the lead data to add as columns, 6 selected, and the line All data will be available after the run. Choose the data points to add as columns, then run the enrichment to view the results. LinkedIn identifiers (ln_id, sn_id, member id, nickname) is on and locked. Switched on: Full name, Position, Company name, Location, About and Experience. Switched off: Company LinkedIn ID, Headline, Avatar URL, Skills and Education. Each row shows a sample value: John Smith, CEO, Acme Inc, 1441, Redmond, Washington, United States, Building revenue engines, Bio summary, Image, Title, Company, List, Degree, School" width="400" />
@@ -179,8 +193,8 @@ or its domain. A domain alone can take one web lookup of 0.1 credit to find the 
 
 To pay once, use **Run all N rows that haven't run** or **Run all N rows with errors**: both leave
 finished cells untouched, while **Run first 5 rows**, **Choose number of rows to run** and **Actions**,
-**Run rows** run finished cells again. A column with **Auto-update** on runs by itself on every new row a
-data source adds to its tab. For rows that are already in the table, open the column's header menu, then
+**Run rows** run finished cells again. A column with **Auto-update** on runs by itself on every row that enters
+its tab. For rows that are already in the table, open the column's header menu, then
 **Run column**:
 
 | Choice | What runs | Finished cells |
@@ -204,9 +218,12 @@ What that costs:
 - Find work email takes the address it already wrote at no cost while **Use existing email if
   available** leads the chain. A verifier checks that address again unless it is **Verified**, and a
   check of the same address within the last 30 days comes back free.
-- Enrich lead at **Basic** and Enrich company are charged again, except a read the workspace repeats
-  within 24 hours (a person) or 7 days (a company), which comes back at no cost.
-- Enrich lead at **Advanced** and **Latest posts** are charged every time.
+- Enrich lead and Enrich company cost nothing again while saved data answers: the workspace's own read
+  for 24 hours (a person) or 7 days (a company), then saved data inside the column's window. After that
+  the row is read again, free on one of your sender profiles' LinkedIn accounts and for credits on our
+  managed infrastructure.
+- **Latest posts** is read live every time: free on your own LinkedIn account, 0.1 credit on our managed
+  infrastructure.
 
 ## What happens when a Find work email or Enrich run hits its budget or runs out of credits?
 
@@ -218,7 +235,10 @@ A run you start in the app stops at the top of its estimate: the cells running a
 **Run stopped at its budget** (`budget_exhausted`), and the rows it did not reach go back to how they
 were before the run. **Run all N rows that haven't run** finishes the rows that never ran, and **Run all
 N rows with errors** finishes the stopped cells. When the workspace runs out of credits, the cell shows
-**Out of credits** (`allowance_exhausted`) and the run stops the same way. A daily credit limit for Find
+**Out of credits** (`allowance_exhausted`) and the run stops the same way. On Enrich lead, Enrich company and
+Latest posts, the budget, the daily limit and an empty balance stop only the reads on our managed
+infrastructure: in a workspace with a LinkedIn account of its own, the cell that needed credits ends and the
+run goes on. A daily credit limit for Find
 work email and Enrich columns is set over the API (`config.daily_credit_limit`): a cell past it waits
 for 00:00 UTC when **Auto-update** is on, and otherwise ends with **Daily limit reached**
 (`daily_credit_limit_reached`).
@@ -251,7 +271,7 @@ reads one cell with its error and every step it took.
 
 ## Why is an Enrich cell empty?
 
-A read that fails costs nothing, apart from the 0.1-credit web lookup a company known only by its
+A read that fails costs nothing, apart from the 0.02-credit web lookup a company known only by its
 domain can take, and the cell says why. Open a finished cell to see its **Log**: what it read from the
 row, each step with its answer, and the credits it spent.
 

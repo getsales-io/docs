@@ -36,7 +36,7 @@ inside the workflow's sending window and that sender profile's daily limits. Wha
 7. The journey ends **Completed** (it reached the end of its path, an **End** step or a **Move to workflow** step),
    **Failed** (a step failed for good) or **Exited** (taken out of it: by hand, by a play such as **On a job
    change** that removes or moves them, by a move of the person to another table, by the person's removal from
-   the [HubSpot segment](/kb/tables/add-people-and-companies#how-do-i-sync-a-hubspot-segment-into-a-table) that
+   the [CRM segment](/kb/tables/add-people-and-companies#how-do-i-sync-a-crm-list-into-a-table) that
    feeds the table, or by the workflow's deletion).
 
 Four objects carry a workflow, and the API names them:
@@ -207,11 +207,11 @@ Each LinkedIn step acts from the LinkedIn account of the person's sender profile
 
 | Step | What it needs, and its limits |
 |---|---|
-| **Connection request** | The **Invite note** is optional: leave it empty to send a blank invite. A note holds 300 characters at most. People who are already connections, or who already have an invite from this sender profile waiting, skip the step. |
-| **LinkedIn message** | Reaches the sender profile's 1st-degree connections only, 8,000 characters at most. Put a **Connection request** and a **Wait for event** on **Connection accepted** before it: people already connected pass both at once. |
-| **InMail** | Reaches someone without connecting. It needs a Premium LinkedIn account and its InMail credits. Subject 200 characters, message 8,000. |
+| **Connection request** | The **Invite note** is optional: leave it empty to send a blank invite. A note holds 300 characters at most. People who are already connections, or who already have an invite from this sender profile waiting, skip the step. An invite carries no file. |
+| **LinkedIn message** | Reaches the sender profile's 1st-degree connections only, 8,000 characters at most. Put a **Connection request** and a **Wait for event** on **Connection accepted** before it: people already connected pass both at once. Takes up to 5 files from the team's file library, 20 MB together. |
+| **InMail** | Reaches someone without connecting. It needs a Premium LinkedIn account and its InMail credits. Subject 200 characters, message 8,000. Takes up to 5 files from the team's file library, 20 MB together. |
 | **Like latest post**, **Comment latest post** | Act on the person's newest post of their own from the last 90 days: a repost with no words of theirs does not count. With no such post the step fails (`no_recent_post`), which stops the journey. A comment holds 1,250 characters at most, and a new **Comment latest post** starts empty: a comment is public, so you write it. |
-| **Endorse skills** | Endorses as many of the person's top skills as **Skills to endorse** says (1 to 10, 3 on a new step), for 1st-degree connections only. With no skill left to endorse the step fails (`no_endorsable_skills`). |
+| **Endorse skills** | Endorses as many of the person's top skills as **Skills to endorse** says (1 to 10, 3 on a new step), for 1st-degree connections only. With no skill left to endorse the step is skipped (`no_endorsable_skills`) and the person moves on. |
 | **Withdraw request** | Withdraws the invite this journey sent. With none sent, or one already accepted, withdrawn or expired, the step fails. |
 
 ## What does a Send email step need?
@@ -220,13 +220,58 @@ A **Send email** step sends from the sender profile's mailboxes in turn, to the 
 **Work email**, the **Personal email**, or **Work email, then personal** (the default). A person with no such
 address fails the step (`email_missing`). Its limits and options:
 
-- Subject 255 characters. **Cc** and **Bcc** copy colleagues, up to 5 addresses each, never the person.
-- Up to 5 files of 10 MB each (PDF, Office, images, text or zip). Files over 20 MB together fail the send
-  (`attachment_too_large`), and a mail provider can refuse less.
-- **Track opens** and **Track clicks** follow the mailbox unless the step turns them on or off, and need a verified
-  tracking domain on the mailbox: turned on without one, the send fails.
+- Subject 255 characters.
+- **Cc** and **Bcc** take up to 5 entries each: an address, or a column of the table picked with `/` and read for
+  each person (over the API, one column reference such as `{{people.owner_email}}`). A person whose column is empty,
+  or holds something that is not an address, gets the email without that copy, and the task says so. A copy on your
+  stoplist is left out the same way. Bcc is added to the standing copy of whichever mailbox sends.
+- Up to 5 files from the team's file library, 20 MB together (documents, pictures, video, audio or a zip). A draft
+  whose files weigh more is not published (`attachments_too_large`), nor is one that names a file deleted from the
+  library (`attachment_missing`). A mail provider can refuse less.
+- **Insert signature**, in the body's toolbar, puts a **Signature** chip where the caret is (`{{sender.signature}}`
+  over the API). Each email is then signed with the signature of the sender profile it leaves from, written on that
+  sender profile's **Variables** tab. A sender profile with no signature prints nothing there, and the email still
+  goes. The chip belongs in an email's body only: anywhere else the draft is not published
+  (`signature_outside_email_body`). Nothing else signs an email: a **Send email** step without the chip goes out
+  unsigned.
+- **Track opens** and **Track clicks** follow the mailbox unless the step turns them on or off. Turning one on needs
+  a verified tracking domain on a mailbox of the workflow's sender profiles: without one the switch is held off and
+  says why, and a draft that still asks for it is not published (`tracking_domain_required`). An email that leaves
+  from a mailbox with no verified tracking domain goes out untracked, and over the API the task's
+  `result.output.sent_untracked` says so: [Set up a tracking domain](/kb/sender-profiles/tracking-domains).
 - **Reply in the previous email thread** is on by default: the journey's next email answers in the thread of its
   previous one, from the same mailbox. Turn it off to start a new thread.
+- **Unsubscribe footer** is off unless the step turns it on: on, a small **Unsubscribe** link is added at the end
+  of the email. To put the link on words of your own instead, click **Insert unsubscribe link** in the body's
+  toolbar, type the **Link words** and click **Insert the link** (over the API, `{{unsubscribe_url}}` as the
+  `href` of a link in the body). Either way the link needs a verified tracking domain on a mailbox of the workflow's
+  sender profiles: without one both are held off and say why, and a draft that holds the link is not published
+  (`tracking_domain_required`). An email that holds the link leaves only from a mailbox with a verified tracking
+  domain. When the person's sender profile has none, the email waits as **Scheduled**, its task reads **Waits for a
+  verified tracking domain**, and it goes out within the hour once a domain is verified. It never goes out without
+  the link. A person who presses the link joins the workspace's stoplist, and no workflow emails that address again.
+
+## How do you test two texts in one step?
+
+A **Connection request**, **LinkedIn message**, **InMail** or **Send email** step can hold 2 to 5 text versions. In
+the step's drawer, under **Versions**, click **Add version**: the text you have becomes A and B starts as its copy,
+each with a switch, a name and a weight. Everything else on the step is shared: who gets a copy, the files, tracking
+and when it runs.
+
+- A person gets one version when the step is planned for them, by the weights of the versions that are on, and
+  keeps it, also on a retry. A version switched off takes no new people.
+- The step's **Result** lists each version with its people and what came back, judged by replies (by accepts on a
+  **Connection request**). Once two versions have each gone to 10 people it says which is ahead and whether the gap
+  is likely chance, such as "B is ahead by 6 points. With 240 people that gap is unlikely to be chance (95%)." Until
+  then it reads **Too few people to tell yet**.
+- **Keep A** (or the letter you pick) switches the other versions off in the draft: publish to make it live.
+
+Over the API a step's `versions` hold each version's `id`, `label`, `weight`, `enabled` and the text fields, and the
+step then carries no text fields of its own. A task carries `version_id`, which
+[`search_workflow_tasks`](/api-reference/playtables/workflow_tasks/search-workflow-tasks) filters on, and
+`get_workflow` with `include` `step_stats` returns each version's numbers. A draft with one version, more than five,
+or every version off is not published (`versions_count`, `versions_all_off`). This is a test of texts inside one
+step. To send people down different steps, use an **A/B test** step, below.
 
 ## How do waits, conditions and A/B tests decide the path?
 
@@ -240,7 +285,8 @@ Waits hold a person in a workflow for a time or an event, and conditions and A/B
   profile**, **Like latest post** and **Withdraw request** show no **When it runs** in the app: put a **Wait**
   before those.
 - **Wait for event** holds the person until **Connection accepted**, **Email opened** or **Link clicked**, with a
-  **Time limit** (**Give up after**, 14 days on a new step). The event branch and the time limit branch each take
+  **Time limit** (**Give up after**, 14 days on a new step). **Email opened** and **Link clicked** can only happen
+  for an email that went out tracked, which needs a verified tracking domain. The event branch and the time limit branch each take
   their own steps, then meet again under the wait. On a wait for **Connection accepted**, the time limit branch
   holds the people who did not accept, so a **LinkedIn message** or **Endorse skills** there fails for them: the
   builder warns, and still lets you publish. If such a step follows the wait, end the time limit branch with

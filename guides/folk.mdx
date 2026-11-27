@@ -38,13 +38,13 @@ Under **Activity sync** on the folk card in Settings, each switch starts logging
 - **Log messages to the timeline**: LinkedIn messages your sender profiles send and receive, with their words.
 - **Log emails to the timeline**: emails sent and received. folk syncs a member's own mailbox: leave this off for a mailbox that is also connected to folk, or each email shows twice.
 - **Log connection requests**: a connection request sent, with its note, and its accept.
-- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as an interaction on the person.
+- **Log AI SDR hand-offs**: a hand-off from the AI SDR lands as an interaction on the person, when GetSales already knows the lead's folk person from an earlier message or request, a Send to CRM column or a group. A hand-off of a lead with no known person is skipped.
 
 Each event is an interaction on the person, dated when it happened: its title says who wrote to whom, and its content holds the words. A lead is matched to a person the same way as in Send to CRM below. An event of a lead who matches no person is not written, and it shows under **Recent failures**.
 
 ### Status and dates
 
-Click **Edit** next to **Status and dates** on the folk card:
+Click **Set up** next to **Status and dates** on the folk card (the button reads **Edit** once something is mapped):
 
 - **Group**: folk keeps a status in a field of a group, and a person holds a value there only while they are in that group. Pick the group first: the fields below are that group's.
 - **Status field**: a single select or a multiple select of the group. For each event (connection request sent, connection accepted, message sent, replied) pick the option it sets, or leave it as is.
@@ -91,12 +91,13 @@ On the folk card in [https://app.getsales.io/settings/integrations](https://app.
 - Every sync of that connection stops: no more rows sent, activity logged or groups read.
 - GetSales deletes its copy of the key. The key itself stays valid in folk until you delete it there, under **Settings**, **API**.
 - What is already written stays: people, companies and interactions in folk, and people, rows and column values in GetSales.
+- Connecting the same account again after a Delete makes a new connection with no settings: turn its switches on and set Status and dates again, pick it in each Send to CRM column, and create its sources again. A source of the deleted connection stops as Failed and keeps its people.
 
 ## Troubleshooting
 
-- **"folk needs a name or an email for a new person"**: the row matched no person and has neither a name nor an email to create one. Enrich the row or fill one of them, then run the cell again.
-- **"The folk member this key belongs to cannot reach this group"**: the group is private to another member, or not shared with the key's member. Share the group with that member in folk, or connect the key of a member who sees it.
-- **"The field has no option"**: a select field was sent an option it does not have. Pick one of the options the message lists, or add the option to the field in folk first.
+- **"Not created: folk needs a name or an email for a new contact."**: the row matched no person and has neither a name nor an email to create one. Enrich the row or fill one of them, then run the cell again.
+- **"The folk member this key belongs to cannot reach that group or record."**: the group is private to another member, or not shared with the key's member. Share the group with that member in folk, or connect the key of a member who sees it.
+- **"A mapped value is not one of the options of its folk field."**: a select field was sent an option it does not have. Pick one of the options the message lists, or add the option to the field in folk first.
 - **The connection needs attention**: folk refused the key, because it was deleted in folk, or because the workspace's plan no longer includes the API (a trial that ended). Create a new key, or move the folk workspace to a plan with API access, and connect again.
 
 Questions: [support@getsales.io](mailto:support@getsales.io).

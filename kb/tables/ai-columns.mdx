@@ -1,6 +1,6 @@
 ---
 title: "AI columns and formulas"
-description: "A Use AI column (action_ai_research) asks a model about each row and stores the answer with its reason and a High, Medium or Low confidence. Each row costs what its model reads and writes, plus each web search it makes, shown before you run. A run started in the app stops at the top of its estimate. Auto-run is off on a new column and fires only on new rows a source of the tab's own kind adds. Only run if skips rows for free. Formulas and templates compute a column from the row at no cost."
+description: "A Use AI column (action_ai_research) asks a model about each row and stores the answer with its reason and a High, Medium or Low confidence. Each row costs what its model reads and writes, plus each web search it makes, shown before you run. A run started in the app stops at the top of its estimate. Auto-run is off on a new column and fires on rows that enter the tab after it is switched on. Only run if skips rows for free. Formulas and templates compute a column from the row at no cost."
 ---
 
 A **Use AI** column asks a model about each row and writes the answer into the cell, with the reason
@@ -49,8 +49,9 @@ saved with a choice of what to run:
   <Step title="Check the use case and the model">
     **Use case** is **Create or modify content** for an answer from the row's own data, or **Web
     research (agent)** to search the web for each row. **Model** picks the model, and **Compare models**
-    shows each model's price per row of this table, with and without web search. Only the Claude
-    models can search the web.
+    shows each model's price per row of this table, with and without web search. **Web research
+    (agent)** lists only the models that can search the web: Claude Sonnet 5, Claude Opus 5, Claude Fable
+    5 and Claude Haiku 4.5. The default model, Claude Haiku 5.5, does not search.
   </Step>
   <Step title="Define the outputs">
     Under **Define outputs**, a new column has one output, `response`, as **Text**, **Number**,
@@ -84,7 +85,7 @@ the column's name or from the column's header menu:
 
 | How | What runs |
 |---|---|
-| **Auto-run** on | Every new row a source of the tab's own kind adds, a CSV import included, as it arrives (checked every minute): people from a source of people on the People tab, companies from a source of companies on the Companies tab. The companies a source of people links to the Companies tab, people moved in from another table, rows you add by hand and the rows already there when you switch it on wait for a run you start |
+| **Auto-run** on | Every row that enters the tab once it is on, as it arrives (checked every minute): a row a source of the tab's own kind adds, a CSV import included, a row you add by hand or over the API once it holds an email or a LinkedIn profile (a company: a domain or a LinkedIn page), and a person moved in from another table. The companies a source of people links to the Companies tab, a company a source finds already in the workspace and the rows already there when you switch it on wait for a run you start |
 | **Run column**, **Run all N rows that haven't run** | The cells that never ran, the run condition checked again |
 | **Run column**, **Run all N rows with errors** | The cells that failed |
 | **Run enrichment**, in the strip under the column's name on hover | The cells that never ran and the cells that failed, in one run |
@@ -203,7 +204,8 @@ A Use AI cell that fails shows its reason, and the reason says what to change:
 | The cell shows | Token | What it means | What to do |
 |---|---|---|---|
 | **Answer isn't JSON**, **Answer isn't a number**, **Answer isn't an option** or **Answer doesn't match the outputs** | `ai_output_not_json`, `ai_output_not_numeric`, `ai_output_not_in_options`, `ai_output_not_matching_schema` | The model answered, but not in the shape the column expects. The call is charged | Make the prompt say what to return, or loosen the outputs |
-| **No web search** | `web_search_not_supported` | The model picked cannot search the web | Pick a Claude model, or use **Create or modify content** |
+| **No web search** | `web_search_not_supported` | The model picked cannot search the web | Pick a model from the **Web research (agent)** list, or use **Create or modify content** |
+| **Model declined** | `model_refused` | The model declined to answer this row. Nothing is charged | Reword the prompt or pick another model in the column's settings, then run the cell again |
 | **Model unavailable** | `model_not_in_catalog` | The model is not offered any more | Pick another model in the column's settings |
 | **Timed out** | `timeout` | The model took longer than 120 seconds, or 240 with web search | Run the cell again |
 | **Daily limit reached** | `daily_credit_limit_reached` | The column spent its daily credit limit | With **Auto-run** on it continues after 00:00 UTC, otherwise run the cell again tomorrow |
@@ -227,8 +229,8 @@ Teams use AI columns to score rows, to write only where it pays off, and to fill
 
 A Use AI column runs only when something starts it, and a formula never calls a model:
 
-- **Auto-run** does not fire on rows you add by hand, on rows already in the table, on people moved in
-  from another table, or on the companies a source of people links to the Companies tab: start a run.
+- **Auto-run** does not fire on rows already in the table or on the companies a source of people links
+  to the Companies tab: start a run.
 - A Use AI column does not run again by itself when the row changes, and a skipped row stays skipped
   until a run checks it again.
 - A column does not wait for a cell it reads that nobody has started: it reads that cell empty.

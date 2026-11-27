@@ -1,6 +1,6 @@
 ---
 title: "Add people and companies"
-description: "Data sources fill a table in bulk: an AI search (3 credits a page of 25 results that returns somebody, up to 100 pages, plus an AI call and term lookups to build its filter from words), a sender search of a LinkedIn, Sales Navigator or Recruiter link on your own sender profile (free), post engagement (free when one of your sender profiles reads the posts), a CSV up to 50 MB (a fraction of a credit to match its columns), a webhook (100 records a call, 1 MB each) or a HubSpot segment (set up in the app only). Each record ends Imported, Duplicate, Moved here, Stoplisted, Disqualified or Failed. A row added by hand, moved from another table or created with create_person has no data source."
+description: "Data sources fill a table in bulk: an AI search (0.5 credit a page of 25 results that returns somebody, up to 100 pages, plus an AI call and term lookups to build its filter from words), a sender search of a LinkedIn, Sales Navigator or Recruiter link on your own sender profile (free), post engagement (free when one of your sender profiles reads the posts), a CSV up to 50 MB (a fraction of a credit to match its columns), a webhook (100 records a call, 1 MB each) or a list of your CRM (a HubSpot segment, a Pipedrive saved filter, a Salesforce campaign or list view, a folk group). Each record ends Imported, Duplicate, Moved here, Stoplisted, Disqualified or Failed. A row added by hand, moved from another table or created with create_person has no data source."
 ---
 
 A data source (`data_source`) brings people or companies into a table in bulk. It sits on the table's
@@ -23,22 +23,22 @@ imported, duplicate or stoplisted."
 ## Which data source should I use?
 
 A table is filled in bulk by data sources, and the kind of source follows from what you start with:
-words, a search link, posts, a file, another tool or a HubSpot segment. Open the table, click **Data
+words, a search link, posts, a file, another tool or a list of your CRM. Open the table, click **Data
 sources**, then one of **AI search**, **Sender search**, **Post engagement**, **CSV**, **Webhook** or
-**HubSpot segment**. The data source `type` decides who runs it and what it costs.
+**CRM segment**. The data source `type` decides who runs it and what it costs.
 
 | What you have | Source (`type`) | Credits |
 |---|---|---|
-| Words for who you sell to, or a Sales Navigator search link | **AI search** (`ai_search`) | 3 a page that returns somebody, plus building the filter from words |
+| Words for who you sell to, or a Sales Navigator search link | **AI search** (`ai_search`) | 0.5 a page that returns somebody, plus building the filter from words |
 | A LinkedIn or Sales Navigator search, a saved search, a list, a Recruiter search | **Sender search** (`sender_search`) on your sender profile | Free |
 | A sender profile's connections, conversations or incoming invitations | **Sender search**: **My network**, **My conversations**, **My invitations** | Free |
 | A post, a person's posts, a company page's posts, or a keyword | **Post engagement** (`post_engagement`) | Free when one of your sender profiles reads it, credits otherwise. **Only relevant posts** costs credits |
 | A spreadsheet of people or companies | **CSV** (`csv`) | A fraction of a credit a file to match its columns, and the rows are free |
 | A tool that can send a webhook | **Webhook** (`webhook`) | Free |
-| A HubSpot segment | **HubSpot segment** (`crm_list`) | Free |
+| A HubSpot segment, a Pipedrive saved filter, a Salesforce campaign or list view, or a folk group | **CRM segment** (`crm_list`) | Free |
 
 [Check on save](#what-does-check-on-save-do), when you switch it on, adds one AI call per 20 records to
-any of them but a HubSpot segment. The seventh kind, `find_people`, finds people at companies: see
+any of them but a CRM segment. The seventh kind, `find_people`, finds people at companies: see
 [Find people at companies](/kb/tables/find-people-at-companies).
 
 The tab lists every source with its **Status**, what it **Imported** (the people or companies it added,
@@ -86,7 +86,7 @@ words cannot change once the filter is built, since a different description is a
 
 ## Which links does an AI search take, and what does it cost?
 
-An AI search takes your words, or a Sales Navigator people or company search link, and costs 3 credits
+An AI search takes your words, or a Sales Navigator people or company search link, and costs 0.5 credit
 for each page of results that returns somebody.
 
 A LinkedIn search link, a saved search, a list, a Recruiter search and the network and inbox pages run
@@ -94,21 +94,24 @@ as a sender search on your sender profile instead, and the dialog says so: **Sav
 opens a sender search with the link filled in. A post link gets **Open in Post engagement**.
 
 <Note>
-A search link can be up to 2,048 characters. The AI search box takes no more than that, so a longer
-link is cut there and can become a different search, and a sender search refuses it. For a long Sales
-Navigator search, save it in Sales Navigator on the LinkedIn account of the sender profile that will run
-it and paste the saved search's link into a sender search. Or remove some filters, or describe the
-people in your words instead.
+A search link can be up to 15,000 characters, in an AI search and in a sender search, and it is never
+cut. A longer one is refused with **This link is too long to save. Save the search in Sales Navigator and
+paste the saved search's link.** (`link_too_long`): save the search in Sales Navigator on the LinkedIn
+account of the sender profile that will run it and paste the saved search's link into a sender search.
+Or remove some filters, or describe the people in your words instead.
 </Note>
 
-An AI search costs 3 credits for each page that returns somebody and nothing for a page that returns
-nobody. Building the filter is one AI call, plus 1 credit for each term it has to look up, such as a
+An AI search costs 0.5 credit for each page that returns somebody and nothing for a page that returns
+nobody. Building the filter is one AI call, plus 0.1 credit for each term it has to look up, such as a
 place or an industry (a term already looked up in the past week, or one that matches nothing, costs
 nothing).
 
 API and MCP: [`plan_data_source_filters`](/api-reference/playtables/data_sources/plan-data-source-filters)
 builds and shows the filter before anything is created, and is paid like a source's own filter (the AI
-call and the term lookups). `create_data_source` with `type: ai_search` and `payload.prompt` starts the
+call and the term lookups).
+[`preview_company_search`](/api-reference/playtables/data_sources/preview-company-search) plans a description
+of companies and returns up to 25 of the first page with the filters to create the source with: nothing is
+created, and it is paid like the plan and one page. `create_data_source` with `type: ai_search` and `payload.prompt` starts the
 search.
 
 ## How do I collect a LinkedIn, Sales Navigator or Recruiter search on my sender profile?
@@ -180,7 +183,7 @@ with what they did.
 A post engagement brings its people with the columns **Engagement**, **Comment**, **Post**, **Post
 author** and **Post text**. A run reads up to 100 posts and everyone who engaged with each. The read is
 free when one of your sender profiles can read posts. When none can, our managed infrastructure reads
-them for credits: 3 for each page of 50 people, and 1 to 3 for each read that finds the posts, and the
+them for credits: 0.5 for each page of 50 people, and 0.1 to 0.5 for each read that finds the posts, and the
 dialog shows that cost before you create the source. **Only relevant posts** costs credits either way:
 one AI call for each 20 posts it judges.
 
@@ -244,25 +247,31 @@ address at once, so update every tool that posts to it.
 API and MCP: `create_data_source` with `type: webhook` answers the `ingest_url`, and [`rotate_data_source_ingest_key`](/api-reference/playtables/data_sources/rotate-data-source-ingest-key)
 mints a new one.
 
-## How do I sync a HubSpot segment into a table?
+## How do I sync a CRM list into a table?
 
-A HubSpot segment source keeps a table's people in step with the contacts of one HubSpot segment.
+A CRM segment source keeps a table's people in step with one list of your CRM: a HubSpot segment, a
+Pipedrive saved filter of persons, a Salesforce campaign or a lead or contact list view, or a folk group.
 
-Click **HubSpot segment**, pick the **HubSpot portal** and the **Segment**, and optionally up to 25
-**Columns from HubSpot**. **Sync** reads the segment every hour by default, or every day or week, and
-**Sync now** in the source's menu reads it at once. A contact added to the segment is added to the
-table, and one removed from it leaves the table's workflows and stays in the table. Connect HubSpot
-first: [Connect your CRM](/kb/integrations/connect-your-crm). The source is set up in the app only: the
-API's `create_data_source` has no type for it.
+Click **CRM segment**, pick the **CRM account** and the list (**Segment**, **Saved filter**, **Campaign or
+list view** or **Group**), and optionally up to 25 of its fields as columns. On Pipedrive and Salesforce,
+**LinkedIn field** names the field that holds a person's LinkedIn link. **Sync** reads the list every hour
+by default, or every day or week, and **Sync now** in the source's menu reads it at once. A person added to
+the list is added to the table, and one who leaves it leaves the table's workflows and stays in the table.
+Connect the CRM first: [Connect your CRM](/kb/integrations/connect-your-crm).
+
+API and MCP: [`create_data_source`](/api-reference/playtables/data_sources/create-data-source) with
+`type: crm_list` and `payload.connection_sid`, `list_id` and `list_name`, and
+[`sync_data_source`](/api-reference/playtables/data_sources/sync-data-source-now) reads the list at once,
+as **Sync now** does.
 
 ## How does a data source run again on a schedule?
 
-A sender search, a post engagement and a HubSpot segment run again on their interval. An AI search and
+A sender search, a post engagement and a CRM segment run again on their interval. An AI search and
 a CSV run once, and a webhook listens all the time.
 
 **Interval**, on a sender search and a post engagement, offers **Once**, **Every hour**, **Every day**,
 **Every week** and **Every month** (`repeat`: `hourly`, `daily`, `weekly`, `monthly`, and none for
-**Once**), and **View details** changes it later. A HubSpot segment's **Sync** offers **Every hour** (the
+**Once**), and **View details** changes it later. A CRM segment's **Sync** offers **Every hour** (the
 default), **Every day** and **Every week**. A repeating source's row shows its interval between two runs,
 and hovering it shows **Next run on** with the date (**View details** shows **Next run**). A repeating
 LinkedIn or Sales Navigator search, saved search or list keeps its own schedule: its row shows neither,
@@ -286,7 +295,7 @@ decision maker at a marketing agency, not a freelancer".
 - The cost shows under the switch before you save: one AI call per 20 records, **About N credits per
   N records**.
 - Check on save is off on a new source and can be changed later in the source's **View details**.
-  AI search, sender search, post engagement, CSV and webhook sources have it, and HubSpot segments do not.
+  AI search, sender search, post engagement, CSV and webhook sources have it, and CRM segments do not.
 
 API and MCP: the `qualify` field of `create_data_source`, `{on, criterion}`.
 
@@ -346,15 +355,15 @@ failed source says why in **View details**, under **Why it stopped**, in a sente
 | `post_unavailable` | The post could not be read: deleted or private | Check the link, or create a source with another post |
 | `target_not_found` | LinkedIn has no page at that profile or company page address any more | Create a source with another link |
 | `file_unreadable`, `parse_failed` | The uploaded file could not be read, or stopped loading part way through | Upload the file again |
-| `crm_list_scope_missing` | The HubSpot portal cannot read segments yet | Connect it again in **Settings**, **Integrations**, **HubSpot**, then resume |
-| `crm_list_unreadable` | HubSpot refused the segment: it was deleted or is not a contact segment | Pick it again in a new source |
+| `crm_list_scope_missing` | The CRM account cannot read this list yet (a HubSpot portal connected before segments could be read) | Connect it again in **Settings**, **Integrations**, then resume |
+| `crm_list_unreadable` | The CRM refused the list: it was deleted or is not a list of contacts | Pick it again in a new source |
 | `playtable_archived` | The table was archived | Resume once the table is back in use |
 
 Nothing resumes by itself after a top-up: press **Resume import** in the source's menu. The one
 exception is a Find people search, which starts again as soon as its Find people column (once there are
 credits) or a find people play hands it a new company. The source's menu also has **View details**,
 **View imported** (the table's **People** or **Companies** tab), **Pause import**, **Sync now** for
-HubSpot, **Copy webhook URL** and **Rotate webhook URL** for a webhook, and **Delete source**. Deleting
+a CRM segment, **Copy webhook URL** and **Rotate webhook URL** for a webhook, and **Delete source**. Deleting
 a source keeps the people and companies it imported.
 
 API and MCP: [`update_data_source`](/api-reference/playtables/data_sources/update-data-source) with

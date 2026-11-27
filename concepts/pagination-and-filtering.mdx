@@ -65,7 +65,7 @@ confirm a filter reached the backend in the shape you meant.
 
 ## Sorting
 
-`sort` is a single object with a `field` and a `direction`, both required, for example `{ "field": "created_at", "direction": "desc" }`. One sort field applies per request, and the sortable fields are listed per endpoint.
+`sort` is a single object with a required `field` and an optional `direction` (`asc` or `desc`, `desc` when left out), for example `{ "field": "created_at", "direction": "desc" }`. One sort field applies per request, and the sortable fields are listed per endpoint.
 
 ## Includes
 

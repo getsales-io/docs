@@ -1,6 +1,6 @@
 ---
 title: "Sender profiles"
-description: "A sender profile (ub_sp_) is the identity a GetSales team sends as: a person's name, at most one LinkedIn account and any number of mailboxes, with a label, an assignee and sender variables. It has no status of its own: the LinkedIn account has linkedin_status (active, reconnect_required, stalled, disconnected, stopped) and each mailbox a status (active, sending_paused, reconnect_required, disconnected, subscription_required, deleted). Creating sender profiles is never limited: the plan's LinkedIn sender profiles and email inboxes cap how many channels connect (402 linkedin_sender_profiles_full or email_inboxes_full), a mailbox needs an email package of a paid plan (none on the trial), and for now a detached account keeps its place. Workflows, Unibox and the AI SDR all send as a sender profile. The app, the API and Creator create and edit one (create_sender_profile, update_sender_profile), but an assistant on the public MCP address cannot."
+description: "A sender profile (ub_sp_) is the identity a GetSales team sends as: a person's name, at most one LinkedIn account and any number of mailboxes, with a label, an assignee and sender variables. It has no status of its own: the LinkedIn account has linkedin_status (active, reconnect_required, stalled, disconnected, stopped) and each mailbox a status (connecting, active, sending_paused, reconnect_required, disconnected, subscription_required, deleted). Creating sender profiles is never limited: the plan's LinkedIn sender profiles and email inboxes cap how many channels connect (402 linkedin_sender_profiles_full or email_inboxes_full), a mailbox needs an email package of a paid plan (none on the trial), and a detached account that was connected through GetSales is removed, which frees its place. Its signature is a variable of its own (variables.signature), placed in an email where you insert it. Workflows, Unibox and the AI SDR all send as a sender profile. The app, the API and Creator create and edit one (create_sender_profile, update_sender_profile), but an assistant on the public MCP address cannot."
 ---
 
 A sender profile is the identity your team sends as: a person's name, one LinkedIn account, and the mailboxes it sends email from. Workflows, the inbox and the AI SDR all send as a sender profile, so every message a prospect gets, and every reply they send back, belongs to one.
@@ -26,7 +26,7 @@ A sender profile's parts, as the app and the API name them:
 | Mailboxes | `mailboxes` | Any number, on the workspace's email server, which comes with an email package (none on the trial). An email step sends from the active ones in turn: [Connect a mailbox](/kb/sender-profiles/connect-a-mailbox) |
 | **Label** | `label` | A word of your own (a client, a team, a market), shown in the list under the name and used to filter it |
 | **Assignee** | `assignee_user_sid` | The teammate who works it: its manual steps, the AI SDR's hand-offs and live website visit alerts reach them. With **Nobody**, manual steps go to the team's queue, alerts to the workspace owner |
-| **Variables** tab | `variables` | Its values of the team's sender variables, such as a calendar link a message quotes as `{{sender.calendar_link}}` |
+| **Variables** tab | `variables` | Its **Signature** (`variables.signature`, quoted as `{{sender.signature}}`) and its values of the team's sender variables, such as a calendar link a message quotes as `{{sender.calendar_link}}` |
 | Licence marks | `linkedin_has_sn`, `linkedin_recruiter_status` | Sales Navigator on the account, and Recruiter's state, read from LinkedIn |
 
 ## How do you create a sender profile?
@@ -51,11 +51,24 @@ Click **Create profile**. The new sender profile reads **No channels yet** until
 </Step>
 </Steps>
 
-Through the API, [`create_sender_profile`](/api-reference/unibox/sender_profiles/create-sender-profile) does the same and can also bind an account the workspace already holds, and [`update_sender_profile`](/api-reference/unibox/sender_profiles/update-sender-profile) edits the name, label, assignee and variables.
+Through the API, [`create_sender_profile`](/api-reference/unibox/sender_profiles/create-sender-profile) does the same and can also bind an account the workspace already holds, and [`update_sender_profile`](/api-reference/unibox/sender_profiles/update-sender-profile) edits the name, label, assignee, variables and signature (`variables.signature`).
 
 <Frame caption="New sender profile, under Channels are connected after the profile exists: First name and Last name (both required), an optional Label, and the Assignee, who starts as whoever creates the profile. The hint says the label shows in the list under the name and the profile's manual steps land in the assignee's queue.">
   <img src="/images/kb/sender-profiles/new-sender-profile-dialog.png" alt="New sender profile dialog under the line Channels are connected after the profile exists, filled with First name Maya, Last name Chen, Label DACH and Assignee Maya Chen, with the hint that the label shows in the list under the name and that manual steps of this profile land in the assignee queue, and the Cancel and Create profile buttons" />
 </Frame>
+
+## Where does a sender profile's signature go?
+
+A sender profile's signature is written in the **Signature** box of its **Variables** tab ("Built in: it cannot be deleted or renamed."): text with bold, italic and links, up to 8,192 characters of HTML. It belongs to the sender profile, not to a mailbox, so every mailbox of the sender profile signs with the same one.
+
+The signature goes into an email only where you place it ("Goes into an email where you place it: the Signature verb in a reply, the chip in a step."):
+
+- **In Unibox**, **Insert signature** under the composer puts it under the reply you are writing: [Unibox](/kb/inbox/unibox).
+- **In a workflow**, **Insert signature** in a **Send email** step's body puts a **Signature** chip (`{{sender.signature}}`) where the caret is, and each email is signed by the sender profile it leaves from: [Build a workflow](/kb/workflows/build-a-workflow#what-does-a-send-email-step-need).
+
+An email with neither goes out unsigned, and a LinkedIn message is never signed. Until 26 November 2026 a signature was a mailbox's setting and was added to every email from it. Since then a **Send email** step that is to be signed needs the **Signature** chip in its body, and the signature is filled in on the sender profile.
+
+Over the API it is `variables.signature` on [`update_sender_profile`](/api-reference/unibox/sender_profiles/update-sender-profile), and `include_signature` on [`send_message`](/api-reference/unibox/messages/write-send-or-reply-to-a-message).
 
 ## Can an AI assistant create or edit a sender profile?
 
@@ -74,7 +87,7 @@ A click on a sender profile's row on [https://app.getsales.io/sender-profiles](h
 | **Overview** | Over its own period (the last 30 days by default, picked on the tab, not the list's **Stats period**): touches and replies, the funnel from **Reached** to **Positive** by channel, and, for a member with `can_view_workflows`, **Who shares this sender profile**. Then the workspace's **Website visits** and the account's **Profile views** this week, and the **Latest activity** |
 | **LinkedIn** | The account card and its status, **Manage**, the proxy, import and sync rows, the warmup, the daily activity against the limits, and **Auto tasks and daily limits** |
 | **Email** | One card per mailbox, with its status, today's sends and its settings |
-| **Variables** | The sender profile's values for the team's sender variables |
+| **Variables** | The sender profile's **Signature** and its values for the team's sender variables |
 | **Activity** | What the sender profile did, newest first |
 
 **Edit profile** and **Delete profile** sit in the drawer's menu and in the row's menu. The Overview's numbers, day by day with the share of each workflow, come from [`get_sender_profile_performance`](/api-reference/playtables/sender_profiles/sender-profile-performance).
@@ -85,6 +98,7 @@ A sender profile's statuses belong to its channels: the LinkedIn account has one
 
 | LinkedIn card reads | `linkedin_status` | Means |
 |---|---|---|
+| **Syncing** | `active`, with `initial_sync` set on [`read_sender_profile_limits`](/api-reference/unibox/sender_profiles/read-sender-profile-caps) | The account's first sync runs ("This account is syncing.", with about how long it takes). Nothing is sent from it until the sync ends: a step due meanwhile waits and goes out afterwards |
 | **Active** | `active` | The account works |
 | **Reconnect needed** | `reconnect_required` | LinkedIn signed the account out: someone signs in again |
 | **Needs your action** | `disconnected` or `stalled` | A cause only you can fix, named on the card |
@@ -101,18 +115,19 @@ Each mailbox of a sender profile has its own status (`status` on the mailbox), o
 
 | Mailbox card reads | `status` | Means |
 |---|---|---|
+| **Syncing** | `connecting` | Just connected: its mail is being read for the first time. It sends nothing until that is done and turns **Active** by itself. A due **Send email** step waits for it, for up to 24 hours |
 | **Active** | `active` | Sends and receives |
 | **Sending paused** | `sending_paused` | Receives, does not send. A person paused it, or GetSales did: the mail provider refused 3 of its emails under its policy within 24 hours, or the provider's own daily sending quota for it is spent, a pause that lifts by itself after 24 hours. The mailbox's own **Daily send limit** never pauses it |
 | **Reconnect needed** | `reconnect_required` | The provider ended the sign-in: reconnect it |
 | **Disconnected** | `disconnected` | Someone disconnected it and its sign-in was removed: reconnect it |
 | **Subscription needed** | `subscription_required` | The plan no longer covers the mailbox |
-| **Deleted** | `deleted` | The mailbox is gone and nothing brings it back: **Detach** it and connect a new one. Until it is detached it keeps its red mark and still takes one of the plan's inboxes. As the sender profile's last channel it cannot be detached: connect another channel first, or delete the sender profile |
+| **Deleted** | `deleted` | The mailbox was removed: **Detach** it, or connect the same address again from **Add mailbox**, which brings it back. Until it is detached it keeps its red mark and still takes one of the plan's inboxes. As the sender profile's last channel it cannot be detached: connect another channel first, or delete the sender profile |
 
 What to do about each: [When a sender profile needs attention](/kb/sender-profiles/troubleshooting).
 
 ## Which sender profiles count under Needs attention?
 
-A sender profile counts under **Needs attention**, and wears a red mark in the list, on its channel's tab in the drawer and in the sidebar's mark on **Sender Profiles**, when its LinkedIn card reads anything but **Active** or **Stopped**, when its Recruiter chip reads **Signed out** (Recruiter asks for its password again), or when one of its mailboxes reads **Reconnect needed**, **Disconnected**, **Subscription needed** or **Deleted**. An action held at its limit does not count: the LinkedIn card stays **Active**, and in the list the LinkedIn chip's card reads **On hold** for it. A mailbox whose sending is paused does not count either, nor does a stopped account. The filter is [https://app.getsales.io/sender-profiles?filter=attention](https://app.getsales.io/sender-profiles?filter=attention).
+A sender profile counts under **Needs attention**, and wears a red mark in the list, on its channel's tab in the drawer and in the sidebar's mark on **Sender Profiles**, when its LinkedIn card reads anything but **Active** or **Stopped**, when its Recruiter chip reads **Signed out** (Recruiter asks for its password again), or when one of its mailboxes reads **Reconnect needed**, **Disconnected**, **Subscription needed** or **Deleted**. An action held at its limit does not count: the LinkedIn card stays **Active**, and in the list the LinkedIn chip's card reads **On hold** for it. A mailbox whose sending is paused does not count either, nor does one that reads **Syncing**, nor a stopped account. The filter is [https://app.getsales.io/sender-profiles?filter=attention](https://app.getsales.io/sender-profiles?filter=attention).
 
 ## Who can send as a sender profile?
 
@@ -129,11 +144,11 @@ A plan holds any number of sender profiles: creating one never takes a place. It
 - **LinkedIn sender profiles:** how many LinkedIn accounts can be connected at once. Each sender profile with a LinkedIn account takes one.
 - **Email inboxes:** how many mailboxes can be connected at once, across all sender profiles. Each email package of the plan is one dedicated email server for the workspace, and a new mailbox lands on a server that is ready and has an inbox free, so a workspace with no email package (the trial, the Free plan) connects no mailbox: [Connect a mailbox](/kb/sender-profiles/connect-a-mailbox#where-does-a-new-mailbox-land).
 
-A new connect beyond them is refused with `402` and the reason `linkedin_sender_profiles_full` (**All 10 LinkedIn sender profiles of this workspace's plan are in use. Detach a LinkedIn account you no longer need, or add LinkedIn sender profiles in Settings, Billing.**) or `email_inboxes_full` (**All 100 inboxes of this workspace's plan are in use. Disconnect a mailbox you no longer need, or add inboxes in Settings, Billing.**), with the plan's own numbers. In **Add mailbox**, the email refusal reads **Every inbox your plan holds is in use. Add inboxes, or detach a mailbox you no longer need.**
+A new connect beyond them is refused with `402` and the reason `linkedin_sender_profiles_full` (**All 10 LinkedIn sender profiles of this workspace's plan are in use. Detach a LinkedIn account you no longer need, or add LinkedIn sender profiles in Settings, Billing.**) or `email_inboxes_full` (**All 100 inboxes of this workspace's plan are in use. Detach a mailbox you no longer need, or add inboxes in Settings, Billing.**), with the plan's own numbers. In **Add mailbox**, the email refusal reads **Every inbox your plan holds is in use. Add inboxes, or detach a mailbox you no longer need.**
 
 ## Does a detached LinkedIn account or mailbox still take a place?
 
-Yes, for now. A LinkedIn account or mailbox you detach, or one a deleted sender profile held, stays connected to the workspace and keeps its place, so detaching one to make room frees nothing. A LinkedIn connect still waiting for its sign-in holds a place the same way. A new connect refused for such a place reads **All 10 LinkedIn sender profiles of this workspace's plan are in use. Detach a LinkedIn account you no longer need, then connect again.** (the plan's number), and a mailbox finds its email server full: **All 100 inboxes are in use.** in **Add mailbox**, `402` `email_server_full` over the API. Instead, attach the held account to a sender profile again, which takes no new place: [`attach_sender_profile_linkedin`](/api-reference/unibox/sender_profiles/attach-a-linkedin-account-to-a-sender-profile) or [`attach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/attach-a-mailbox-to-a-sender-profile) with a free row of [`list_sender_profile_available_accounts`](/api-reference/unibox/sender_profiles/list-available-channel-accounts), or `create_sender_profile` with its sid. Creator can do it for you. Or add more in **Settings**, **Subscription**.
+No. A LinkedIn account or mailbox that was connected through GetSales is removed when you detach it, or when the sender profile that held it is deleted: its place in the plan is free again, and to use it again you connect it again. The confirm says so: "One connected through GetSales is removed, and one LinkedIn sender profile of your plan is free again." What you brought from a gtm-api workspace of your own that you linked stays connected there, and can be attached again with no new sign-in: [`attach_sender_profile_linkedin`](/api-reference/unibox/sender_profiles/attach-a-linkedin-account-to-a-sender-profile) or [`attach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/attach-a-mailbox-to-a-sender-profile) with a free row of [`list_sender_profile_available_accounts`](/api-reference/unibox/sender_profiles/list-available-channel-accounts). A LinkedIn connect still waiting for its sign-in holds a place until it lands or is given up. To keep a mailbox and its conversations, move it to another sender profile instead of detaching it: [Connect a mailbox](/kb/sender-profiles/connect-a-mailbox#how-do-you-pause-make-primary-or-detach-a-mailbox).
 
 ## What happens to sender profiles when a trial ends without a plan?
 
@@ -141,9 +156,9 @@ When a trial ends without a paid plan, the workspace moves to [the Free plan](/k
 
 ## What happens when you detach a channel or delete a sender profile?
 
-- **Detach LinkedIn** (under **Manage** on the LinkedIn tab, or [`detach_sender_profile_linkedin`](/api-reference/unibox/sender_profiles/detach-the-linkedin-account-from-a-sender-profile)) takes the account off the sender profile, which stays and can take another account. For now the account stays connected to the workspace and keeps its place. Its queued LinkedIn steps stay with the sender profile: if another account is connected before they come due, they go out from it, and a step that comes due with no account fails.
-- **Detach** on a mailbox ([`detach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/detach-a-mailbox-from-a-sender-profile)) does the same for one mailbox. A mailbox that is the sender profile's last channel cannot be detached (`409` `last_channel_account`): delete the sender profile instead.
-- **Delete profile** (the drawer's menu, or [`delete_sender_profile`](/api-reference/unibox/sender_profiles/delete-sender-profile)) removes the sender profile, after the confirm **Threads keep their history. Queued sends from this profile stop.** Its conversations, messages and tasks stay. Each workflow person pinned to it moves, at their next send, to another live sender profile of that workflow. With none left, or in a play, the send fails.
+- **Detach LinkedIn** (under **Manage** on the LinkedIn tab, or [`detach_sender_profile_linkedin`](/api-reference/unibox/sender_profiles/detach-the-linkedin-account-from-a-sender-profile)) takes the account off the sender profile, which stays and can take another account. An account connected through GetSales is removed with it, and its place in the plan is free again. Its queued LinkedIn steps stay with the sender profile: if another account is connected before they come due, they go out from it, and a step that comes due with no account fails.
+- **Detach** on a mailbox ([`detach_sender_profile_mailbox`](/api-reference/unibox/sender_profiles/detach-a-mailbox-from-a-sender-profile)) does the same for one mailbox, and frees its inbox in the plan. A mailbox that is the sender profile's last channel cannot be detached (`409` `last_channel_account`): move it to another sender profile, or delete the sender profile.
+- **Delete profile** (the drawer's menu, or [`delete_sender_profile`](/api-reference/unibox/sender_profiles/delete-sender-profile)) removes the sender profile, after the confirm **Threads keep their history. Queued sends from this profile stop.** Its LinkedIn account and its mailboxes that were connected through GetSales are removed with it, and their places in the plan are free again. Its conversations, messages and tasks stay. Each workflow person pinned to it moves, at their next send, to another live sender profile of that workflow. With none left, or in a play, the send fails.
 
 ## What does a sender profile not do?
 
@@ -151,7 +166,7 @@ When a trial ends without a paid plan, the workspace moves to [the Free plan](/k
 - It has **no sending hours and no time zone** of its own: sends follow each workflow's window, and a day is the workspace's.
 - It has **no status of its own**: only its channels do.
 - GetSales **does not sell, rent or lend LinkedIn accounts**: a sender profile connects a LinkedIn account that you, a teammate or a client already holds and signs in to.
-- GetSales **sends no email** when a sender profile needs attention: the marks are in the app, and a developer can subscribe to the `sender-profiles.health-changed` webhook, for the LinkedIn channel only ([Webhook events](/guides/webhook-events)).
+- GetSales **emails the assignee**, or the workspace's owner when there is none, when a LinkedIn account is signed out or restricted or a mailbox needs reconnecting, and again when it works: [When a sender profile needs attention](/kb/sender-profiles/troubleshooting). A developer can subscribe to the `sender-profiles.health-changed` webhook, for the LinkedIn channel only, and to `sender-profiles.limit-reached` and `sender-profiles.limit-released` for its daily caps ([Webhook events](/guides/webhook-events)).
 
 ## How do teams use sender profiles?
 

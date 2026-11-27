@@ -36,7 +36,9 @@ In **Members and invites**, each name carries **Owner** or **Member** and how mu
 </Frame>
 
 Nobody can give more than they hold: a member who invites or edits someone else can grant only permissions they hold
-themselves. An AI assistant or Creator acting for a member never does more than that member can.
+themselves. An AI assistant or Creator acting for a member never does more than that member can. A connected app is held
+further: it cannot change the sign-in address of the account it acts for or delete that account, answer a consent,
+or change its own permissions. Each of those takes your own sign-in in the app.
 
 Members cost nothing. No plan, trial or Free plan caps the number of members, and the workspace's plan and credits
 are shared by all of them: a LinkedIn account a member connects takes one of the plan's LinkedIn sender profiles,
@@ -82,7 +84,7 @@ A preset ticks a fixed set of the 46 permissions:
 |---|---|---|
 | **Superadmin** | Every permission, including ones added later | Everything a member can do. It is not the owner: it cannot transfer or delete the workspace. Only the owner or another Superadmin can grant it |
 | **Operator** (the default) | 25 of 46 permissions | Works tables, people, workflows, the inbox and the AI SDR's drafts and plans, connects integrations and webhooks, opens a sender profile's cloud browser and changes its proxy. Cannot create, rename or delete tables or their columns, build or publish workflows, delete people, edit pipeline stages or plays, add or remove stoplist entries in Settings or with a table's Actions, Add to Stoplist (a person still goes on the stoplist with Add to stoplist on their thread or on Signals), create, edit or connect sender profiles (a LinkedIn account or a mailbox), stop or start a sender profile's browser, configure the AI SDR, change website tracking, see API keys or billing, invite or remove members, or rename the workspace |
-| **View only** | 15 of 46 permissions | Sees tables, people, workflows, the inbox, sender profiles, the AI SDR, signals, the stoplist, integrations, webhooks, notifications and the member list, and changes nothing but its own sign-ins, connected apps, profile and Signals feed settings, though its Creator chats and dictation spend the workspace's credits. Sees no API keys or billing |
+| **View only** | 15 of 46 permissions | Sees tables, people, workflows, the inbox, sender profiles, the AI SDR, signals, the stoplist, integrations, webhooks, notifications and the member list, and changes nothing but its own sign-ins, connected apps, profile, email preferences and Signals feed settings, though its Creator chats and dictation spend the workspace's credits. Sees no API keys or billing |
 
 Every member always holds three permissions, drawn ticked and locked: Workspace View, Sessions View and Sessions
 Manage. **Custom** lights up when the ticked set matches no preset.
@@ -99,10 +101,10 @@ under its name, a box you can tick shows its token on hover, and **Search permis
 |---|---|---|---|
 | Workspace | View, Manage | `can_view_teams`, `can_manage_teams` | Manage: rename the workspace and set its timezone, edit the workspace profile (your company and offer), create another workspace |
 | Members | View, Manage | `can_view_team_members`, `can_manage_team_members` | View: the Teammates list. Manage: invite, resend, edit access, remove |
-| API keys | View, Manage | `can_view_api_keys`, `can_manage_api_keys` | View: the API keys panel. Manage: create, rotate and revoke keys |
+| API keys | View, Manage | `can_view_api_keys`, `can_manage_api_keys` | View: the API keys panel. Manage: create, rotate and revoke keys. A member adds to a key only permissions they hold, and takes a rotated secret only for a key that carries nothing they lack ("This key carries permissions you don't hold, so its new secret isn't yours to take.") |
 | OAuth apps | View, Manage | `can_view_oauth_clients`, `can_manage_oauth_clients` | The OAuth apps a developer registers |
 | Sessions | View, Manage | `can_view_sessions`, `can_manage_sessions` | Your own sign-ins and connected apps |
-| Billing | View, Manage | `can_view_billing`, `can_manage_billing` | View: Subscription and Invoices. Manage: buy a plan or credits, cards. Changing, pausing or cancelling a subscription is its buyer's alone |
+| Billing | View, Manage | `can_view_billing`, `can_manage_billing` | View: Subscription and Invoices. Manage: buy a plan or vendor credits, add or update the card, and change, pause or cancel the plan this workspace runs on, as its buyer does. A subscription a partner splits across workspaces is changed by its buyer alone |
 | SSL certificates | View, Manage | `can_view_ssl_certificates`, `can_manage_ssl_certificates` | The certificates of a white label brand's domains |
 | Notifications | View, Manage | `can_view_notifications`, `can_manage_notifications` | The notification feed and email log |
 | White label | View, Manage | `can_view_whitelabels`, `can_manage_whitelabels` | The white label brands of a partner account |
@@ -204,7 +206,8 @@ and [`delete_team_member`](/api-reference/id/team_members/remove-team-member) on
 What removal does:
 
 - The member is signed out of this workspace, and their connected AI assistants lose it, both within 5 minutes.
-  Their other workspaces and their own account are untouched, and no email tells them.
+  Their other workspaces and their own account are untouched, and GetSales emails them that their access to the
+  workspace ended ("You no longer have access to" the workspace).
 - Everything they worked on stays with the workspace and keeps running: the sender profiles, LinkedIn accounts and
   mailboxes they connected, their threads, workflows, tables and sources.
 - A sender profile whose **Assignee** was the removed member keeps them as its assignee: its hand-off emails and live
@@ -227,9 +230,9 @@ The new owner gets the deletion rights, and their wider access arrives within th
 in again. You stay in the workspace with full access, which the new owner can reduce.
 
 <Warning>
-The subscription does not move with the workspace. It belongs to the person who bought it, and only that person can
-change, pause or cancel it. The workspace keeps drawing on it, and its owner sees "Paid by another member" in
-Settings, Subscription. See [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
+The subscription does not move with the workspace: the person who bought it keeps paying for it, and the receipts go
+to them. The workspace keeps drawing on it, and the new owner, like every member holding Billing Manage in the
+workspace, can change, pause or cancel it in Settings, Subscription. See [Plans, credits and billing](/kb/workspace/plans-credits-and-billing).
 </Warning>
 
 Deleting the workspace, under **Danger zone**, is the owner's alone: "Access ends at once: API keys are revoked and
@@ -264,8 +267,8 @@ members and billing, with you as its owner.
 - It does not charge for members or cap how many a workspace has.
 - It stores no role but the owner, and no Admin label exists: access is the permission list.
 - It does not limit a member to some sender profiles or tables inside a workspace: use a separate workspace.
-- It does not email a removed member, and removing a member deletes nothing they built.
-- It does not move the subscription when the workspace's ownership moves.
+- Removing a member deletes nothing they built.
+- It does not move who pays for the subscription when the workspace's ownership moves.
 - It has no Leave button: a member without Members Manage cannot leave a workspace by themselves, while one who
   holds it can remove their own row (not the owner, who must transfer ownership first). It does not change an
   invitation's address or show when an invitation expires.

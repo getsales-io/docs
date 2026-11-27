@@ -3,6 +3,287 @@ title: "Changelog"
 description: "What's new in the GetSales platform and this documentation."
 ---
 
+<Update label="2026-11-26" description="A mailbox moves between sender profiles, a workspace sets its own tracking domain, and the signature belongs to the sender profile">
+  **A mailbox moves with its conversations.** `POST /api/sender-profiles/{sid}/mailboxes/{emailAccountSid}/move`
+  with `to_sender_profile_sid` hands a mailbox to another sender profile of the workspace. It stays connected,
+  and its conversations go with it. A connect that meets a mailbox another sender profile holds answers `409`
+  `mailbox_bound_elsewhere` with `context.sender_profile_sid` and `context.email_account_sid`, so the move is
+  one call away. A new mailbox reads `status` `connecting` from its sign-in until its first sync ends.
+
+  **A workspace sets its own tracking domain.** Three operations under
+  `/api/sender-profiles/{sid}/mailboxes/{emailAccountSid}/tracking-domains`: `create` registers a subdomain and
+  answers the one CNAME record to add, `{emailTrackingDomainSid}/verify` checks it, and
+  `{emailTrackingDomainSid}/delete` removes a domain no mailbox is set on (`409` `tracking_domain_in_use`
+  otherwise). The list answers each domain's `dns_records`, and `PATCH` on the mailbox sets
+  `email_tracking_domain_sid`, `track_opens` and `track_clicks`. The steps are in
+  [Set up a tracking domain](/kb/sender-profiles/tracking-domains).
+
+  **Tracking and the unsubscribe link need a verified tracking domain.** A workflow whose email step holds
+  `{{unsubscribe_url}}`, `unsubscribe_link` or a true track flag is not published while no mailbox of its
+  sender profiles has a verified domain: `POST /api/workflows/validate` and
+  `POST /api/workflows/{sid}/publish` answer `tracking_domain_required`. A due email that holds the link
+  waits, with `result.held` on its task, until a domain is verified, and an email that forces tracking from a
+  mailbox without one goes out untracked (`result.output.sent_untracked`).
+
+  **The signature is the sender profile's.** `PATCH /api/sender-profiles/{sid}/mailboxes/{emailAccountSid}`
+  no longer takes `signature_html`. A signature is `variables.signature` on `PATCH /api/sender-profiles/{sid}`
+  (HTML, up to 8,192 characters) and goes into an email only where it is placed: `include_signature: true` on
+  `POST /api/messages/send`, or `{{sender.signature}}` in an email step's body. A workflow email that its
+  mailbox signed before this date goes out unsigned until its step carries `{{sender.signature}}`.
+
+  **A due email waits for its mailbox.** An email step whose mailboxes are paused, or still in their first
+  sync, waits instead of failing: up to 24 hours for a first sync, then `mailbox_first_sync_unfinished`. A
+  LinkedIn step due while a new account's first sync runs waits too, and
+  `POST /api/sender-profiles/{sid}/limits` answers `result.initial_sync` meanwhile. Its `result.linkedin`
+  rows no longer carry `batch_size`.
+
+  **The accounts read names what it could not read.** `POST /api/sender-profiles/available-accounts`
+  answers `unreadable_workspaces`, a workspace whose read failed, and each account's `provider` and, while a
+  LinkedIn account syncs, its `initial_sync`.
+</Update>
+
+<Update label="2026-11-26" description="Cc, Bcc, files and a later time on a message, text versions and files on workflow steps">
+  **A message takes copies, files, a mailbox and a time.** `POST /api/messages/send` takes `cc` and `bcc` (up
+  to 5 addresses each: `bcc` left out sends the mailbox's standing copy, `[]` sends none), `attachments` (up to
+  5 files, each named by an https address, 20 MB together: documents, pictures, video, audio or a zip),
+  `new_thread.email_account_sid` (the mailbox a first email leaves from) and `include_signature`. Every
+  message answer carries `cc`, `bcc`, `include_signature`, `reply_to` and `hold_reason`.
+
+  **A scheduled message pauses when the lead answers first.** It stays `queued` with `hold_reason`
+  `lead_replied`, the thread's timeline gets a `scheduled_paused` event, and a task opens for whoever scheduled
+  it. `PATCH /api/messages/{sid}` with a new `scheduled_at`, or `null` for now, sends it.
+
+  **A text step holds two to five versions.** A `linkedin_send_connection_request`, `linkedin_send_message`,
+  `linkedin_send_inmail` or `email_send` step takes `versions`: each with its `id`, `label`, `weight`,
+  `enabled` and text, in place of the step's own text fields. A person draws one version when the step is
+  planned and keeps it. A task carries `version_id`, `POST /api/workflow-tasks/search` filters on it, and
+  `GET /api/workflows/{sid}` with `include` `step_stats` answers each version's numbers and which one leads.
+
+  **LinkedIn steps carry files, and an email step's copies read a column.** `linkedin_send_message` and
+  `linkedin_send_inmail` steps take `attachments`: up to 5 files of the workflow's library, 20 MB together, and
+  one library file may now be 20 MB where it stopped at 10. An `email_send` step's `cc` and `bcc` take an
+  address or one column reference such as `{{people.owner_email}}`.
+
+  **A task says which touch it is and what it waits for.** Every workflow task carries `touch_seq`, and a
+  scheduled one names what holds it in `result.held`. `variables_snapshot` is the step's text as rendered
+  when the task was planned, not at dispatch.
+</Update>
+
+<Update label="2026-11-26" description="Webhook events for connection requests and sending caps, and message events that name the person">
+  **Four new events.** `linkedin-connection-requests.sent` and `linkedin-connection-requests.accepted` fire
+  when a sender profile's request goes out and when the person accepts it, with the person, the sender
+  profile and the workflow step that sent it. `sender-profiles.limit-reached` and
+  `sender-profiles.limit-released` fire when a daily cap of a sender profile's LinkedIn account closes and
+  opens again, with the `limit_type` and the `cause`: `filters.where` on `payload.cause` keeps a subscription
+  to LinkedIn's own refusals. The catalog holds 37 types, and
+  [Webhook events](/guides/webhook-events) lists each payload.
+
+  **Message events name the person.** `messages.sent`, `messages.received` and `messages.bounced` carry
+  `person_sid` and `sender_profile_sid`, so a receiver matches a message to its person without a second call.
+
+  **The limits read answers the account's health.** `POST /api/sender-profiles/{sid}/limits` with
+  `snapshot: true` adds `result.snapshot`: the LinkedIn account's warmup score, what took it off, and tips.
+</Update>
+
+<Update label="2026-11-26" description="A data subscription, AI SDR licenses and vendor credits on a plan, and paid actions priced in dollars">
+  **A plan takes three more lines.** `POST /api/billing-subscriptions/quote` takes `data_subscription` (its
+  tier, with the three tiers priced in the answer), `ai_sdr` (licenses, one workspace's AI SDR each),
+  `vendor_credits` (dollars, paid once) and a `promo_code`.
+  `POST /api/billing-subscriptions/{sid}/change` takes `data_subscription` and `ai_sdr`, answers typed
+  `steps` with what each charges, and never buys vendor credits (`422` `vendor_credits_by_checkout`). A
+  subscription allocation takes `ai_sdr`, and `include` `entitlements` on a team or a subscription answers
+  what the plan grants. The first LinkedIn bracket, 1 to 4 accounts, is $59 an account a month.
+
+  **The AI SDR needs a license.** In a workspace whose plan holds none, turning an agent on, a test, a retry
+  and a plan's approval answer `402` `ai_sdr_not_in_plan`. The agent still labels replies. A trial holds one
+  license.
+
+  **A member with Billing Manage changes the plan.** A change, a pause and a cancel are open to the buyer and
+  to anyone holding `can_manage_billing` in the workspace the plan feeds. A subscription split across
+  workspaces stays its buyer's alone (`403` `not_subscription_owner`).
+
+  **A credit is five cents, and a paid action costs what its vendor charges.** The balance is kept in US
+  dollars, and every answer that speaks credits counts one credit as $0.05. An AI call, a found email and an
+  email check are charged at the vendor's price: the 20% added to AI calls and the rate of 25 credits a
+  dollar are gone. A read of LinkedIn data on our managed infrastructure costs 0.1 or 0.5 credit, and a read
+  answered from saved data or by one of the workspace's own LinkedIn accounts is free. An Enrich column takes
+  `payload.params.trust_cache_max_age_days` (1 to 3650, 30 when left out, 0 for none), and saved answers are
+  free up to the plan's allowance. Prices are in
+  [Plans, credits and billing](/kb/workspace/plans-credits-and-billing#what-spends-credits).
+</Update>
+
+<Update label="2026-11-26" description="Slack channels, CRM sync settings, and data sources that take longer links">
+  **Slack channels have operations.** `POST /api/slack-channels`, `POST /api/slack-channels/search`,
+  `PATCH` and `DELETE /api/slack-channels/{sid}`, `POST /api/slack-channels/{sid}/test` and
+  `POST /api/slack-channels/workspace-channels` manage the Slack channels that hear a workspace's alerts, and
+  `slack` is a provider of `POST /api/provider-connections/oauth/authorize`.
+
+  **A CRM connection's sync policy is typed.** `PATCH /api/provider-connections/{sid}` takes `settings` whole:
+  `activity` (`messages`, `invites`, `emails`, `handoff`), `status`, `dates`, `identity` and `classification`,
+  the AI SDR's class of a reply written onto a field of yours. An unknown key is refused. A `crm_list` source
+  takes `payload.properties`, up to 25 fields of the list as columns, and
+  `PATCH /api/data-sources/{sid}` replaces them.
+
+  **A search link may be 15,000 characters long.** `url` on `POST /api/data-sources` took 2,048.
+  `POST /api/data-sources/preview-search` answers the companies a description fits before any source exists,
+  with the filters to create it with.
+
+  **A grid shows each widget column once.** `POST /api/playtable-fields` for a widget the grid already shows
+  answers that column with `already_exists: true`. A column's auto-run now starts on a row added by hand or
+  over the API, and on a person moved in from another table, as it does on a row a source lands.
+
+  **A model that declines is its own failure.** A cell or a provider call the model refused ends
+  `model_refused` and is charged nothing. Columns and workflow steps stored on `gpt-5` and `gpt-5-mini` moved to
+  `gpt-6.1-sol` and `gpt-6.1-terra`.
+
+  **A website's live alert starts off.** `live_alerts` on a site defaults to `off` and `live_alert_tasks` to
+  `false`, and the alert is an email to whoever works the thread.
+</Update>
+
+<Update label="2026-11-26" description="The reference at 345 operations, two more MCP groups, and the fields answers already carried">
+  **345 operations.** The REST reference follows what the API serves: Playtables 123, Unibox 108, ID and
+  Teams 65, Integrations 32 and Signals 17. New beside the ones named above:
+  `GET` and `PATCH /api/notification-preferences` (a person's email preferences), and
+  `POST /api/sender-profiles/{sid}/linkedin/move` with `POST /api/sender-profiles/linkedin/moves` (an account
+  handed over to another workspace for good, and the read of such moves).
+
+  **Two more MCP groups.** `gtm-api` lists and calls gtm-api.com's own tools through the workspace's direct
+  integration with gtm-api.com, with the caller's rights (three operations under `/api/gtm-api` over REST).
+  `knowledge-base` searches and reads this documentation (`search_knowledge`, `get_kb_article`). The server
+  holds 22 groups, and the public address, `https://mcp2.getsales.io/mcp/public`, serves 272 tools in 20 of
+  them.
+
+  **Answers name the fields they already carried.** Every person answer names `ln_nickname`, `website_code`
+  and `timezone`, every company answer its `website_code`, every workflow answer its `playtable_sid`, every
+  activity its `play_sid` and `trigger_activity_sid`, every workflow record its `re_entered_count` and
+  `last_re_entered_at` (its `entered_via_source_sid` can be null), and every AI SDR run its `answer_sids` and
+  `answers_quoted`.
+
+  **A credential is held to its reach.** An edit of an API key adds only permissions the caller holds, and a
+  rotate of a key that carries more than the caller holds answers `403` `key_exceeds_actor_reach`, unless the
+  caller is that key or its issuer. A connected app cannot change the sign-in address of the account it acts
+  for, delete that account, answer a consent or change its own grant: each takes the person's own sign-in.
+
+  **More in the catalogs.** The permission catalog gains `can_view_data`, `can_act_data` and
+  `can_manage_data`. A white label brand takes `config` (its own terms and privacy links), and a brand's
+  certificate answers `provider` and `cname_target`, with `challenge` as a map.
+</Update>
+
+<Update label="2026-11-25" description="An AI SDR that is off does nothing, and a scenario's level decides whether a message is sent or drafted">
+  **`off` stops the agent.** An agent whose `state` is `off` labels each new reply and does nothing else: it
+  plans, writes and sends nothing, and its plans wait where they stand. Set to `on` again, it goes on from
+  there, and a reply that came meanwhile is read as if it had just arrived, unless it is older than the
+  agent's recency window. Until this date a paused agent went on planning and answering.
+
+  **The scenario's level decides at the send.** On a thread with no mode of its own, a message the AI SDR
+  writes goes out by itself when the latest labelled reply resolved to a scenario on `autopilot`, and waits
+  as a draft on `copilot`, whatever the workflow's or the agent's own mode says. A thread's
+  `agent_mode_override` still comes first, and a thread whose workflow stops or continues on a reply is left
+  alone.
+</Update>
+
+<Update label="2026-11-24" description="The folk sync, Cursor over OAuth, and a CRM write that waits out the pace">
+  **folk syncs both ways.** A folk person is found by its folk id, the LinkedIn profile among its links or
+  its email, outreach lands on the person as interactions, a select field of a group moves forward with the
+  conversation, and a folk group is a table's source (`type` `crm_list` with a `grp_...` list id). The setup
+  is in [Set up the folk integration](/guides/folk).
+
+  **Cursor connects over OAuth.** Client registration accepts an app's own redirect scheme beside https and
+  loopback addresses, so Cursor signs in to `https://mcp2.getsales.io/mcp/public` over OAuth:
+  [Connect a client](/mcp/connect).
+
+  **A CRM write the pace held back waits.** A Send to CRM cell that meets the account's request pace waits
+  and tries again every minute, for up to 15 minutes, instead of failing as `rate_limited`.
+</Update>
+
+<Update label="2026-11-22" description="A mailbox's sending domain read over the API, and a mailbox that was already connected">
+  **One read answers every mailbox's DNS.** `POST /api/sender-profiles/mailboxes/domain-health` answers, for
+  each mailbox, its `status` (`problem`, `ok` or `unknown`), its MX, SPF, DKIM and DMARC `records` and
+  `checked_at`. With `email_account_sid` and `refresh: true` it looks one mailbox's domain up now, at most
+  once a minute for a domain.
+
+  **A connect says when the mailbox was already there.**
+  `POST /api/sender-profiles/{sid}/mailboxes/connect-imap` answers `result.bound_existing` `true` when the
+  workspace already held the mailbox: it is attached as it is, and the settings sent with the call are not
+  applied.
+
+  **A column an agent creates lands on its grid.** Over MCP, `create_playtable_field` adds the column to the
+  grid's default view unless `add_to_default_view` is `false`. A direct REST call still leaves it on no view
+  unless it says `true`.
+</Update>
+
+<Update label="2026-11-21" description="The Salesforce sync">
+  **Salesforce syncs both ways.** Once an org's admin installs the GetSales Sync package and a user connects
+  the org, a lead or contact is found by its Salesforce id, its LinkedIn profile or its email, outreach lands
+  on the record as completed tasks, a picklist moves forward with the conversation, and a campaign or a lead
+  or contact list view is a table's source (`type` `crm_list`, with a `701...` or `00B...` list id). The setup
+  is in [Set up the Salesforce integration](/guides/salesforce).
+</Update>
+
+<Update label="2026-11-20" description="The Pipedrive sync, and an endorse step that skips">
+  **Pipedrive syncs both ways.** A Pipedrive person is found by its id, its LinkedIn profile or its email,
+  outreach lands on the person as notes, a field or its labels moves forward with the conversation, and a
+  saved filter of persons is a table's source (`type` `crm_list`). The setup is in
+  [Set up the Pipedrive integration](/guides/pipedrive).
+
+  **An endorse step with nothing to endorse is skipped.** A `linkedin_endorse_skills` task for a person with
+  no skill left to endorse ends `skipped` with `no_endorsable_skills`, and the person moves on. It failed
+  the journey before.
+</Update>
+
+<Update label="2026-11-19" description="The stoplist at every send, a bounced address that skips its step, and what a detach removes">
+  **The stoplist is read at every send.** `POST /api/messages/send` to a person on the workspace's stoplist
+  answers `409` `stoplisted` with `context.cause` `workspace_stoplist`, for a member, an API key and the AI
+  SDR alike. `DELETE /api/stoplist-entries/{sid}` lifts it.
+
+  **A bounced address skips the email step.** An `email_send` task that meets an address on the do-not-send
+  list ends `skipped` with `recipient_suppressed`, and the journey goes on to its next step. It failed the
+  journey before.
+
+  **A detach removes what GetSales connected.** `POST /api/sender-profiles/{sid}/linkedin/detach`, a mailbox
+  detach and `DELETE /api/sender-profiles/{sid}` remove a LinkedIn account or a mailbox that was connected
+  through GetSales, and its place in the plan is free again. One that lives in a workspace of your own that
+  you linked stays connected there.
+
+  **One email package per workspace.** A second package on a plan is refused: `409`
+  `email_single_package_only`.
+</Update>
+
+<Update label="2026-11-18" description="The workspace a credential acts in, email servers, and the cause of a refused IMAP sign-in">
+  **A credential names its workspace.** `GET /api/teams/current` answers the workspace the token acts in, by
+  its sid and its name.
+
+  **A mailbox lands on an email server.** Each email package of a plan is one dedicated email server.
+  `POST /api/sender-profiles/{sid}/mailboxes/servers` lists the servers a new mailbox can land on, and
+  `POST /api/sender-profiles/{sid}/mailboxes/connect-imap` takes `email_server_sid`. A connect no server can
+  take is refused before anything is created: `409` `email_server_missing`, `email_server_not_ready`,
+  `email_server_suspended` or `email_server_failed`, `402` `email_server_full`, `422` `email_server_unknown`.
+  The trial carries no email.
+
+  **A refused sign-in says why.** `connect-imap` signs in to both servers before it creates the mailbox, and
+  a refusal is a `422` on the field to change with the mail server's cause as its rule, such as
+  `imap_auth_failed`, `imap_app_password_required` or `smtp_auth_failed`.
+  [Connect mailboxes from a script](/guides/connect-mailboxes) lists every cause.
+
+  **HubSpot emails land on the timeline.** `settings.activity.emails` on a HubSpot connection logs emails
+  sent and answered, and is refused with `422` `email_scope_missing` until the portal grants HubSpot's email
+  access.
+</Update>
+
+<Update label="2026-11-17" description="A CRM list as a table's source, and a CRM status that follows the conversation">
+  **A HubSpot segment fills a table.** `POST /api/data-sources` takes `type` `crm_list` with
+  `payload.connection_sid` and `payload.list_id`, read every hour unless `payload.repeat` says otherwise, and
+  `POST /api/data-sources/{sid}/sync-now` reads it at once.
+  `POST /api/provider-connections/{sid}/crm-metadata` with `kind` `lists` and `query` finds a list by name. A
+  person who leaves the list leaves the table's workflows and stays in the table.
+
+  **Outreach follows the contact.** A HubSpot contact is found by its HubSpot id, then the LinkedIn profile,
+  then the email. `settings.activity.invites` logs a connection request, with its note, and its accept, and
+  `settings.status` with `settings.dates` moves a property of yours forward as a request is sent and
+  accepted, a message goes out and the lead replies. The setup is in
+  [Set up the HubSpot integration](/guides/hubspot).
+</Update>
+
 <Update label="2026-11-15" description="Post engagement with no sender profile and by keyword, CSV columns matched on upload, json columns that declare their outputs">
   **A post engagement names no sender profile.** `POST /api/data-sources` with `type` `post_engagement`
   refuses `sender_profile_sid` now and picks how each read runs: a LinkedIn account of your workspace

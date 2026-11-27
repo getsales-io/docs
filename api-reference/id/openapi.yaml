@@ -11,7 +11,7 @@ info:
 
     GENERATED. This document is projected from the Zod MCP tool registry in `product/mcp/gs.mcp` (one tool per public endpoint, 1:1). Do not edit it by hand; edit the tool definition and regenerate with `pnpm openapi:public`.
 
-    Surface: the public `/api` contract of `gs.service.id`, 62 operations. This is the only OpenAPI document the platform publishes. Internal (`/internal`) and health endpoints are deliberately absent: they are not part of any contract, they can change without notice, and the service source is their only description.
+    Surface: the public `/api` contract of `gs.service.id`, 65 operations. This is the only OpenAPI document the platform publishes. Internal (`/internal`) and health endpoints are deliberately absent: they are not part of any contract, they can change without notice, and the service source is their only description.
 
     Conventions:
     - Auth is a bearer JWT, optionally narrowed by the `Team-SID` header.
@@ -51,6 +51,8 @@ tags:
     description: Registry package `mcp.id/credit_transactions`, served on MCP mount `workspace.billing`.
   - name: gtm_connections
     description: Registry package `mcp.id/gtm_connections`, served on MCP mount `sender-accounts`.
+  - name: notification_preferences
+    description: Registry package `mcp.id/notification_preferences`, served on MCP mount `workspace.team`.
   - name: notifications
     description: Registry package `mcp.id/notifications`, served on MCP mount `workspace.team`.
   - name: oauth_authorizations
@@ -253,7 +255,7 @@ paths:
       operationId: update_api_key
       summary: Update API key
       description: |-
-        Rename a key or replace its permissions (a full replacement, inside the issuer's grant: 403 grant_exceeds_ceiling). The identity and the secret are untouched (a rotation, in the app or over REST, changes the secret). At least one field. The change binds here at once; a peer that cached the key's verdict keeps the old set for up to 300 seconds.
+        Rename a key or replace its permissions (a full replacement, inside the issuer's grant, and adding only what the caller holds: 403 grant_exceeds_ceiling). The identity and the secret are untouched (a rotation, in the app or over REST, changes the secret). At least one field. The change binds here at once; a peer that cached the key's verdict keeps the old set for up to 300 seconds.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/api_keys`, surface api).
@@ -352,7 +354,7 @@ paths:
       operationId: rotate_api_key
       summary: Rotate API key
       description: |-
-        Swap the key's secret IN PLACE and return the new plaintext in result.plaintext_token EXACTLY ONCE: hand it to the user, never log it, unrecoverable. Sid, name, permissions and expiry are unchanged. The previous secret stays valid until result.previous_token_expires_at (now plus grace_seconds, 24 hours by default; 0 = immediate cutover), so a config can be updated without downtime. Use when a secret leaks or before an offboarding. NOT idempotent: every call mints a brand-new secret. A revoked or expired key answers 409.
+        Swap the key's secret IN PLACE and return the new plaintext in result.plaintext_token EXACTLY ONCE: hand it to the user, never log it, unrecoverable. Sid, name, permissions and expiry are unchanged. The previous secret stays valid until result.previous_token_expires_at (now plus grace_seconds, 24 hours by default; 0 = immediate cutover), so a config can be updated without downtime. Use when a secret leaks or before an offboarding. NOT idempotent: every call mints a brand-new secret. A revoked or expired key answers 409. A key that carries more than the caller holds answers 403 key_exceeds_actor_reach, unless the caller is that key or its issuer.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/api_keys`, surface api).
@@ -441,7 +443,7 @@ paths:
       operationId: get_billing_payment_method_add_link
       summary: Get add-card link
       description: |-
-        A temporary Paddle Customer Portal link to add or replace a card: the ONLY way (the person types it on Paddle's page, never here). Minted fresh each call, no charge. Without subscription_sid, the subscription the workspace draws from (no_billing_account when none); with it, one you own, the past_due recovery (403 not_subscription_owner; an invoiced one has no card, 422 manual_subscription_no_card_portal).
+        A temporary Paddle Customer Portal link to add or replace a card: the ONLY way (the person types it on Paddle's page, never here). Minted fresh each call, no charge. Without subscription_sid, the subscription the workspace draws from (no_billing_account when none); with it, one you manage (the buyer, or can_manage_billing in the workspace it feeds; else 403 not_subscription_owner), the past_due recovery (an invoiced one has no card, 422 manual_subscription_no_card_portal).
 
         Contract:
         - MCP tool `get_billing_payment_method_add_link`, registry package `mcp.id/billing_payment_methods`, mount `workspace.billing`.
@@ -525,7 +527,7 @@ paths:
       operationId: quote_billing_subscription_order
       summary: Quote a billing order
       description: |-
-        Price an order before buying: data credits (0 or from 1,000, every month or one time), LinkedIn accounts and inbox packages, in USD, EUR or GBP, monthly or as 12 + 2 months (12 monthly amounts paid, 14 months of service). Answers the server's figures in minor units: each line, the monthly sum, the invoice, what is due now, the service level and the next LinkedIn tier. No side effects, nothing charged; the same order is then bought in the app, where the checkout opens Paddle's overlay.
+        Price an order before buying: the data subscription (the plan, one a bill, by tier), LinkedIn accounts, inbox packages, AI SDR licenses (one workspace's AI SDR each), vendor credits (one-time dollars, bought only by a checkout in the app) and data credits, in USD, EUR or GBP, monthly or 12 + 2 months. Answers the server's figures in minor units: each line, the month, what is due now, the level, the entitlements and the three tiers priced. No side effects; the order is then bought in the app.
 
         Contract:
         - MCP tool `quote_billing_subscription_order`, registry package `mcp.id/billing_subscriptions`, mount `workspace.billing`.
@@ -567,7 +569,7 @@ paths:
       operationId: search_billing_subscriptions
       summary: Search billing subscriptions
       description: |-
-        The caller's subscriptions, the orders they bought. status for dunning or canceled ones, paddle_subscription_id.is_null true for the trial sentinel, current_period_ends_at for expiry windows. include lines for what each holds (accounts, inbox packages, credits a month, amounts), price, product, latest_transactions; team is always null here. The split across workspaces is search_subscription_allocations (/mcp/workspace/billing). page_size 0 returns the counts only.
+        The caller's subscriptions, the orders they bought. status for dunning or canceled ones, paddle_subscription_id.is_null true for the trial sentinel, current_period_ends_at for expiry windows. include lines, entitlements (the data subscription and AI SDR licenses held now), card (a trial's card, what it holds, the offers), management, price, product, latest_transactions; team is null. The split across workspaces is search_subscription_allocations. page_size 0 returns the counts only.
 
         Contract:
         - MCP tool `search_billing_subscriptions`, registry package `mcp.id/billing_subscriptions`, mount `workspace.billing`.
@@ -609,7 +611,7 @@ paths:
       operationId: get_billing_subscription
       summary: Get billing subscription
       description: |-
-        One subscription by sid (yours or the one the workspace draws from, else 404), with includes: lines, price, product, latest_transactions; team is always null, a subscription floats.
+        One subscription by sid (yours or the one the workspace draws from, else 404), with the includes search_billing_subscriptions names; team is always null.
 
         Contract:
         - MCP tool `get_billing_subscription`, registry package `mcp.id/billing_subscriptions`, mount `workspace.billing`.
@@ -631,14 +633,14 @@ paths:
         - name: include[]
           in: query
           required: false
-          description: lines, price, product, latest_transactions; team is accepted and always null here.
+          description: lines, entitlements, card, management, email_server_after_end, email_resize_directions, price, product, latest_transactions, each as search_billing_subscriptions describes it; team is accepted, always null here.
           style: form
           explode: true
           schema:
             type: array
             items:
               type: string
-            description: lines, price, product, latest_transactions; team is accepted and always null here.
+            description: lines, entitlements, card, management, email_server_after_end, email_resize_directions, price, product, latest_transactions, each as search_billing_subscriptions describes it; team is accepted, always null here.
       responses:
         "200":
           description: "`get` success envelope."
@@ -665,9 +667,9 @@ paths:
   /api/billing-subscriptions/{sid}/change:
     post:
       operationId: change_billing_subscription
-      summary: "Change the plan: LinkedIn accounts, inboxes, credits"
+      summary: "Change the plan: data subscription, LinkedIn, inboxes, AI SDR, credits"
       description: |-
-        Add or remove LinkedIn accounts (sender profiles), inbox packages or credits a month on the plan, the cost shown first: each part is the whole new value (an omitted part stays). DANGEROUS: up to three Paddle calls, the decreases and free restorations first (nothing billed), then the credits top-up (a one-time charge), then the prorated LinkedIn and added packages, so a refused card stops only the last step (409 payment_declined). The first call, without commit_token, is the preview: nothing charged, preview_result names the steps, what is due now, the next payment and the pool after (LinkedIn prorated now both ways; an added inbox package prorated now, a removed one leaving at the period's end; credits raised now against a top-up charge, lowered from the next period); say the money, then send the commit_token on the person's word. Removing every line is a cancel (409 use_cancel); a pool below the sum of its shares is refused (409 allocated_exceeds_pool: lower the shares first; a standard account's one share follows the plan down); a credits change while a top-up is unpaid is 409 change_pending; an invoiced subscription is not re-priced here. The renewal date never moves. Owner only.
+        Change the plan's data subscription (one a bill), LinkedIn accounts (sender profiles), inbox packages, AI SDR licenses (one workspace's AI SDR each) or credits a month; each part is the whole new value, an omitted part stays. Never vendor credits (422 vendor_credits_by_checkout: a checkout in the app buys them). One email package per workspace (a second: 409 email_single_package_only); its size changes only in a direction the email_resize_directions include lists (409 email_resize_closed), only if the mailboxes fit (409 email_package_does_not_fit, context.over: detach that many; 503 email_mailboxes_unknown: retry), and a package taken off until its period ends returns at its own size first (409 email_package_size_fixed). DANGEROUS: up to three Paddle calls (free decreases and restorations, the credits top-up, then the prorated part with any change of size); a refused card stops only the last (409 payment_declined). The first call, without commit_token, previews: nothing charged; preview_result names the steps, what is due now, the next payment and the pool after; say the money, then send the commit_token on the person's word. Removing every line is a cancel (409 use_cancel); a pool below its shares is 409 allocated_exceeds_pool (lower the shares first); an invoiced subscription is not re-priced here. The renewal date never moves. Who may: the buyer, or can_manage_billing in the workspace it feeds (a partner's pool: its buyer alone, else 403 not_subscription_owner).
 
         Contract:
         - MCP tool `change_billing_subscription`, registry package `mcp.id/billing_subscriptions`, mount `workspace.billing`.
@@ -1113,6 +1115,83 @@ paths:
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: typical
+  /api/notification-preferences:
+    get:
+      operationId: get_notification_preferences
+      summary: Get notification preferences
+      description: |-
+        The signed-in person's email preferences: each kind of product mail, whether they get it, and whether they may turn it off.
+
+        Contract:
+        - MCP tool `get_notification_preferences`, registry package `mcp.id/notification_preferences`, mount `workspace.team`.
+        - Operation `get`, response envelope `get`.
+        - Flags: read only.
+      tags:
+        - notification_preferences
+      responses:
+        "200":
+          description: "`get` success envelope."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetNotificationPreferencesResponse"
+        4XX:
+          $ref: "#/components/responses/McpClientError"
+        5XX:
+          $ref: "#/components/responses/McpServerError"
+      x-gs-mcp-tool: get_notification_preferences
+      x-gs-mcp-mount: workspace.team
+      x-gs-entity: notification_preferences
+      x-gs-operation: get
+      x-gs-envelope: get
+      x-gs-availability: ga
+      x-gs-surface: both
+      x-gs-dangerous: false
+      x-gs-mass-action: false
+      x-gs-step-eligible: false
+      x-gs-schedule-required: false
+      x-gs-tool-class: trivial
+    patch:
+      operationId: update_notification_preferences
+      summary: Update notification preferences
+      description: |-
+        Turn kinds of product mail on or off for the signed-in person: email maps a kind to true or false (signals_digest is the morning digest of Signals, off until turned on). account, billing and white_label are always sent: 422 always_sent. Answers the whole list with updated_fields and previous_values.
+
+        Contract:
+        - MCP tool `update_notification_preferences`, registry package `mcp.id/notification_preferences`, mount `workspace.team`.
+        - Operation `update`, response envelope `update`.
+        - Flags: none.
+      tags:
+        - notification_preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferencesRequest"
+      responses:
+        "200":
+          description: "`update` success envelope."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateNotificationPreferencesResponse"
+        4XX:
+          $ref: "#/components/responses/McpClientError"
+        5XX:
+          $ref: "#/components/responses/McpServerError"
+      x-gs-mcp-tool: update_notification_preferences
+      x-gs-mcp-mount: workspace.team
+      x-gs-entity: notification_preferences
+      x-gs-operation: update
+      x-gs-envelope: update
+      x-gs-availability: ga
+      x-gs-surface: both
+      x-gs-dangerous: false
+      x-gs-mass-action: false
+      x-gs-step-eligible: false
+      x-gs-schedule-required: false
+      x-gs-tool-class: typical
   /api/notifications/search:
     post:
       operationId: search_notifications
@@ -1542,7 +1621,7 @@ paths:
       operationId: search_ssl_certificates
       summary: Search SSL certificates
       description: |-
-        The team's TLS certificates for its white label domains: each domain's status, issuer, issued_at, expires_at and the last_error token of a failure. status for live vs failed, expires_at.lte for the ones expiring soon, domain.eq for one host. The body and the key are never returned. page_size 0 returns the counts only.
+        The team's TLS certificates for its white label hosts: each host's status, cname_target (the CNAME it needs), issuer, issued_at, expires_at and the last_error token of a failure. status for live vs failed, expires_at.lte for the ones ending soon, domain.eq for one host. The certificate and its key stay at the edge. page_size 0 returns the counts only.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/ssl_certificates`, surface api).
@@ -1584,7 +1663,7 @@ paths:
       operationId: get_ssl_certificate
       summary: Get SSL certificate
       description: |-
-        One certificate by sid: status, issuer, validity, the last_error token, and the HTTP-01 challenge while an attempt is in flight. Poll it after issue or renew until challenge is null.
+        One certificate by sid: status, cname_target (the CNAME the host needs), issuer, validity and the last_error token. The poll after issue: until active, or failed with a token.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/ssl_certificates`, surface api).
@@ -1630,7 +1709,7 @@ paths:
       operationId: delete_ssl_certificate
       summary: Delete SSL certificate
       description: |-
-        Remove a domain's certificate: the row is soft-deleted, and after the commit a job revokes it at the CA and removes the serving files. DESTRUCTIVE, no recovery: the brand's activate registers and issues anew. A brand delete does this itself.
+        Remove a host's certificate: the row is soft-deleted, and within minutes a sweep takes the host, its certificate and the brand's endpoint off the edge. DESTRUCTIVE, no recovery: the brand's activate sets the host up anew once that is done (409 domain_being_removed until then). A brand delete does this itself.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/ssl_certificates`, surface api).
@@ -1677,7 +1756,7 @@ paths:
       operationId: issue_ssl_certificate
       summary: Issue SSL certificate
       description: |-
-        Start the ACME HTTP-01 issuance for a registered domain, by hand (activate_whitelabel does it on its own). ASYNC: the authorization is requested, the challenge stored, status goes challenge, and the platform self-checks, validates and flips the row active in the background; poll get_ssl_certificate until challenge is null (active, or failed with a last_error token: domain_not_pointed means the CNAME is not there yet). Not idempotent: each call requests a fresh authorization. 409 conflict: domain_already_active (renew instead), issuance_already_in_progress (an attempt is in flight, whatever the status), cannot_issue_deleted_certificate, acme_unreachable (the CA could not be asked; the row then carries issuance_unavailable).
+        One step at the cloud edge on a registered host, by hand (activate_whitelabel takes the first itself and its job the rest): it makes the brand's endpoint (cname_target) when the row has none, sets the host up once public DNS leads its CNAME there, puts an issued certificate on it, or asks for a certificate again when the last request ended (paced: 0, 0, 10, 60, 360, then 1440 minutes apart, a call inside the pace asks nothing). ASYNC: poll get_ssl_certificate until status is active, or failed with a last_error token: domain_not_pointed (create <domain> CNAME <cname_target>, DNS only), domain_in_use_elsewhere (another provider holds the host), certificate_refused_by_caa (add 0 issue "amazon.com" to the CAA records or remove them, then issue again), certificate_not_issued (issue again), issuance_unavailable (ours). Never 409 for a row in flight: a step on a certificate on its way reads it and changes nothing. On the host of a disabled brand it sets nothing up and asks for no certificate: the host is switched off at the edge until the brand is enabled. 404 on a deleted row.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/ssl_certificates`, surface api).
@@ -1724,7 +1803,7 @@ paths:
       operationId: create_subscription_allocation
       summary: Create subscription allocation
       description: |-
-        Hand a workspace a share of a subscription's pool: the workspace turns active with these quantities as its limits, the credits due so far this period are issued, and a lapsed trial share is superseded. The caller must be the buyer (403 not_subscription_owner) and a partner account (403 partner_only; a standard account's one share follows its plan on its own); the workspace must be the buyer's own or a client workspace of a brand the buyer's team owns (403 team_not_reachable). For every key the shares may not exceed the pool (409 pool_exceeded with key, pool, allocated_elsewhere, requested); a workspace already on a live share is 409 team_already_allocated; a canceled subscription takes no share. Quantities omitted are 0.
+        Hand a workspace a share of a subscription's pool: the workspace turns active with these quantities as its limits, the credits due so far this period are issued, and a lapsed trial share is superseded. The caller must be the buyer (403 not_subscription_owner) and a partner account (403 partner_only; a standard account's one share follows its plan on its own); the workspace must be the buyer's own or a client workspace of a brand the buyer's team owns (403 team_not_reachable). For every key the shares may not exceed the pool (409 pool_exceeded with key, pool, allocated_elsewhere, requested). ai_sdr 1 hands the workspace one of the bill's AI SDR licenses so its agents run (a partner's paid pool places none by itself), and is 409 pool_exceeded with key ai_sdr when every license is out. A workspace already on a live share is 409 team_already_allocated; a canceled subscription takes no share. Quantities omitted are 0.
 
         Contract:
         - MCP tool `create_subscription_allocation`, registry package `mcp.id/subscription_allocations`, mount `workspace.billing`.
@@ -1766,7 +1845,7 @@ paths:
       operationId: search_subscription_allocations
       summary: Search subscription allocations
       description: |-
-        How a subscription's pool is split across workspaces, or what one workspace draws from: subscription_sid.eq for the split of one pool, team_sid.eq for a workspace's share (its capacity: sender profiles, credits per period, the White label). Scope: the pools the caller bought, plus the current workspace's own share. include team hydrates the workspace with its derived status. Oldest share first by default. page_size 0 returns the count only.
+        How a subscription's pool is split across workspaces, or what one workspace draws from: subscription_sid.eq for the split of one pool, team_sid.eq for a workspace's share (its capacity: sender profiles, credits per period, the White label). Scope: the pools the caller bought, plus the current workspace's own share. include team for the workspace with its status, ai_sdr for the AI SDR license each share holds (1 or 0). Oldest share first by default. page_size 0 returns the count only.
 
         Contract:
         - MCP tool `search_subscription_allocations`, registry package `mcp.id/subscription_allocations`, mount `workspace.billing`.
@@ -1808,7 +1887,7 @@ paths:
       operationId: get_subscription_allocation
       summary: Get subscription allocation
       description: |-
-        One allocation by sid (readable by the buyer and the allocated workspace), with the team include.
+        One allocation by sid (readable by the buyer and the allocated workspace), with the team and ai_sdr (the AI SDR license it holds) includes.
 
         Contract:
         - REST only: no MCP tool serves this route (registry package `mcp.id/subscription_allocations`, surface api).
@@ -1839,6 +1918,7 @@ paths:
               type: string
               enum:
                 - team
+                - ai_sdr
             description: Relations to attach to the row; omit for the bare row.
       responses:
         "200":
@@ -1867,7 +1947,7 @@ paths:
       operationId: update_subscription_allocation
       summary: Update subscription allocation
       description: |-
-        Change a workspace's share: any of the four quantities. The workspace's limits follow at once; a raised credits_per_month issues the difference into the current month's grant, a lowered one claws nothing back. Buyer and partner only; the pool guard applies (409 pool_exceeded). At least one field, else 422 nothing_to_update.
+        Change a workspace's share: any of the four quantities, or ai_sdr (1 hands it one of the bill's AI SDR licenses, 0 takes it back; updated_fields names it). The workspace's limits follow at once; a raised credits_per_month issues the difference into the current month's grant, a lowered one claws nothing back. Buyer and partner only; the pool guard applies (409 pool_exceeded, key ai_sdr when every license is out). At least one field, else 422 nothing_to_update.
 
         Contract:
         - MCP tool `update_subscription_allocation`, registry package `mcp.id/subscription_allocations`, mount `workspace.billing`.
@@ -2233,12 +2313,48 @@ paths:
       x-gs-step-eligible: false
       x-gs-schedule-required: false
       x-gs-tool-class: typical
+  /api/teams/current:
+    get:
+      operationId: get_current_team
+      summary: Get current team
+      description: |-
+        The workspace the caller acts in: its sid and name, nothing else. Any credential of it reads it (a session, an API key, an OAuth grant), no can_view_teams needed: what labels a connection.
+
+        Contract:
+        - REST only: no MCP tool serves this route (registry package `mcp.id/teams`, surface api).
+        - Operation `get`, response envelope `get`.
+        - Flags: read only.
+      tags:
+        - teams
+      responses:
+        "200":
+          description: "`get` success envelope."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentTeamResponse"
+        4XX:
+          $ref: "#/components/responses/McpClientError"
+        5XX:
+          $ref: "#/components/responses/McpServerError"
+      x-gs-mcp-tool: get_current_team
+      x-gs-mcp-mount: workspace.team
+      x-gs-entity: teams
+      x-gs-operation: get
+      x-gs-envelope: get
+      x-gs-availability: ga
+      x-gs-surface: api
+      x-gs-dangerous: false
+      x-gs-mass-action: false
+      x-gs-step-eligible: false
+      x-gs-schedule-required: false
+      x-gs-tool-class: trivial
   /api/teams/search:
     post:
       operationId: search_teams
       summary: Search teams
       description: |-
-        The caller's workspaces: the ones they own plus their active memberships. status.eq suspended finds the workspaces with no live share, subscription_sid.is_null the ones nothing pays for, q matches the name. include owner / members_counts. page_size 0 returns the counts only. The capacity a workspace holds is its allocation (search_subscription_allocations on /mcp/workspace/billing); limits here is its snapshot.
+        The caller's workspaces: the ones they own plus their active memberships. status.eq suspended finds the workspaces with no live share, subscription_sid.is_null the ones nothing pays for, q matches the name. include owner / members_counts / entitlements (its data subscription and AI SDR license now). page_size 0 returns the counts only. The capacity a workspace holds is its allocation (search_subscription_allocations on /mcp/workspace/billing); limits here is its snapshot.
 
         Contract:
         - MCP tool `search_teams`, registry package `mcp.id/teams`, mount `workspace.team`.
@@ -2280,7 +2396,7 @@ paths:
       operationId: get_team
       summary: Get team
       description: |-
-        One workspace by sid, visible to its owner and active members, with optional includes (owner, members_counts).
+        One workspace by sid, visible to its owner and active members, with optional includes (owner, members_counts, entitlements: its data subscription and AI SDR license now).
 
         Contract:
         - MCP tool `get_team`, registry package `mcp.id/teams`, mount `workspace.team`.
@@ -2312,6 +2428,7 @@ paths:
               enum:
                 - owner
                 - members_counts
+                - entitlements
             description: Relations to attach to the row; omit for the bare row.
       responses:
         "200":
@@ -2560,7 +2677,7 @@ paths:
       operationId: create_whitelabel
       summary: Create whitelabel
       description: |-
-        Register a brand on a custom domain, born pending_domain: nothing serves until the reseller points the host's CNAME at the platform and activate_whitelabel proves it. Needs the White label entitlement on the workspace's share (403 whitelabel_not_enabled). domain is a bare lowercase FQDN, unique across the platform (409 domain_already_taken; 409 domain_held_by_deleted_whitelabel while a deleted brand still holds it, support releases it); the artwork is given as https URLs (the files are uploaded in the app); the palette is #rrggbb per slot; email_from_name and email_reply_to sign the clients' mail at once, email_from_address only after verify_whitelabel_email_domain proves its domain. The setup chain: create, hand over the CNAME, activate, poll get_whitelabel with include ssl_certificate until active.
+        Register a brand on a custom domain, born pending_domain: nothing serves until activate_whitelabel has made the brand's own endpoint at the cloud edge (ssl_certificate.cname_target), the reseller has created the record <domain> CNAME <cname_target> (DNS only, not proxied) and the edge serves the host with its certificate. Needs the White label entitlement on the workspace's share (403 whitelabel_not_enabled). domain is a bare lowercase FQDN, unique across the platform (409 domain_already_taken, or 409 domain_held_by_deleted_whitelabel while a deleted brand still holds it: support releases it). The artwork is given as https URLs (the files are uploaded in the app), the palette as #rrggbb per slot, config as the reseller's own terms and privacy links for the brand host's sign-in and sign-up pages and its Google Tag Manager container (gtm_container_id), which the brand's host loads with custom code refused. email_from_name and email_reply_to sign the clients' mail at once, email_from_address only after verify_whitelabel_email_domain proves its domain. The setup chain: create, activate, read cname_target from get_whitelabel with include ssl_certificate and hand the reseller the record, then poll the same read until active.
 
         Contract:
         - MCP tool `create_whitelabel`, registry package `mcp.id/whitelabels`, mount `workspace.whitelabel`.
@@ -2602,7 +2719,7 @@ paths:
       operationId: search_whitelabels
       summary: Search whitelabels
       description: |-
-        The reseller team's white label brands: each brand's host, status (pending_domain, active, disabled), artwork, palette and email chrome. include ssl_certificate for the domain's certificate state (why a host is not live yet; it also needs can_view_ssl_certificates, else 403 scope_missing), users_count for how many clients registered on it. page_size 0 returns the counts only. Empty for a team without the White label entitlement.
+        The reseller team's white label brands: each brand's host, status (pending_domain, active, disabled), artwork, palette, config (links, tag container) and email chrome. include ssl_certificate for the host's state at the edge (the CNAME to create, why it is not live yet; it also needs can_view_ssl_certificates, else 403 scope_missing), users_count for how many clients registered on it. page_size 0 returns the counts only. Empty for a team without the White label entitlement.
 
         Contract:
         - MCP tool `search_whitelabels`, registry package `mcp.id/whitelabels`, mount `workspace.whitelabel`.
@@ -2644,7 +2761,7 @@ paths:
       operationId: get_whitelabel
       summary: Get whitelabel
       description: |-
-        One brand by sid. include ssl_certificate to poll the domain proof after activate (it also needs can_view_ssl_certificates), users_count for its registrations.
+        One brand by sid. include ssl_certificate for the CNAME to create and the poll after activate (it also needs can_view_ssl_certificates), users_count for its registrations.
 
         Contract:
         - MCP tool `get_whitelabel`, registry package `mcp.id/whitelabels`, mount `workspace.whitelabel`.
@@ -2704,7 +2821,7 @@ paths:
       operationId: update_whitelabel
       summary: Update whitelabel
       description: |-
-        Rebrand: name, the artwork URLs, the palette and the email chrome, effective on the next app load and the next email. domain changes only while pending_domain (422 on a live brand: disable and create anew). A new email_from_address on another domain drops the old proof: verify it again. At least one field, else 422 nothing_to_update.
+        Rebrand: name, the artwork URLs, the palette, config (the terms and privacy links, the Tag Manager container) and the email chrome, effective on the next app load and the next email. palette and config are replaced whole. domain changes only while pending_domain (422 on a live brand: disable and create anew). A new email_from_address on another domain drops the old proof: verify it again. At least one field, else 422 nothing_to_update.
 
         Contract:
         - MCP tool `update_whitelabel`, registry package `mcp.id/whitelabels`, mount `workspace.whitelabel`.
@@ -2757,7 +2874,7 @@ paths:
       operationId: activate_whitelabel
       summary: Activate whitelabel
       description: |-
-        Start or retry proving the brand's domain: the certificate row is ensured and a job issues it over ACME HTTP-01, retrying while the DNS propagates (about a day at most); on success the brand flips pending_domain to active. ASYNC: tell the reseller to point the domain's CNAME at the platform, then poll get_whitelabel with include ssl_certificate until status is active (or the certificate's last_error names the fault: domain_not_pointed, domain_validation_failed). Idempotent while pending; a no-op on an active brand unless reissue is true: a new certificate after a DNS or CA fix or a lapse, the brand stays active and keeps serving, poll until the certificate's challenge is null (last_error null: the new one is live; 409 issuance_already_in_progress, acme_unreachable). 404 on a deleted brand.
+        Start or retry setting up the brand's host at the cloud edge: the certificate row is ensured and one step taken at once (the first makes the brand's own endpoint, ssl_certificate.cname_target), then a job keeps stepping for about a day: the host goes on the edge once its CNAME points there, gets the certificate the edge issues, and the brand flips pending_domain to active. ASYNC: hand the reseller the record <domain> CNAME <cname_target> (DNS only, not proxied), then poll get_whitelabel (include ssl_certificate) until active. A last_error names what is in the way: domain_not_pointed (the CNAME is missing, proxied or elsewhere), domain_in_use_elsewhere (another provider holds the host: remove it there or use another name), certificate_refused_by_caa (add 0 issue "amazon.com" to the domain's CAA records or remove them, then retry), certificate_not_issued (retry), issuance_unavailable (ours). Both certificate_* tokens stop the job (whitelabels.activation-failed). Idempotent while pending, a no-op on an active brand unless reissue is true. 409 domain_being_removed while a deleted brand's host leaves the edge (minutes), 409 invalid_transition on a disabled brand (its host is off the edge, its domain still proven: the owner enables it in the app, with no new record), 404 on a deleted one.
 
         Contract:
         - MCP tool `activate_whitelabel`, registry package `mcp.id/whitelabels`, mount `workspace.whitelabel`.
@@ -2961,7 +3078,7 @@ components:
       properties:
         reissue:
           type: boolean
-          description: "An active brand only: issue a new certificate now. Ignored on a pending brand, whose activation issues one anyway."
+          description: "An active brand only: one more look at the edge now (an issued certificate put on the host, an ended one asked for again, paced). The brand keeps serving. Ignored on a pending brand, whose activation does it anyway."
     ActivateWhitelabelResponse:
       type: object
       properties:
@@ -3001,7 +3118,7 @@ components:
                 - pending_domain
                 - active
                 - disabled
-              description: pending_domain = waiting for the CNAME and the certificate; active = the host serves the brand; disabled = switched off, the host falls back to the platform brand.
+              description: "pending_domain = the host waits for its CNAME to the brand's own endpoint and its certificate at the cloud edge. active = the host serves the brand. disabled = switched off: the host is off the edge and serves nothing, its domain stays proven."
             logo_url:
               type: string
               nullable: true
@@ -3106,6 +3223,27 @@ components:
                 - checked_at
                 - verified_at
               description: The proof of the sending domain; null = verify never ran, or the address moved to another domain.
+            config:
+              type: object
+              nullable: true
+              properties:
+                terms_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's terms of service page, null = no terms link.
+                privacy_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's privacy policy page, null = no privacy link.
+                gtm_container_id:
+                  type: string
+                  nullable: true
+                  description: "The reseller's Google Tag Manager container (GTM-AB12CD3). The brand's host loads it with custom code refused: built-in tags and pixels only. null = the host loads no tag."
+              required:
+                - terms_url
+                - privacy_url
+                - gtm_container_id
+              description: "The reseller's own terms and privacy links on the brand host's sign-in and sign-up pages, and its Tag Manager container. null = none: those pages link no terms or privacy page and the host loads no tag."
             created_by:
               type: object
               properties:
@@ -3176,6 +3314,7 @@ components:
             - email_reply_to
             - email_from_address
             - email_domain
+            - config
             - created_by
             - created_at
             - updated_at
@@ -3187,15 +3326,15 @@ components:
             properties:
               expected_completion_seconds:
                 type: integer
-                description: "activate: 300; verify-email-domain: 3600."
+                description: "activate: 300, or 120 for a reissue on an active brand. verify-email-domain: 3600."
               webhook_events:
                 type: array
                 items:
                   type: string
-                description: "activate: whitelabels.activated, whitelabels.activation-failed; verify-email-domain: whitelabels.email-domain-verified, whitelabels.email-domain-failed."
+                description: "activate: whitelabels.activated, whitelabels.activation-failed (a reissue: ssl-certificates.issued, ssl-certificates.renewal-failed, ssl-certificates.failed). verify-email-domain: whitelabels.email-domain-verified, whitelabels.email-domain-failed."
               polling_hint:
                 type: string
-                description: "Poll get_whitelabel: after activate (include ssl_certificate) until status is active; after verify-email-domain until email_domain.status is verified or failed."
+                description: "After activate: create the CNAME to ssl_certificate.cname_target, poll get_whitelabel (include ssl_certificate) until active. After verify-email-domain: poll until email_domain.status is verified or failed."
             required:
               - expected_completion_seconds
               - webhook_events
@@ -3247,6 +3386,20 @@ components:
       type: object
       description: Request body of `change_billing_subscription`.
       properties:
+        data_subscription:
+          type: object
+          nullable: true
+          properties:
+            tier:
+              type: string
+              enum:
+                - startup
+                - sales_team
+                - agency
+              description: "The tier to move to: startup, sales_team or agency, the smallest first."
+          required:
+            - tier
+          description: "The data subscription's target, the plan (one a bill): a bigger tier prorated now, a smaller one from the next period; null takes it off from the next period. Omit to keep it."
         linkedin:
           type: object
           properties:
@@ -3257,7 +3410,7 @@ components:
               description: The new count of LinkedIn accounts.
           required:
             - accounts
-          description: The LinkedIn line's target; omit to keep it.
+          description: The LinkedIn line's target, prorated now both ways; omit to keep it.
         email:
           type: object
           properties:
@@ -3287,7 +3440,18 @@ components:
               description: How many packages of each size, 0 to 1,000 each; the capacity is their sum.
           required:
             - packages
-          description: The email line's target packages, every size named; omit to keep it.
+          description: "The email line's target packages, an added one prorated now, a removed one at the period's end; a size left out keeps its count, omit the part to keep the line. A change of size sets the old size to 0 and the new to 1, e.g. {\"100\": 0, \"500\": 1}."
+        ai_sdr:
+          type: object
+          properties:
+            licenses:
+              type: integer
+              minimum: 0
+              maximum: 1000
+              description: "The new count of AI SDR licenses, 0 to 1,000: one for each workspace whose agents should run."
+          required:
+            - licenses
+          description: "The AI SDR line's target: licenses added are prorated now, removed ones leave at the period's end. Omit to keep it."
         data:
           type: object
           properties:
@@ -3298,7 +3462,7 @@ components:
               description: "The new credits a month: 0, or from 1,000."
           required:
             - credits
-          description: The data line's target; omit to keep it.
+          description: "The data line's target: credits raised now against a top-up (free back up to the paid term), lowered from the next period; a change while a top-up is unpaid is 409 change_pending. Omit to keep it."
     ChangeBillingSubscriptionResponse:
       type: object
       properties:
@@ -3524,11 +3688,66 @@ components:
               type: array
               items:
                 type: object
-                additionalProperties: {}
-              description: "One per line that moves: line, kind (increase | decrease | restore), applies (now | next_period), charge_minor, charge_exact (false = Paddle's proration preview), from, to; a paid data increase carries credits_now."
+                properties:
+                  line:
+                    type: string
+                    description: data_subscription | linkedin | email | ai_sdr | data.
+                  kind:
+                    type: string
+                    description: increase | decrease | restore (back up to what the period was paid for, free) | resize (the one email package takes another size).
+                  applies:
+                    type: string
+                    description: now | next_period.
+                  charge_minor:
+                    type: integer
+                    nullable: true
+                    description: 0 on a free or next_period step; the exact top-up of a data raise; in the preview Paddle's figure on the one prorated step; null on each prorated step when several share it and on every prorated step of a change made.
+                  charge_exact:
+                    type: boolean
+                    description: false = prorated by Paddle (Paddle's proration preview).
+                  from:
+                    anyOf:
+                      - type: number
+                      - type: string
+                      - {}
+                    description: "Before the step: a count (package counts on an email step), or a tier (null = no data subscription)."
+                  to:
+                    anyOf:
+                      - type: number
+                      - type: string
+                      - {}
+                    description: "After the step: a count (package counts on an email step), or a tier (null = no data subscription)."
+                  size:
+                    type: string
+                    description: An email step's package size (100 | 500 | 2000 | 10000); on a resize step, the size it takes.
+                  from_size:
+                    type: string
+                    description: "A resize step: the package's size before the change."
+                  to_size:
+                    type: string
+                    description: "A resize step: the package's size after the change."
+                  credits_now:
+                    type: integer
+                    description: "A paid data raise: the credits granted now."
+                  remaining_grants:
+                    type: integer
+                    description: "A paid data raise: the grants left in the period, the current one included."
+                required:
+                  - line
+                  - kind
+                  - applies
+                  - charge_minor
+                  - charge_exact
+                  - from
+                  - to
+              description: "One per line that moves, one per package size on email, one resize step for a change of the email package's size. charge_minor is never negative: what a change down gives back is a credit on later invoices and no figure here."
+            prorated_charge_minor:
+              type: integer
+              nullable: true
+              description: The preview's one Paddle figure for every prorated step, carried on a step only when one step is prorated; null when nothing is prorated. Absent from the answer of a change that was made.
             due_now_minor:
               type: integer
-              description: What the card is charged now, before tax.
+              description: "What the card is charged now, before tax: in a preview the exact charges plus Paddle's prorated figure; in the answer of a change that was made, the exact part alone."
             next_payment:
               type: object
               additionalProperties: {}
@@ -3555,7 +3774,7 @@ components:
                   items:
                     type: object
                     additionalProperties: {}
-                  description: "One per resource ordered: line (linkedin | email | data), its count or packages, capacity, rate_minor, monthly_minor and invoice_minor (the amount per billing period)."
+                  description: "One per line ordered: line (data_subscription | linkedin | email | ai_sdr | data | vendor_credits), its tier and limits, accounts, packages, licenses, credits or usd, rate_minor, monthly_minor and invoice_minor (the amount a billing period)."
                 monthly_minor:
                   type: integer
                   description: The recurring lines a month, before 12 + 2.
@@ -3564,13 +3783,13 @@ components:
                   description: "The recurring invoice: the monthly sum, times 12 on annual."
                 one_time_minor:
                   type: integer
-                  description: The one-time credits line, paid once.
+                  description: "The one-time lines, paid once: one-time data credits and vendor credits."
                 due_now_minor:
                   type: integer
-                  description: "The first payment before tax and coupons: the recurring invoice plus the one-time line."
+                  description: "The first payment before tax and coupons: the recurring invoice plus the one-time lines."
                 has_recurring:
                   type: boolean
-                  description: false = one-time credits alone, which make no subscription.
+                  description: false = nothing renews (one-time data credits or vendor credits alone), which makes no subscription.
                 service_months:
                   type: integer
                   nullable: true
@@ -3587,6 +3806,20 @@ components:
                   additionalProperties:
                     type: number
                   description: "What the order grants a workspace: linkedin_sender_profiles, email_inboxes, credits_per_month, whitelabel."
+                entitlements:
+                  type: object
+                  properties:
+                    data_subscription:
+                      type: string
+                      nullable: true
+                      description: The tier the order holds (startup | sales_team | agency); null for none.
+                    ai_sdr_licenses:
+                      type: integer
+                      description: The AI SDR licenses the order holds, one workspace's AI SDR each.
+                  required:
+                    - data_subscription
+                    - ai_sdr_licenses
+                  description: "What the order entitles to beside capacity: the data subscription and the AI SDR licenses."
                 service:
                   type: object
                   additionalProperties: {}
@@ -3596,6 +3829,52 @@ components:
                   nullable: true
                   additionalProperties: {}
                   description: "The next LinkedIn volume tier: accounts, add, capacity, total_minor, per_account_minor, savings_minor (negative = costlier in total); null at the package and above."
+                data_subscription_tiers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tier:
+                        type: string
+                        description: startup | sales_team | agency.
+                      monthly_minor:
+                        type: integer
+                        description: The tier's month in the order's currency, priced as the line is.
+                      limits:
+                        type: object
+                        properties:
+                          enrichments_per_day:
+                            type: integer
+                            nullable: true
+                            description: Enrichments a UTC day.
+                          searches_per_day:
+                            type: integer
+                            nullable: true
+                            description: Searches a UTC day.
+                          results_per_search:
+                            type: integer
+                            nullable: true
+                            description: Results one search answers.
+                          rows_per_table:
+                            type: integer
+                            nullable: true
+                            description: Rows one table holds; null = any.
+                          workspaces:
+                            type: integer
+                            nullable: true
+                            description: Workspaces the tier serves; null = any.
+                        required:
+                          - enrichments_per_day
+                          - searches_per_day
+                          - results_per_search
+                          - rows_per_table
+                          - workspaces
+                        description: The tier's day.
+                    required:
+                      - tier
+                      - monthly_minor
+                      - limits
+                  description: "The three tiers, the smallest first, priced in the order's currency whatever the order holds: what a data subscription is chosen from."
               required:
                 - currency
                 - period
@@ -3610,8 +3889,10 @@ components:
                 - grant_count
                 - credit_expiry_days
                 - capacity
+                - entitlements
                 - service
                 - linkedin_next_tier
+                - data_subscription_tiers
               description: The quote of the target composition.
             applied:
               type: boolean
@@ -3758,6 +4039,9 @@ components:
               - can_manage_agents
               - can_view_signals
               - can_manage_signals
+              - can_view_data
+              - can_act_data
+              - can_manage_data
               - "*"
             description: A permission token of the gs catalog (can_view_teams, can_manage_webhooks, ...); * only from an unrestricted issuer. The product objects carry their own families since 2026-11-02.
           description: The explicit token list the key gets; inside the issuer's own grant.
@@ -4208,6 +4492,11 @@ components:
           minimum: 0
           maximum: 1
           description: 1 to let the workspace register brands; default 0.
+        ai_sdr:
+          type: integer
+          minimum: 0
+          maximum: 1
+          description: "1 to hand the workspace one of the bill's AI SDR licenses, its AI SDR; default 0. Within the bill's licenses, else 409 pool_exceeded with key ai_sdr. A trial places its license by itself: 409 ai_sdr_placed_automatically."
       required:
         - subscription_sid
         - team_sid
@@ -4452,6 +4741,9 @@ components:
               - can_manage_agents
               - can_view_signals
               - can_manage_signals
+              - can_view_data
+              - can_act_data
+              - can_manage_data
               - "*"
             description: A permission token of the gs catalog (can_view_billing, can_manage_webhooks, ...); * is the owner's wildcard.
           description: The tokens the member gets instead of a preset, stored as sent; may be empty. Each must be held by the caller.
@@ -4909,6 +5201,30 @@ components:
               pattern: ^#[0-9a-fA-F]{6}$
               description: "The login page background, #rrggbb; null = the platform default."
           description: "Brand colors, #rrggbb each; null = the platform defaults."
+        config:
+          type: object
+          nullable: true
+          properties:
+            terms_url:
+              type: string
+              nullable: true
+              maxLength: 2048
+              format: uri
+              pattern: ^https:\/\/
+              description: https URL of the reseller's terms of service. null or left out = no terms link.
+            privacy_url:
+              type: string
+              nullable: true
+              maxLength: 2048
+              format: uri
+              pattern: ^https:\/\/
+              description: https URL of the reseller's privacy policy. null or left out = no privacy link.
+            gtm_container_id:
+              type: string
+              nullable: true
+              pattern: ^GTM-[A-Z0-9]{4,12}$
+              description: The reseller's Google Tag Manager container id, GTM- and 4 to 12 capital letters or digits. Custom HTML, custom JavaScript and custom templates of it do not run in the app. null or left out = no tag on the host.
+          description: "The reseller's own terms and privacy links for the brand host's sign-in and sign-up pages, and its Tag Manager container. Replaced whole, never merged, like palette: a member left out is cleared. null = none."
         email_from_name:
           type: string
           nullable: true
@@ -4961,7 +5277,7 @@ components:
                 - pending_domain
                 - active
                 - disabled
-              description: pending_domain = waiting for the CNAME and the certificate; active = the host serves the brand; disabled = switched off, the host falls back to the platform brand.
+              description: "pending_domain = the host waits for its CNAME to the brand's own endpoint and its certificate at the cloud edge. active = the host serves the brand. disabled = switched off: the host is off the edge and serves nothing, its domain stays proven."
             logo_url:
               type: string
               nullable: true
@@ -5066,6 +5382,27 @@ components:
                 - checked_at
                 - verified_at
               description: The proof of the sending domain; null = verify never ran, or the address moved to another domain.
+            config:
+              type: object
+              nullable: true
+              properties:
+                terms_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's terms of service page, null = no terms link.
+                privacy_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's privacy policy page, null = no privacy link.
+                gtm_container_id:
+                  type: string
+                  nullable: true
+                  description: "The reseller's Google Tag Manager container (GTM-AB12CD3). The brand's host loads it with custom code refused: built-in tags and pixels only. null = the host loads no tag."
+              required:
+                - terms_url
+                - privacy_url
+                - gtm_container_id
+              description: "The reseller's own terms and privacy links on the brand host's sign-in and sign-up pages, and its Tag Manager container. null = none: those pages link no terms or privacy page and the host loads no tag."
             created_by:
               type: object
               properties:
@@ -5136,6 +5473,7 @@ components:
             - email_reply_to
             - email_from_address
             - email_domain
+            - config
             - created_by
             - created_at
             - updated_at
@@ -6248,7 +6586,180 @@ components:
             - deleted_at
         included:
           type: object
-          additionalProperties: {}
+          properties:
+            lines:
+              type: array
+              items:
+                type: object
+                additionalProperties: {}
+              description: "One descriptor per line: line (data_subscription | linkedin | email | ai_sdr | data) with its tier, accounts, packages, licenses or credits and monthly_minor; empty on the trial."
+            card:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: none | on | canceling | canceled | converted.
+                order:
+                  type: object
+                  nullable: true
+                  additionalProperties: {}
+                  description: The plan the card bills, in the quote's order shape; null with no card.
+                monthly_minor:
+                  type: integer
+                  nullable: true
+                  description: That plan's month before tax, minor units of its currency.
+                currency:
+                  type: string
+                  nullable: true
+                  description: USD | EUR | GBP; null with no card.
+                plan_starts_at:
+                  type: string
+                  nullable: true
+                  description: "ISO 8601 UTC: Paddle's first charge, when the plan starts; null while a cancel is scheduled."
+                cancels_at:
+                  type: string
+                  nullable: true
+                  description: "ISO 8601 UTC: the plan is canceled at the trial's end, nothing billed."
+                added_at:
+                  type: string
+                  nullable: true
+                  description: "ISO 8601 UTC: when the card landed."
+                ended_at:
+                  type: string
+                  nullable: true
+                  description: "ISO 8601 UTC: when the card ended."
+                holds:
+                  type: object
+                  properties:
+                    vendor_credits_usd:
+                      type: number
+                      description: Vendor credits in US dollars.
+                    lifetime_enrichments:
+                      type: integer
+                      description: Enrichments for the whole trial.
+                  required:
+                    - vendor_credits_usd
+                    - lifetime_enrichments
+                  description: What the trial holds now.
+                offers:
+                  type: object
+                  properties:
+                    without_card:
+                      type: object
+                      properties:
+                        vendor_credits_usd:
+                          type: number
+                          description: Vendor credits in US dollars.
+                        lifetime_enrichments:
+                          type: integer
+                          description: Enrichments for the whole trial.
+                      required:
+                        - vendor_credits_usd
+                        - lifetime_enrichments
+                      description: What a trial with no card holds.
+                    with_card:
+                      type: object
+                      properties:
+                        vendor_credits_usd:
+                          type: number
+                          description: Vendor credits in US dollars.
+                        lifetime_enrichments:
+                          type: integer
+                          description: Enrichments for the whole trial.
+                        vendor_credits_until:
+                          type: string
+                          nullable: true
+                          description: "ISO 8601 UTC, two days before the trial ends: a card that lands later brings no dollars; null with no end."
+                      required:
+                        - vendor_credits_usd
+                        - lifetime_enrichments
+                        - vendor_credits_until
+                      description: "What a card landing now would bring: the card's dollars (never below holds) before vendor_credits_until on a running trial no card holds; else holds."
+                  required:
+                    - without_card
+                    - with_card
+                  description: The trial pick's two offers.
+                default_order:
+                  type: object
+                  additionalProperties: {}
+                  description: The plan the pick offers until the person edits it, in the order shape.
+              required:
+                - status
+                - order
+                - monthly_minor
+                - currency
+                - plan_starts_at
+                - cancels_at
+                - added_at
+                - ended_at
+                - holds
+                - offers
+                - default_order
+              description: "The trial sentinel's alone: the card on the trial; absent on any other row. A card is added in the app (no tool)."
+            entitlements:
+              type: object
+              properties:
+                data_subscription:
+                  type: object
+                  nullable: true
+                  properties:
+                    tier:
+                      type: string
+                      description: startup | sales_team | agency.
+                    source:
+                      type: string
+                      description: line (its data subscription line), trial (the trial's tier) or grant (Startup, granted to a paid plan with no such line).
+                    limits:
+                      type: object
+                      properties:
+                        enrichments_per_day:
+                          type: integer
+                          nullable: true
+                          description: Enrichments a UTC day.
+                        searches_per_day:
+                          type: integer
+                          nullable: true
+                          description: Searches a UTC day.
+                        results_per_search:
+                          type: integer
+                          nullable: true
+                          description: Results one search answers.
+                        rows_per_table:
+                          type: integer
+                          nullable: true
+                          description: Rows one table holds; null = any.
+                        workspaces:
+                          type: integer
+                          nullable: true
+                          description: Workspaces the tier serves; null = any.
+                      required:
+                        - enrichments_per_day
+                        - searches_per_day
+                        - results_per_search
+                        - rows_per_table
+                        - workspaces
+                      description: The tier's day.
+                  required:
+                    - tier
+                    - source
+                    - limits
+                  description: The data subscription the bill holds now; null when it grants nothing (paused, canceled, past its grace).
+                ai_sdr_licenses:
+                  type: integer
+                  description: The AI SDR licenses the bill holds now, the paid term counted; 0 when it grants nothing.
+              required:
+                - data_subscription
+                - ai_sdr_licenses
+              description: What the bill holds now, read by the data allowance's and the license placement's own rules.
+            email_server_after_end:
+              type: string
+              nullable: true
+              description: "deleted | paused: what the plan's email server does when the plan ends (an ended plan: what it met); null without email."
+            email_resize_directions:
+              type: array
+              items:
+                type: string
+              description: "grow | to_dedicated | down: the changes of the email package's size taken now; empty while none is."
         includes:
           type: array
           items:
@@ -7673,6 +8184,73 @@ components:
         - operation
         - metrics
         - meta
+    GetCurrentTeamResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        operation:
+          type: string
+          enum:
+            - get
+        item:
+          type: object
+          properties:
+            sid:
+              type: string
+              description: Team (workspace) sid (ts_tm_...).
+            name:
+              type: string
+              description: Workspace name; not unique.
+          required:
+            - sid
+            - name
+        included:
+          type: object
+          additionalProperties: {}
+        includes:
+          type: array
+          items:
+            type: string
+        meta:
+          type: object
+          properties:
+            trace_id:
+              type: string
+              description: UUID v7; same 128-bit value as the X-Trace-Id header.
+            span_id:
+              type: string
+              pattern: ^[0-9a-f]{16}$
+              description: 16 hex chars, root span of this request.
+            timestamp:
+              type: string
+              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
+            duration_ms:
+              type: integer
+              minimum: 0
+              description: Server-side wall clock.
+            team_sid:
+              type: string
+              nullable: true
+              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
+            actor_type:
+              type: string
+              nullable: true
+              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
+          required:
+            - trace_id
+            - span_id
+            - timestamp
+            - duration_ms
+      required:
+        - success
+        - operation
+        - item
+        - included
+        - includes
+        - meta
     GetCurrentUserResponse:
       type: object
       properties:
@@ -7814,6 +8392,89 @@ components:
             - erasure_requested_at
             - erased_at
             - deleted_at
+        included:
+          type: object
+          additionalProperties: {}
+        includes:
+          type: array
+          items:
+            type: string
+        meta:
+          type: object
+          properties:
+            trace_id:
+              type: string
+              description: UUID v7; same 128-bit value as the X-Trace-Id header.
+            span_id:
+              type: string
+              pattern: ^[0-9a-f]{16}$
+              description: 16 hex chars, root span of this request.
+            timestamp:
+              type: string
+              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
+            duration_ms:
+              type: integer
+              minimum: 0
+              description: Server-side wall clock.
+            team_sid:
+              type: string
+              nullable: true
+              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
+            actor_type:
+              type: string
+              nullable: true
+              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
+          required:
+            - trace_id
+            - span_id
+            - timestamp
+            - duration_ms
+      required:
+        - success
+        - operation
+        - item
+        - included
+        - includes
+        - meta
+    GetNotificationPreferencesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        operation:
+          type: string
+          enum:
+            - get
+        item:
+          type: object
+          properties:
+            user_sid:
+              type: string
+              description: Whose preferences they are.
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    description: "The kind of mail: account, billing, channels (LinkedIn accounts, mailboxes, the email server), agents (AI SDR hand-offs), website (the script stopped, live visits), signals_digest (the morning digest), tables (a data source stopped), credits (running low), tips (the welcome and the connect reminder), white_label (listed only for a person who runs one)."
+                  email:
+                    type: boolean
+                    description: Whether the person gets this kind of mail.
+                  switchable:
+                    type: boolean
+                    description: "false: always sent (account, billing, white_label)."
+                required:
+                  - key
+                  - email
+                  - switchable
+              description: Every kind, in the order the app lists them, with the person's choice or its default (signals_digest off, the rest on).
+          required:
+            - user_sid
+            - categories
         included:
           type: object
           additionalProperties: {}
@@ -8278,40 +8939,23 @@ components:
                 - active
                 - failed
                 - expired
-              description: pending = registered; challenge = a first issuance in flight; active = serving; failed; expired. A renewal of an active row keeps active.
+              description: "pending = not at the edge yet (no CNAME to cname_target seen). challenge = at the edge, its certificate on its way. active = its certificate in place, served unless its brand is disabled. failed = see last_error. expired is never written: the edge renews."
+            provider:
+              type: string
+              nullable: true
+              enum:
+                - acme
+                - cloudfront_saas
+              description: "What proves and serves the host: cloudfront_saas, the cloud edge, on every row here. acme belongs to the shared contract and never appears here. null = no edge claimed the row."
+            cname_target:
+              type: string
+              nullable: true
+              description: "The brand's own endpoint at the edge: the reseller creates <domain> CNAME <cname_target>, DNS only (not proxied). null until the first step made it."
             challenge:
               type: object
               nullable: true
-              properties:
-                type:
-                  type: string
-                  enum:
-                    - http-01
-                  description: The one challenge type served.
-                token:
-                  type: string
-                  description: The ACME token the platform serves at well_known_path.
-                key_authorization:
-                  type: string
-                  description: The key authorization the CA expects there.
-                well_known_path:
-                  type: string
-                  description: The path the CA fetches on the domain.
-                cname_target:
-                  type: string
-                  description: The platform host the domain's CNAME must point at.
-                expires_at:
-                  type: string
-                  nullable: true
-                  description: ISO 8601 UTC when the authorization lapses at the CA.
-              required:
-                - type
-                - token
-                - key_authorization
-                - well_known_path
-                - cname_target
-                - expires_at
-              description: The attempt in flight (first issuance or renewal); null when none.
+              additionalProperties: {}
+              description: "Always null here: the cloud edge validates the host itself. The field belongs to the shared contract."
             issuer:
               type: string
               nullable: true
@@ -8323,11 +8967,11 @@ components:
             expires_at:
               type: string
               nullable: true
-              description: ISO 8601 UTC the serving certificate lapses; renewed 30 days ahead.
+              description: ISO 8601 UTC the serving certificate ends, as the edge reports it. The edge renews it while the CNAME stays.
             last_error:
               type: string
               nullable: true
-              description: "Why the last attempt failed, as a token: domain_not_pointed (fix the CNAME), domain_validation_failed (CAA or other DNS), issuance_unavailable (our side or the CA, contact support). null = none."
+              description: "Why the host is not served yet, a token: domain_not_pointed, domain_in_use_elsewhere, certificate_refused_by_caa, certificate_not_issued, issuance_unavailable. null = none."
             created_by:
               type: object
               properties:
@@ -8389,6 +9033,8 @@ components:
             - team_sid
             - domain
             - status
+            - provider
+            - cname_target
             - challenge
             - issuer
             - issued_at
@@ -8552,6 +9198,9 @@ components:
               type: object
               additionalProperties: {}
               description: The workspace row (TeamDomain) with the derived status and limits.
+            ai_sdr:
+              type: integer
+              description: "The AI SDR license the share holds: 1, the workspace's agents run; 0, they stand still."
         includes:
           type: array
           items:
@@ -8773,7 +9422,20 @@ components:
             - deleted_at
         included:
           type: object
-          additionalProperties: {}
+          properties:
+            entitlements:
+              type: object
+              properties:
+                data_subscription:
+                  type: string
+                  description: "startup | sales_team | agency | trial | none: the data subscription the workspace draws on, as the data allowance names it."
+                ai_sdr:
+                  type: integer
+                  description: 1 = the workspace holds an AI SDR license and its agents run; 0 = its agents stand still (replies are still labelled).
+              required:
+                - data_subscription
+                - ai_sdr
+              description: What the workspace's share entitles it to now; any member reads it.
         includes:
           type: array
           items:
@@ -8998,7 +9660,7 @@ components:
                 - pending_domain
                 - active
                 - disabled
-              description: pending_domain = waiting for the CNAME and the certificate; active = the host serves the brand; disabled = switched off, the host falls back to the platform brand.
+              description: "pending_domain = the host waits for its CNAME to the brand's own endpoint and its certificate at the cloud edge. active = the host serves the brand. disabled = switched off: the host is off the edge and serves nothing, its domain stays proven."
             logo_url:
               type: string
               nullable: true
@@ -9103,6 +9765,27 @@ components:
                 - checked_at
                 - verified_at
               description: The proof of the sending domain; null = verify never ran, or the address moved to another domain.
+            config:
+              type: object
+              nullable: true
+              properties:
+                terms_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's terms of service page, null = no terms link.
+                privacy_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's privacy policy page, null = no privacy link.
+                gtm_container_id:
+                  type: string
+                  nullable: true
+                  description: "The reseller's Google Tag Manager container (GTM-AB12CD3). The brand's host loads it with custom code refused: built-in tags and pixels only. null = the host loads no tag."
+              required:
+                - terms_url
+                - privacy_url
+                - gtm_container_id
+              description: "The reseller's own terms and privacy links on the brand host's sign-in and sign-up pages, and its Tag Manager container. null = none: those pages link no terms or privacy page and the host loads no tag."
             created_by:
               type: object
               properties:
@@ -9173,6 +9856,7 @@ components:
             - email_reply_to
             - email_from_address
             - email_domain
+            - config
             - created_by
             - created_at
             - updated_at
@@ -9183,8 +9867,28 @@ components:
             ssl_certificate:
               type: object
               nullable: true
-              additionalProperties: {}
-              description: "The certificate row for the brand's domain (SslCertificateDomain: status, expires_at, the last_error token); null when none yet."
+              properties:
+                status:
+                  type: string
+                  description: "pending (not at the edge yet: no CNAME to cname_target seen), challenge (at the edge, its certificate on its way), active (its certificate in place; served unless the brand is disabled) or failed (see last_error)."
+                expires_at:
+                  type: string
+                  nullable: true
+                  description: ISO 8601 UTC the certificate ends, as the edge reports it. The edge renews it while the CNAME stays.
+                last_error:
+                  type: string
+                  nullable: true
+                  description: "Why the host is not served yet, a token: domain_not_pointed, domain_in_use_elsewhere, certificate_refused_by_caa, certificate_not_issued, issuance_unavailable. null = none."
+                cname_target:
+                  type: string
+                  nullable: true
+                  description: The brand's own endpoint at the edge. The reseller creates <domain> CNAME <cname_target>, DNS only (not proxied). null until the first activate.
+              required:
+                - status
+                - expires_at
+                - last_error
+                - cname_target
+              description: "The certificate row of the brand's host: status, expires_at, last_error and cname_target, the record the reseller creates. null until activate ran once."
             users_count:
               type: integer
               description: How many client users registered on the brand.
@@ -9468,40 +10172,23 @@ components:
                 - active
                 - failed
                 - expired
-              description: pending = registered; challenge = a first issuance in flight; active = serving; failed; expired. A renewal of an active row keeps active.
+              description: "pending = not at the edge yet (no CNAME to cname_target seen). challenge = at the edge, its certificate on its way. active = its certificate in place, served unless its brand is disabled. failed = see last_error. expired is never written: the edge renews."
+            provider:
+              type: string
+              nullable: true
+              enum:
+                - acme
+                - cloudfront_saas
+              description: "What proves and serves the host: cloudfront_saas, the cloud edge, on every row here. acme belongs to the shared contract and never appears here. null = no edge claimed the row."
+            cname_target:
+              type: string
+              nullable: true
+              description: "The brand's own endpoint at the edge: the reseller creates <domain> CNAME <cname_target>, DNS only (not proxied). null until the first step made it."
             challenge:
               type: object
               nullable: true
-              properties:
-                type:
-                  type: string
-                  enum:
-                    - http-01
-                  description: The one challenge type served.
-                token:
-                  type: string
-                  description: The ACME token the platform serves at well_known_path.
-                key_authorization:
-                  type: string
-                  description: The key authorization the CA expects there.
-                well_known_path:
-                  type: string
-                  description: The path the CA fetches on the domain.
-                cname_target:
-                  type: string
-                  description: The platform host the domain's CNAME must point at.
-                expires_at:
-                  type: string
-                  nullable: true
-                  description: ISO 8601 UTC when the authorization lapses at the CA.
-              required:
-                - type
-                - token
-                - key_authorization
-                - well_known_path
-                - cname_target
-                - expires_at
-              description: The attempt in flight (first issuance or renewal); null when none.
+              additionalProperties: {}
+              description: "Always null here: the cloud edge validates the host itself. The field belongs to the shared contract."
             issuer:
               type: string
               nullable: true
@@ -9513,11 +10200,11 @@ components:
             expires_at:
               type: string
               nullable: true
-              description: ISO 8601 UTC the serving certificate lapses; renewed 30 days ahead.
+              description: ISO 8601 UTC the serving certificate ends, as the edge reports it. The edge renews it while the CNAME stays.
             last_error:
               type: string
               nullable: true
-              description: "Why the last attempt failed, as a token: domain_not_pointed (fix the CNAME), domain_validation_failed (CAA or other DNS), issuance_unavailable (our side or the CA, contact support). null = none."
+              description: "Why the host is not served yet, a token: domain_not_pointed, domain_in_use_elsewhere, certificate_refused_by_caa, certificate_not_issued, issuance_unavailable. null = none."
             created_by:
               type: object
               properties:
@@ -9579,6 +10266,8 @@ components:
             - team_sid
             - domain
             - status
+            - provider
+            - cname_target
             - challenge
             - issuer
             - issued_at
@@ -9595,15 +10284,15 @@ components:
             properties:
               expected_completion_seconds:
                 type: integer
-                description: "120: the self-check, the validation and the finalize once the domain resolves."
+                description: "120: the next steps at the edge once the CNAME points at cname_target. DNS that is still propagating takes longer."
               webhook_events:
                 type: array
                 items:
                   type: string
-                description: "issue: ssl-certificates.issued, ssl-certificates.failed; renew: ssl-certificates.renewed, ssl-certificates.renewal-failed, ssl-certificates.failed."
+                description: ssl-certificates.issued (the row turned active), ssl-certificates.failed (it turned failed).
               polling_hint:
                 type: string
-                description: "Poll get_ssl_certificate: after issue until status is active or failed; after renew until challenge is null."
+                description: Create the CNAME to cname_target (DNS only), then poll get_ssl_certificate until status is active, or failed with a last_error token.
             required:
               - expected_completion_seconds
               - webhook_events
@@ -9926,6 +10615,19 @@ components:
             - monthly
             - annual
           description: "monthly, or annual (12 + 2 months: 12 monthly amounts paid once, 14 months of service)."
+        data_subscription:
+          type: object
+          properties:
+            tier:
+              type: string
+              enum:
+                - startup
+                - sales_team
+                - agency
+              description: startup, sales_team or agency, the smallest first.
+          required:
+            - tier
+          description: "The data subscription, the plan: one a bill, its tier sets the day's enrichments, searches and results (data_subscription_tiers prices all three). Omit for none."
         data:
           type: object
           properties:
@@ -9942,7 +10644,7 @@ components:
               description: recurring (granted every month, the default) or one_time (paid once in the first transaction). Under a plan the credits live with it; see credit_expiry_days.
           required:
             - credits
-          description: The data credits line; omit for none.
+          description: The data credits line; omit for none. Never beside vendor credits (422 vendor_credits_with_data_credits).
         linkedin:
           type: object
           properties:
@@ -9984,6 +10686,33 @@ components:
           required:
             - packages
           description: The email inbox capacity line; omit for none.
+        ai_sdr:
+          type: object
+          properties:
+            licenses:
+              type: integer
+              minimum: 0
+              maximum: 1000
+              description: "AI SDR licenses, 0 to 1,000: one for each workspace whose agents should run."
+          required:
+            - licenses
+          description: "The AI SDR line, monthly: a license is the AI SDR of one workspace, whose agents stand still without one. Omit for none."
+        vendor_credits:
+          type: object
+          properties:
+            usd:
+              type: integer
+              minimum: 0
+              maximum: 100000
+              description: "Whole US dollars: 0, or from 50 to 100,000. In EUR and GBP the order pays the localized figure and the balance takes the dollars."
+          required:
+            - usd
+          description: "Vendor credits: one-time dollars on the balance, bought only by a checkout in the app, beside a line that renews or for a workspace on a running plan (else 422 vendor_credits_without_subscription); no promo code covers them. Omit for none."
+        promo_code:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: "A promo code the person typed: GetSales' own (TAAFT: 20% off LinkedIn and email) or one made in Paddle (a move from the old app, a test, a deal), once per workspace; the quote shows it applied with the final amount, or why not. Omit or null for none."
       required:
         - currency
         - period
@@ -10019,7 +10748,7 @@ components:
               items:
                 type: object
                 additionalProperties: {}
-              description: "One per resource ordered: line (linkedin | email | data), its count or packages, capacity, rate_minor, monthly_minor and invoice_minor (the amount per billing period)."
+              description: "One per line ordered: line (data_subscription | linkedin | email | ai_sdr | data | vendor_credits), its tier and limits, accounts, packages, licenses, credits or usd, rate_minor, monthly_minor and invoice_minor (the amount a billing period)."
             monthly_minor:
               type: integer
               description: The recurring lines a month, before 12 + 2.
@@ -10028,13 +10757,13 @@ components:
               description: "The recurring invoice: the monthly sum, times 12 on annual."
             one_time_minor:
               type: integer
-              description: The one-time credits line, paid once.
+              description: "The one-time lines, paid once: one-time data credits and vendor credits."
             due_now_minor:
               type: integer
-              description: "The first payment before tax and coupons: the recurring invoice plus the one-time line."
+              description: "The first payment before tax and coupons: the recurring invoice plus the one-time lines."
             has_recurring:
               type: boolean
-              description: false = one-time credits alone, which make no subscription.
+              description: false = nothing renews (one-time data credits or vendor credits alone), which makes no subscription.
             service_months:
               type: integer
               nullable: true
@@ -10051,6 +10780,20 @@ components:
               additionalProperties:
                 type: number
               description: "What the order grants a workspace: linkedin_sender_profiles, email_inboxes, credits_per_month, whitelabel."
+            entitlements:
+              type: object
+              properties:
+                data_subscription:
+                  type: string
+                  nullable: true
+                  description: The tier the order holds (startup | sales_team | agency); null for none.
+                ai_sdr_licenses:
+                  type: integer
+                  description: The AI SDR licenses the order holds, one workspace's AI SDR each.
+              required:
+                - data_subscription
+                - ai_sdr_licenses
+              description: "What the order entitles to beside capacity: the data subscription and the AI SDR licenses."
             service:
               type: object
               additionalProperties: {}
@@ -10060,6 +10803,52 @@ components:
               nullable: true
               additionalProperties: {}
               description: "The next LinkedIn volume tier: accounts, add, capacity, total_minor, per_account_minor, savings_minor (negative = costlier in total); null at the package and above."
+            data_subscription_tiers:
+              type: array
+              items:
+                type: object
+                properties:
+                  tier:
+                    type: string
+                    description: startup | sales_team | agency.
+                  monthly_minor:
+                    type: integer
+                    description: The tier's month in the order's currency, priced as the line is.
+                  limits:
+                    type: object
+                    properties:
+                      enrichments_per_day:
+                        type: integer
+                        nullable: true
+                        description: Enrichments a UTC day.
+                      searches_per_day:
+                        type: integer
+                        nullable: true
+                        description: Searches a UTC day.
+                      results_per_search:
+                        type: integer
+                        nullable: true
+                        description: Results one search answers.
+                      rows_per_table:
+                        type: integer
+                        nullable: true
+                        description: Rows one table holds; null = any.
+                      workspaces:
+                        type: integer
+                        nullable: true
+                        description: Workspaces the tier serves; null = any.
+                    required:
+                      - enrichments_per_day
+                      - searches_per_day
+                      - results_per_search
+                      - rows_per_table
+                      - workspaces
+                    description: The tier's day.
+                required:
+                  - tier
+                  - monthly_minor
+                  - limits
+              description: "The three tiers, the smallest first, priced in the order's currency whatever the order holds: what a data subscription is chosen from."
           required:
             - currency
             - period
@@ -10074,8 +10863,10 @@ components:
             - grant_count
             - credit_expiry_days
             - capacity
+            - entitlements
             - service
             - linkedin_next_tier
+            - data_subscription_tiers
         meta:
           type: object
           properties:
@@ -11628,6 +12419,12 @@ components:
               - team
               - latest_transactions
               - lines
+              - management
+              - email_server_after_end
+              - email_resize_directions
+              - card
+              - entitlements
+            description: "lines, management, entitlements, card, email_server_after_end (deleted | paused when the plan ends; null without email), email_resize_directions (grow | to_dedicated | down: the size changes taken now), price, product, latest_transactions, team."
           description: Relations to attach to every item; omit for the bare rows.
         sort:
           type: object
@@ -11872,7 +12669,180 @@ components:
                   - deleted_at
               included:
                 type: object
-                additionalProperties: {}
+                properties:
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: {}
+                    description: "One descriptor per line: line (data_subscription | linkedin | email | ai_sdr | data) with its tier, accounts, packages, licenses or credits and monthly_minor; empty on the trial."
+                  card:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        description: none | on | canceling | canceled | converted.
+                      order:
+                        type: object
+                        nullable: true
+                        additionalProperties: {}
+                        description: The plan the card bills, in the quote's order shape; null with no card.
+                      monthly_minor:
+                        type: integer
+                        nullable: true
+                        description: That plan's month before tax, minor units of its currency.
+                      currency:
+                        type: string
+                        nullable: true
+                        description: USD | EUR | GBP; null with no card.
+                      plan_starts_at:
+                        type: string
+                        nullable: true
+                        description: "ISO 8601 UTC: Paddle's first charge, when the plan starts; null while a cancel is scheduled."
+                      cancels_at:
+                        type: string
+                        nullable: true
+                        description: "ISO 8601 UTC: the plan is canceled at the trial's end, nothing billed."
+                      added_at:
+                        type: string
+                        nullable: true
+                        description: "ISO 8601 UTC: when the card landed."
+                      ended_at:
+                        type: string
+                        nullable: true
+                        description: "ISO 8601 UTC: when the card ended."
+                      holds:
+                        type: object
+                        properties:
+                          vendor_credits_usd:
+                            type: number
+                            description: Vendor credits in US dollars.
+                          lifetime_enrichments:
+                            type: integer
+                            description: Enrichments for the whole trial.
+                        required:
+                          - vendor_credits_usd
+                          - lifetime_enrichments
+                        description: What the trial holds now.
+                      offers:
+                        type: object
+                        properties:
+                          without_card:
+                            type: object
+                            properties:
+                              vendor_credits_usd:
+                                type: number
+                                description: Vendor credits in US dollars.
+                              lifetime_enrichments:
+                                type: integer
+                                description: Enrichments for the whole trial.
+                            required:
+                              - vendor_credits_usd
+                              - lifetime_enrichments
+                            description: What a trial with no card holds.
+                          with_card:
+                            type: object
+                            properties:
+                              vendor_credits_usd:
+                                type: number
+                                description: Vendor credits in US dollars.
+                              lifetime_enrichments:
+                                type: integer
+                                description: Enrichments for the whole trial.
+                              vendor_credits_until:
+                                type: string
+                                nullable: true
+                                description: "ISO 8601 UTC, two days before the trial ends: a card that lands later brings no dollars; null with no end."
+                            required:
+                              - vendor_credits_usd
+                              - lifetime_enrichments
+                              - vendor_credits_until
+                            description: "What a card landing now would bring: the card's dollars (never below holds) before vendor_credits_until on a running trial no card holds; else holds."
+                        required:
+                          - without_card
+                          - with_card
+                        description: The trial pick's two offers.
+                      default_order:
+                        type: object
+                        additionalProperties: {}
+                        description: The plan the pick offers until the person edits it, in the order shape.
+                    required:
+                      - status
+                      - order
+                      - monthly_minor
+                      - currency
+                      - plan_starts_at
+                      - cancels_at
+                      - added_at
+                      - ended_at
+                      - holds
+                      - offers
+                      - default_order
+                    description: "The trial sentinel's alone: the card on the trial; absent on any other row. A card is added in the app (no tool)."
+                  entitlements:
+                    type: object
+                    properties:
+                      data_subscription:
+                        type: object
+                        nullable: true
+                        properties:
+                          tier:
+                            type: string
+                            description: startup | sales_team | agency.
+                          source:
+                            type: string
+                            description: line (its data subscription line), trial (the trial's tier) or grant (Startup, granted to a paid plan with no such line).
+                          limits:
+                            type: object
+                            properties:
+                              enrichments_per_day:
+                                type: integer
+                                nullable: true
+                                description: Enrichments a UTC day.
+                              searches_per_day:
+                                type: integer
+                                nullable: true
+                                description: Searches a UTC day.
+                              results_per_search:
+                                type: integer
+                                nullable: true
+                                description: Results one search answers.
+                              rows_per_table:
+                                type: integer
+                                nullable: true
+                                description: Rows one table holds; null = any.
+                              workspaces:
+                                type: integer
+                                nullable: true
+                                description: Workspaces the tier serves; null = any.
+                            required:
+                              - enrichments_per_day
+                              - searches_per_day
+                              - results_per_search
+                              - rows_per_table
+                              - workspaces
+                            description: The tier's day.
+                        required:
+                          - tier
+                          - source
+                          - limits
+                        description: The data subscription the bill holds now; null when it grants nothing (paused, canceled, past its grace).
+                      ai_sdr_licenses:
+                        type: integer
+                        description: The AI SDR licenses the bill holds now, the paid term counted; 0 when it grants nothing.
+                    required:
+                      - data_subscription
+                      - ai_sdr_licenses
+                    description: What the bill holds now, read by the data allowance's and the license placement's own rules.
+                  email_server_after_end:
+                    type: string
+                    nullable: true
+                    description: "deleted | paused: what the plan's email server does when the plan ends (an ended plan: what it met); null without email."
+                  email_resize_directions:
+                    type: array
+                    items:
+                      type: string
+                    description: "grow | to_dedicated | down: the changes of the email package's size taken now; empty while none is."
             required:
               - item
               - included
@@ -13424,40 +14394,23 @@ components:
                       - active
                       - failed
                       - expired
-                    description: pending = registered; challenge = a first issuance in flight; active = serving; failed; expired. A renewal of an active row keeps active.
+                    description: "pending = not at the edge yet (no CNAME to cname_target seen). challenge = at the edge, its certificate on its way. active = its certificate in place, served unless its brand is disabled. failed = see last_error. expired is never written: the edge renews."
+                  provider:
+                    type: string
+                    nullable: true
+                    enum:
+                      - acme
+                      - cloudfront_saas
+                    description: "What proves and serves the host: cloudfront_saas, the cloud edge, on every row here. acme belongs to the shared contract and never appears here. null = no edge claimed the row."
+                  cname_target:
+                    type: string
+                    nullable: true
+                    description: "The brand's own endpoint at the edge: the reseller creates <domain> CNAME <cname_target>, DNS only (not proxied). null until the first step made it."
                   challenge:
                     type: object
                     nullable: true
-                    properties:
-                      type:
-                        type: string
-                        enum:
-                          - http-01
-                        description: The one challenge type served.
-                      token:
-                        type: string
-                        description: The ACME token the platform serves at well_known_path.
-                      key_authorization:
-                        type: string
-                        description: The key authorization the CA expects there.
-                      well_known_path:
-                        type: string
-                        description: The path the CA fetches on the domain.
-                      cname_target:
-                        type: string
-                        description: The platform host the domain's CNAME must point at.
-                      expires_at:
-                        type: string
-                        nullable: true
-                        description: ISO 8601 UTC when the authorization lapses at the CA.
-                    required:
-                      - type
-                      - token
-                      - key_authorization
-                      - well_known_path
-                      - cname_target
-                      - expires_at
-                    description: The attempt in flight (first issuance or renewal); null when none.
+                    additionalProperties: {}
+                    description: "Always null here: the cloud edge validates the host itself. The field belongs to the shared contract."
                   issuer:
                     type: string
                     nullable: true
@@ -13469,11 +14422,11 @@ components:
                   expires_at:
                     type: string
                     nullable: true
-                    description: ISO 8601 UTC the serving certificate lapses; renewed 30 days ahead.
+                    description: ISO 8601 UTC the serving certificate ends, as the edge reports it. The edge renews it while the CNAME stays.
                   last_error:
                     type: string
                     nullable: true
-                    description: "Why the last attempt failed, as a token: domain_not_pointed (fix the CNAME), domain_validation_failed (CAA or other DNS), issuance_unavailable (our side or the CA, contact support). null = none."
+                    description: "Why the host is not served yet, a token: domain_not_pointed, domain_in_use_elsewhere, certificate_refused_by_caa, certificate_not_issued, issuance_unavailable. null = none."
                   created_by:
                     type: object
                     properties:
@@ -13535,6 +14488,8 @@ components:
                   - team_sid
                   - domain
                   - status
+                  - provider
+                  - cname_target
                   - challenge
                   - issuer
                   - issued_at
@@ -13694,6 +14649,7 @@ components:
             type: string
             enum:
               - team
+              - ai_sdr
           description: Relations to attach to every item; omit for the bare rows.
         sort:
           type: object
@@ -13837,6 +14793,9 @@ components:
                     type: object
                     additionalProperties: {}
                     description: The workspace row (TeamDomain) with the derived status and limits.
+                  ai_sdr:
+                    type: integer
+                    description: "The AI SDR license the share holds: 1, the workspace's agents run; 0, they stand still."
             required:
               - item
               - included
@@ -14344,6 +15303,7 @@ components:
             enum:
               - owner
               - members_counts
+              - entitlements
           description: Relations to attach to every item; omit for the bare rows.
         sort:
           type: object
@@ -14558,7 +15518,20 @@ components:
                   - deleted_at
               included:
                 type: object
-                additionalProperties: {}
+                properties:
+                  entitlements:
+                    type: object
+                    properties:
+                      data_subscription:
+                        type: string
+                        description: "startup | sales_team | agency | trial | none: the data subscription the workspace draws on, as the data allowance names it."
+                      ai_sdr:
+                        type: integer
+                        description: 1 = the workspace holds an AI SDR license and its agents run; 0 = its agents stand still (replies are still labelled).
+                    required:
+                      - data_subscription
+                      - ai_sdr
+                    description: What the workspace's share entitles it to now; any member reads it.
             required:
               - item
               - included
@@ -15002,7 +15975,7 @@ components:
                       - pending_domain
                       - active
                       - disabled
-                    description: pending_domain = waiting for the CNAME and the certificate; active = the host serves the brand; disabled = switched off, the host falls back to the platform brand.
+                    description: "pending_domain = the host waits for its CNAME to the brand's own endpoint and its certificate at the cloud edge. active = the host serves the brand. disabled = switched off: the host is off the edge and serves nothing, its domain stays proven."
                   logo_url:
                     type: string
                     nullable: true
@@ -15107,6 +16080,27 @@ components:
                       - checked_at
                       - verified_at
                     description: The proof of the sending domain; null = verify never ran, or the address moved to another domain.
+                  config:
+                    type: object
+                    nullable: true
+                    properties:
+                      terms_url:
+                        type: string
+                        nullable: true
+                        description: The reseller's terms of service page, null = no terms link.
+                      privacy_url:
+                        type: string
+                        nullable: true
+                        description: The reseller's privacy policy page, null = no privacy link.
+                      gtm_container_id:
+                        type: string
+                        nullable: true
+                        description: "The reseller's Google Tag Manager container (GTM-AB12CD3). The brand's host loads it with custom code refused: built-in tags and pixels only. null = the host loads no tag."
+                    required:
+                      - terms_url
+                      - privacy_url
+                      - gtm_container_id
+                    description: "The reseller's own terms and privacy links on the brand host's sign-in and sign-up pages, and its Tag Manager container. null = none: those pages link no terms or privacy page and the host loads no tag."
                   created_by:
                     type: object
                     properties:
@@ -15177,6 +16171,7 @@ components:
                   - email_reply_to
                   - email_from_address
                   - email_domain
+                  - config
                   - created_by
                   - created_at
                   - updated_at
@@ -15187,8 +16182,28 @@ components:
                   ssl_certificate:
                     type: object
                     nullable: true
-                    additionalProperties: {}
-                    description: "The certificate row for the brand's domain (SslCertificateDomain: status, expires_at, the last_error token); null when none yet."
+                    properties:
+                      status:
+                        type: string
+                        description: "pending (not at the edge yet: no CNAME to cname_target seen), challenge (at the edge, its certificate on its way), active (its certificate in place; served unless the brand is disabled) or failed (see last_error)."
+                      expires_at:
+                        type: string
+                        nullable: true
+                        description: ISO 8601 UTC the certificate ends, as the edge reports it. The edge renews it while the CNAME stays.
+                      last_error:
+                        type: string
+                        nullable: true
+                        description: "Why the host is not served yet, a token: domain_not_pointed, domain_in_use_elsewhere, certificate_refused_by_caa, certificate_not_issued, issuance_unavailable. null = none."
+                      cname_target:
+                        type: string
+                        nullable: true
+                        description: The brand's own endpoint at the edge. The reseller creates <domain> CNAME <cname_target>, DNS only (not proxied). null until the first activate.
+                    required:
+                      - status
+                      - expires_at
+                      - last_error
+                      - cname_target
+                    description: "The certificate row of the brand's host: status, expires_at, last_error and cname_target, the record the reseller creates. null until activate ran once."
                   users_count:
                     type: integer
                     description: How many client users registered on the brand.
@@ -15430,6 +16445,9 @@ components:
               - can_manage_agents
               - can_view_signals
               - can_manage_signals
+              - can_view_data
+              - can_act_data
+              - can_manage_data
               - "*"
             description: A permission token of the gs catalog (can_view_teams, can_manage_webhooks, ...); * only from an unrestricted issuer. The product objects carry their own families since 2026-11-02.
           description: FULL replacement of the key's permission list.
@@ -15571,6 +16589,124 @@ components:
             - created_at
             - updated_at
             - deleted_at
+        updated_fields:
+          type: array
+          items:
+            type: string
+        previous_values:
+          type: object
+          additionalProperties: {}
+        kept_fields:
+          type: array
+          items:
+            type: string
+          description: The fields this write did not change because the person's own value stands on them (stamped person); read the item for what landed.
+        meta:
+          type: object
+          properties:
+            trace_id:
+              type: string
+              description: UUID v7; same 128-bit value as the X-Trace-Id header.
+            span_id:
+              type: string
+              pattern: ^[0-9a-f]{16}$
+              description: 16 hex chars, root span of this request.
+            timestamp:
+              type: string
+              description: ISO 8601 UTC (Y-m-dTH:i:sZ), response time.
+            duration_ms:
+              type: integer
+              minimum: 0
+              description: Server-side wall clock.
+            team_sid:
+              type: string
+              nullable: true
+              description: The team this call ran in (the token team, or the team_sid override). Null when unauthenticated; absent from pre-2026-08-20 backends.
+            actor_type:
+              type: string
+              nullable: true
+              description: user | agent | api_key | system. Null when unauthenticated; absent from pre-2026-08-20 backends.
+          required:
+            - trace_id
+            - span_id
+            - timestamp
+            - duration_ms
+      required:
+        - success
+        - operation
+        - item
+        - updated_fields
+        - previous_values
+        - meta
+    UpdateNotificationPreferencesRequest:
+      type: object
+      description: Request body of `update_notification_preferences`.
+      properties:
+        email:
+          type: object
+          properties:
+            account:
+              type: boolean
+            billing:
+              type: boolean
+            channels:
+              type: boolean
+            agents:
+              type: boolean
+            website:
+              type: boolean
+            signals_digest:
+              type: boolean
+            tables:
+              type: boolean
+            credits:
+              type: boolean
+            tips:
+              type: boolean
+            white_label:
+              type: boolean
+          description: 'The kinds to switch, kind -> true or false, at least one: {"signals_digest": true, "channels": false}. account, billing and white_label are always sent and refused (422 always_sent); an unknown kind is 422 unknown_category.'
+      required:
+        - email
+    UpdateNotificationPreferencesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        operation:
+          type: string
+          enum:
+            - update
+        item:
+          type: object
+          properties:
+            user_sid:
+              type: string
+              description: Whose preferences they are.
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    description: "The kind of mail: account, billing, channels (LinkedIn accounts, mailboxes, the email server), agents (AI SDR hand-offs), website (the script stopped, live visits), signals_digest (the morning digest), tables (a data source stopped), credits (running low), tips (the welcome and the connect reminder), white_label (listed only for a person who runs one)."
+                  email:
+                    type: boolean
+                    description: Whether the person gets this kind of mail.
+                  switchable:
+                    type: boolean
+                    description: "false: always sent (account, billing, white_label)."
+                required:
+                  - key
+                  - email
+                  - switchable
+              description: Every kind, in the order the app lists them, with the person's choice or its default (signals_digest off, the rest on).
+          required:
+            - user_sid
+            - categories
         updated_fields:
           type: array
           items:
@@ -15873,6 +17009,11 @@ components:
           minimum: 0
           maximum: 1
           description: "1 or 0: the White label entitlement."
+        ai_sdr:
+          type: integer
+          minimum: 0
+          maximum: 1
+          description: "1 hands the workspace one of the bill's AI SDR licenses, 0 takes it back. Within the bill's licenses, else 409 pool_exceeded with key ai_sdr. A trial places its license by itself: 409 ai_sdr_placed_automatically."
     UpdateSubscriptionAllocationResponse:
       type: object
       properties:
@@ -16114,6 +17255,9 @@ components:
               - can_manage_agents
               - can_view_signals
               - can_manage_signals
+              - can_view_data
+              - can_act_data
+              - can_manage_data
               - "*"
             description: A permission token of the gs catalog (can_view_billing, can_manage_webhooks, ...); * is the owner's wildcard.
           description: Full replacement, stored as sent; each token must be held by the caller.
@@ -16829,6 +17973,30 @@ components:
               pattern: ^#[0-9a-fA-F]{6}$
               description: "The login page background, #rrggbb; null = the platform default."
           description: "Brand colors, #rrggbb each; null = the platform defaults."
+        config:
+          type: object
+          nullable: true
+          properties:
+            terms_url:
+              type: string
+              nullable: true
+              maxLength: 2048
+              format: uri
+              pattern: ^https:\/\/
+              description: https URL of the reseller's terms of service. null or left out = no terms link.
+            privacy_url:
+              type: string
+              nullable: true
+              maxLength: 2048
+              format: uri
+              pattern: ^https:\/\/
+              description: https URL of the reseller's privacy policy. null or left out = no privacy link.
+            gtm_container_id:
+              type: string
+              nullable: true
+              pattern: ^GTM-[A-Z0-9]{4,12}$
+              description: The reseller's Google Tag Manager container id, GTM- and 4 to 12 capital letters or digits. Custom HTML, custom JavaScript and custom templates of it do not run in the app. null or left out = no tag on the host.
+          description: "The reseller's own terms and privacy links for the brand host's sign-in and sign-up pages, and its Tag Manager container. Replaced whole, never merged, like palette: a member left out is cleared. null = none."
         email_from_name:
           type: string
           nullable: true
@@ -16878,7 +18046,7 @@ components:
                 - pending_domain
                 - active
                 - disabled
-              description: pending_domain = waiting for the CNAME and the certificate; active = the host serves the brand; disabled = switched off, the host falls back to the platform brand.
+              description: "pending_domain = the host waits for its CNAME to the brand's own endpoint and its certificate at the cloud edge. active = the host serves the brand. disabled = switched off: the host is off the edge and serves nothing, its domain stays proven."
             logo_url:
               type: string
               nullable: true
@@ -16983,6 +18151,27 @@ components:
                 - checked_at
                 - verified_at
               description: The proof of the sending domain; null = verify never ran, or the address moved to another domain.
+            config:
+              type: object
+              nullable: true
+              properties:
+                terms_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's terms of service page, null = no terms link.
+                privacy_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's privacy policy page, null = no privacy link.
+                gtm_container_id:
+                  type: string
+                  nullable: true
+                  description: "The reseller's Google Tag Manager container (GTM-AB12CD3). The brand's host loads it with custom code refused: built-in tags and pixels only. null = the host loads no tag."
+              required:
+                - terms_url
+                - privacy_url
+                - gtm_container_id
+              description: "The reseller's own terms and privacy links on the brand host's sign-in and sign-up pages, and its Tag Manager container. null = none: those pages link no terms or privacy page and the host loads no tag."
             created_by:
               type: object
               properties:
@@ -17053,6 +18242,7 @@ components:
             - email_reply_to
             - email_from_address
             - email_domain
+            - config
             - created_by
             - created_at
             - updated_at
@@ -17467,7 +18657,7 @@ components:
                 - pending_domain
                 - active
                 - disabled
-              description: pending_domain = waiting for the CNAME and the certificate; active = the host serves the brand; disabled = switched off, the host falls back to the platform brand.
+              description: "pending_domain = the host waits for its CNAME to the brand's own endpoint and its certificate at the cloud edge. active = the host serves the brand. disabled = switched off: the host is off the edge and serves nothing, its domain stays proven."
             logo_url:
               type: string
               nullable: true
@@ -17572,6 +18762,27 @@ components:
                 - checked_at
                 - verified_at
               description: The proof of the sending domain; null = verify never ran, or the address moved to another domain.
+            config:
+              type: object
+              nullable: true
+              properties:
+                terms_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's terms of service page, null = no terms link.
+                privacy_url:
+                  type: string
+                  nullable: true
+                  description: The reseller's privacy policy page, null = no privacy link.
+                gtm_container_id:
+                  type: string
+                  nullable: true
+                  description: "The reseller's Google Tag Manager container (GTM-AB12CD3). The brand's host loads it with custom code refused: built-in tags and pixels only. null = the host loads no tag."
+              required:
+                - terms_url
+                - privacy_url
+                - gtm_container_id
+              description: "The reseller's own terms and privacy links on the brand host's sign-in and sign-up pages, and its Tag Manager container. null = none: those pages link no terms or privacy page and the host loads no tag."
             created_by:
               type: object
               properties:
@@ -17642,6 +18853,7 @@ components:
             - email_reply_to
             - email_from_address
             - email_domain
+            - config
             - created_by
             - created_at
             - updated_at
@@ -17653,15 +18865,15 @@ components:
             properties:
               expected_completion_seconds:
                 type: integer
-                description: "activate: 300; verify-email-domain: 3600."
+                description: "activate: 300, or 120 for a reissue on an active brand. verify-email-domain: 3600."
               webhook_events:
                 type: array
                 items:
                   type: string
-                description: "activate: whitelabels.activated, whitelabels.activation-failed; verify-email-domain: whitelabels.email-domain-verified, whitelabels.email-domain-failed."
+                description: "activate: whitelabels.activated, whitelabels.activation-failed (a reissue: ssl-certificates.issued, ssl-certificates.renewal-failed, ssl-certificates.failed). verify-email-domain: whitelabels.email-domain-verified, whitelabels.email-domain-failed."
               polling_hint:
                 type: string
-                description: "Poll get_whitelabel: after activate (include ssl_certificate) until status is active; after verify-email-domain until email_domain.status is verified or failed."
+                description: "After activate: create the CNAME to ssl_certificate.cname_target, poll get_whitelabel (include ssl_certificate) until active. After verify-email-domain: poll until email_domain.status is verified or failed."
             required:
               - expected_completion_seconds
               - webhook_events
